@@ -346,14 +346,14 @@ Static
 ■VB6 BATからコンパイル
 
 REM vbpのフォルダにCD
-CD /d "D:\Zerowork\kawasaki\Lab\Redmine\110¥VB6"
+CD /d "D:\Lab\Redmine\110¥VB6"
 
 REM コンパイル (/out を指定しないとエラー時にポップアップが出てしまう)
 "C:\Program Files\Microsoft Visual Studio\VB98\VB6.exe" /m Project1.vbp /out out.log
 
 
 エラー例(out.log)
-ﾌｧｲﾙ内のｺﾝﾊﾟｲﾙｴﾗｰ - 'D:\Zerowork¥kawasaki\Lab¥Redmine #110\VB6\Form1.frm', 行番号 - 4 : 変数が定義されていません。
+ﾌｧｲﾙ内のｺﾝﾊﾟｲﾙｴﾗｰ - 'D:\Lab¥Redmine #110\VB6\Form1.frm', 行番号 - 4 : 変数が定義されていません。
 'Projectl.exe' のﾋﾞﾙﾄﾞに失敗しました。
 
 正常例 (out.log)

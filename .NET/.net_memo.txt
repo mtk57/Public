@@ -1,0 +1,756 @@
+
+■VB.NET  Application.DoEventsについて
+
+＜問題点＞   ※参考：http://dotnetrevo.blog21.fc2.com/blog-entry-2.html
+    UIスレッド上で、あるボタンのクリックにて、少し時間のかかる処理が呼び出され、定期的にApplication.DoEventsを行うという場合を考えよう。
+    DoEventsが呼び出されたとき、どんなことが行われるのだろうか？
+    ----------
+    ①UIスレッド上での処理はApplication.DoEventsのメソッドの部分で一旦停止する。
+    ②ボタンクリックから、①までの間にキューに貯まったWindowsメッセージが処理される。
+    ③キューに貯まっていたすべてのWindowsメッセージが処理されたあと、①の続きの処理が実行される。
+    ----------
+    ここで問題になるのは、②で処理されるWindowsメッセージの内容である。
+    ②に含まれているのは、時間のかかる処理が行われる間に、ユーザがほかのボタンを押したり、キーボードを押したイベントの処理がある。
+    また、マルチスレッドアプリケーションであれば、UIスレッドへのマーシャリングで待機状態となっていた処理が含まれる。
+    ということは、UIスレッド上に割り込ませたいWindowsメッセージ以外のWindowsメッセージが割り込む可能性があるということである。
+    割り込んだWindowsメッセージの処理が、ただ進捗状態を表示するだけのようなものであればよいが、
+    もしそこから別の時間のかかる処理や、別のスレッドを呼び出すようなものだったらどうだろうか？
+    ①の処理を呼び出したユーザの意図とは異なる動作が実行されることになる。
+    さらに、もしプログラム上で排他ロックなどを使用していれば、デッドロックが発生することもある。
+
+
+基本的には使用しないのがベスト
+
+
+＜代替策＞
+
+Backgroundworkerがいいと思う。
+
+
+---------------
+.net frrameworkの以下のprotectedメソッドについて教えてください
+OnCreateControl
+OnHandleCreated
+
+
+はい、.NET Frameworkの`OnCreateControl`と`OnHandleCreated`メソッドについて説明いたします。これらは主にWindows Formsアプリケーションで使用される`Control`クラスのprotectedメソッドです。
+
+1. OnCreateControl:
+
+`OnCreateControl`メソッドは、コントロールが初めて作成されるときに呼び出されます。このメソッドは、コントロールとその子コントロールが作成された後、但しコントロールが表示される前に呼び出されます。
+
+主な特徴:
+- コントロールの初期化処理に使用されます。
+- 子コントロールの追加や、データバインディングの設定などの初期化タスクに適しています。
+- このメソッドはコントロールごとに1回だけ呼び出されます。
+
+使用例:
+```csharp
+protected override void OnCreateControl()
+{
+    base.OnCreateControl();
+    // カスタムの初期化コードをここに記述
+}
+```
+
+2. OnHandleCreated:
+
+`OnHandleCreated`メソッドは、コントロールのウィンドウハンドル（HWND）が作成された直後に呼び出されます。
+
+主な特徴:
+- ウィンドウハンドルが必要な初期化処理に使用されます。
+- ネイティブのWin32 APIを使用する処理に適しています。
+- コントロールが破棄されて再作成された場合、このメソッドは複数回呼び出される可能性があります。
+
+使用例:
+```csharp
+protected override void OnHandleCreated(EventArgs e)
+{
+    base.OnHandleCreated(e);
+    // ウィンドウハンドルを使用する初期化コードをここに記述
+}
+```
+
+これらのメソッドの主な違いは、`OnCreateControl`がコントロールの論理的な作成時に呼ばれるのに対し、`OnHandleCreated`は実際のウィンドウハンドルが作成された後に呼ばれることです。
+
+適切なメソッドを選択することで、コントロールのライフサイクルの異なる段階で初期化処理を行うことができます。
+
+------------
+■動的に他のプログラムのメソッドを実行する方法:
+CreateObject()
+GetObject()
+
+------------
+■VB6 のプロジェクトファイル (.vbp) で使用される設定項目
+AutoIncrementVer：ビルド時にバージョン番号を自動的に増加させるかどうか
+AutoRefresh：プロジェクトの自動更新を行うかどうか
+BoundsCheck：配列の境界チェックを行うかどうか
+Class：クラスモジュールの定義
+CodeViewDebugInfo：CodeView デバッグ情報を生成するかどうか
+Command32：32ビットコマンドラインの設定
+CompatibleMode：互換モードの設定
+CompilationType：コンパイルの種類（例：ネイティブコード、P-code）
+DebugStartupOption：デバッグ時の起動オプション
+Designer：デザイナーファイルの指定
+ExeName32：32ビット実行ファイルの名前
+FDIVCheck：FDIV バグチェックを行うかどうか
+FIPointCheck：浮動小数点の整数性チェックを行うかどうか
+FavorPentiumPro(tm)：Pentium Pro 最適化を行うかどうか
+Form：フォームの定義
+HelpContextID：ヘルプコンテキストID
+HelpFile：ヘルプファイルの指定
+IconForm：アイコンとして使用するフォーム
+MajorVer：メジャーバージョン番号
+MaxNumberOfThreads：最大スレッド数
+MinorVer：マイナーバージョン番号
+Module：モジュールの定義
+Name：プロジェクト名
+NoAliasing：エイリアシングの無効化
+Object：オブジェクトの定義
+Optimization Type：最適化の種類
+OverflowCheck：オーバーフローチェックを行うかどうか
+Path32：32ビットパスの指定
+Reference：参照設定
+RemoveUnusedControlInfo：未使用のコントロール情報を削除するかどうか
+Retained：保持されたモジュールの指定
+RevisionVer：リビジョンバージョン番号
+ServerSupportFiles：サーバーサポートファイルの指定
+StartMode：起動モード
+Startup：スタートアップオブジェクトの指定
+ThreadPerObject：オブジェクトごとのスレッド使用
+Title：プロジェクトのタイトル
+Type：プロジェクトの種類
+Unattended：無人実行モード
+UnroundedFP：丸めなし浮動小数点計算の使用
+VersionComments：バージョンコメント
+VersionCompanyName：会社名
+-----------
+
+■構造体のディープコピー
+
+
+はい、VB.NETで汎用的な構造体のディープコピー関数を作ることができます。主に2つの方法があります：
+
+## 1. シリアライズ/デシリアライズを使用する方法
+
+```vb
+Imports System.IO
+Imports System.Runtime.Serialization.Formatters.Binary
+
+Public Module DeepCopyHelper
+    ''' <summary>
+    ''' 任意の型のオブジェクトをディープコピーする
+    ''' </summary>
+    ''' <typeparam name="T">コピー対象の型</typeparam>
+    ''' <param name="source">コピー元オブジェクト</param>
+    ''' <returns>ディープコピーされたオブジェクト</returns>
+    Public Function DeepCopy(Of T)(ByVal source As T) As T
+        ' 元のオブジェクトがNothingの場合
+        If source Is Nothing Then
+            Return Nothing
+        End If
+        
+        ' シリアライズとデシリアライズを使用してディープコピー
+        Dim formatter As New BinaryFormatter()
+        Dim stream As New MemoryStream()
+        
+        ' ストリームにシリアライズ
+        formatter.Serialize(stream, source)
+        
+        ' ストリームの位置を先頭に戻す
+        stream.Position = 0
+        
+        ' デシリアライズして新しいオブジェクトを作成
+        Dim result As T = DirectCast(formatter.Deserialize(stream), T)
+        
+        ' ストリームを閉じる
+        stream.Close()
+        
+        Return result
+    End Function
+End Module
+```
+
+この方法を使用する場合の注意点：
+- コピー対象の型に `<Serializable()>` 属性が必要です
+- シリアライズできないメンバー（例：デリゲート、イベントハンドラなど）があると失敗します
+
+## 2. リフレクションを使用する方法
+
+```vb
+Imports System.Reflection
+
+Public Module DeepCopyHelper
+    ''' <summary>
+    ''' リフレクションを使用して構造体をディープコピーする
+    ''' </summary>
+    ''' <typeparam name="T">コピー対象の型</typeparam>
+    ''' <param name="source">コピー元オブジェクト</param>
+    ''' <returns>ディープコピーされたオブジェクト</returns>
+    Public Function DeepCopyStructure(Of T As Structure)(ByVal source As T) As T
+        ' 結果の変数を作成
+        Dim result As T = source
+        
+        ' 型の情報を取得
+        Dim type As Type = GetType(T)
+        
+        ' すべてのフィールド情報を取得
+        Dim fields As FieldInfo() = type.GetFields(BindingFlags.Public Or BindingFlags.NonPublic Or BindingFlags.Instance)
+        
+        For Each field As FieldInfo In fields
+            ' フィールドの値を取得
+            Dim value As Object = field.GetValue(source)
+            
+            ' 値がNothingでなく配列の場合
+            If value IsNot Nothing AndAlso value.GetType().IsArray Then
+                ' 配列をコピー
+                Dim array As Array = DirectCast(value, Array)
+                Dim copyArray As Array = Array.CreateInstance(array.GetType().GetElementType(), array.Length)
+                Array.Copy(array, copyArray, array.Length)
+                
+                ' コピーした配列を設定
+                field.SetValue(result, copyArray)
+            End If
+        Next
+        
+        Return result
+    End Function
+End Module
+```
+
+## 使用例
+
+```vb
+' 構造体の定義
+<Serializable()> _
+Public Structure StructureB
+    Public Value As Integer
+End Structure
+
+<Serializable()> _
+Public Structure StructureA
+    Public ID As Integer
+    Public Name As String
+    Public stBary() As StructureB
+End Structure
+
+' 使用例
+Sub Main()
+    ' 元の構造体を作成
+    Dim stA1 As StructureA
+    stA1.ID = 1
+    stA1.Name = "Test"
+    stA1.stBary = New StructureB(1) {}
+    stA1.stBary(0).Value = 10
+    
+    ' ディープコピー
+    Dim stA2 As StructureA = DeepCopy(stA1)
+    
+    ' 値を変更してみる
+    stA2.stBary(0).Value = 20
+    
+    ' 結果を確認
+    Console.WriteLine($"stA1.stBary(0).Value = {stA1.stBary(0).Value}")  ' 10
+    Console.WriteLine($"stA2.stBary(0).Value = {stA2.stBary(0).Value}")  ' 20
+End Sub
+```
+
+シリアライズ方式は汎用性が高く、ほとんどの場合に適しています。ただし、パフォーマンスが重要な場合やシリアライズできないメンバーがある場合は、リフレクション方式または構造体固有のディープコピー方法を検討すると良いでしょう。
+
+
+-------------
+はい、ご質問の件について説明します。
+
+VB.NETでは、構造体（Structure）は値型（Value Type）ですが、配列は参照型（Reference Type）です。そのため：
+
+1. 構造体A型の変数stA1を構造体A型の変数stA2に代入すると、構造体自体は値コピーされますが、配列メンバであるstBaryは参照コピーされます。つまり、stA2.stBaryとstA1.stBaryは同じ配列オブジェクトを参照します。
+
+2. はい、stA2.stBaryの値（配列の要素）を変更すると、stA1.stBaryの値も変更されます。これは両方が同じメモリ上の配列を参照しているためです。
+
+もし配列の完全なコピー（ディープコピー）が必要な場合は、明示的に新しい配列を作成し、要素をコピーする必要があります。例えば：
+
+```vb
+' ディープコピーの例
+stA2 = stA1
+Dim newArray(stA1.stBary.Length - 1) As StructureB
+Array.Copy(stA1.stBary, newArray, stA1.stBary.Length)
+stA2.stBary = newArray
+```
+
+このようにすれば、stA2.stBaryに加えた変更はstA1.stBaryに影響しません。
+
+
+
+
+
+-------
+■Stringについて
+
+C# (.NET) の `string` クラスのコピー操作におけるメモリの動きについて説明します。
+
+`string` はイミュータブル（不変）な参照型なので、コピー操作時には実際のデータの複製は行われず、参照のコピーのみが行われます。これは重要なメモリ最適化です。
+
+例えば：
+
+```csharp
+string original = "Hello World";
+string copy = original; // ここでは新しいメモリ領域は確保されません
+```
+
+この場合：
+
+1. `copy` 変数は `original` 変数と同じメモリ領域（同じ文字列オブジェクト）を参照します
+2. メモリ上に新しい文字列データは作成されません
+3. 変数のみが増え、ヒープ上のデータは共有されます
+
+これが可能なのは `string` がイミュータブルであるためです。どちらの変数からも文字列の内容を変更できないので、同じデータを安全に共有できます。
+
+後で文字列操作を行う場合：
+
+```csharp
+copy = copy + "!"; // この時点で新しいメモリが確保されます
+```
+
+この場合は、元の文字列を変更するのではなく、新しい文字列オブジェクトが作成され、`copy` はその新しいオブジェクトを参照するようになります。`original` は引き続き元のオブジェクトを参照します。
+
+これはメモリ効率の良い設計で、文字列データが頻繁に複製されるのを防いでいます。
+
+
+
+--------------
+■特定のキャラクタ（"A", "#", "H", "@"）が、文字列に含まれているかをチェックする関数をVB.NETでLinqを使って作ってください。
+
+
+# VB.NETでLINQを使用した特定文字チェック関数
+
+特定の文字（"A", "#", "H", "@"）が文字列に含まれているかをチェックする関数を作成しました。
+
+```vb.net
+Imports System.Linq
+
+''' <summary>
+''' 文字列に特定の文字（A, #, H, @）が含まれているかチェックします
+''' </summary>
+''' <param name="inputString">チェック対象の文字列</param>
+''' <returns>特定の文字が含まれていればTrue、そうでなければFalse</returns>
+Function ContainsSpecialCharacters(inputString As String) As Boolean
+    ' チェック対象の文字を配列で定義
+    Dim specialChars() As Char = {"A"c, "#"c, "H"c, "@"c}
+    
+    ' 入力文字列に特定の文字が含まれているかチェック
+    Return inputString.Any(Function(c) specialChars.Contains(c))
+End Function
+```
+
+別の書き方として、配列を使わずに直接比較する方法もあります：
+
+```vb.net
+Function ContainsSpecialCharacters(inputString As String) As Boolean
+    ' 特定の文字（A, #, H, @）がいずれか含まれているかチェック
+    Return inputString.Any(Function(c) c = "A"c OrElse c = "#"c OrElse c = "H"c OrElse c = "@"c)
+End Function
+```
+
+## 使用例
+
+```vb.net
+Sub Main()
+    ' テストケース
+    Console.WriteLine(ContainsSpecialCharacters("Hello"))     ' True (Hを含む)
+    Console.WriteLine(ContainsSpecialCharacters("Test@123"))  ' True (@を含む)
+    Console.WriteLine(ContainsSpecialCharacters("number#1"))  ' True (#を含む)
+    Console.WriteLine(ContainsSpecialCharacters("Apple"))     ' True (Aを含む)
+    Console.WriteLine(ContainsSpecialCharacters("test"))      ' False (特定文字なし)
+    
+    Console.ReadLine()
+End Sub
+```
+
+最初の実装（配列を使用）の方が、将来的に対象文字を追加・変更する場合にメンテナンスが容易です。
+
+
+---------------
+メッセージを絞り込んで貼り付け操作に関連するものだけを効率的に特定するためのいくつかの方法を提案します。
+
+## 1. 差分ベースの監視アプローチ
+
+貼り付け操作前後のメッセージの差分を取ることで、関連するメッセージだけを抽出します：
+
+```vb
+Private normalMessages As New HashSet(Of UInteger)
+Private pasteRelatedMessages As New HashSet(Of UInteger)
+Private isBaselineRecording As Boolean = False
+Private isPasteRecording As Boolean = False
+
+' ベースラインを記録するボタン
+Private Sub RecordBaselineButton_Click(sender As Object, e As EventArgs) Handles RecordBaselineButton.Click
+    normalMessages.Clear()
+    isBaselineRecording = True
+    Debug.WriteLine("通常操作のメッセージ記録中...")
+    
+    ' 5秒後に自動的に記録を停止
+    Dim timer As New Timer With {.Interval = 5000}
+    AddHandler timer.Tick, Sub(s, args)
+                               isBaselineRecording = False
+                               timer.Stop()
+                               Debug.WriteLine($"通常メッセージ記録完了: {normalMessages.Count}個のメッセージを記録")
+                           End Sub
+    timer.Start()
+End Sub
+
+' 貼り付け操作のメッセージを記録するボタン
+Private Sub RecordPasteButton_Click(sender As Object, e As EventArgs) Handles RecordPasteButton.Click
+    pasteRelatedMessages.Clear()
+    isPasteRecording = True
+    Debug.WriteLine("貼り付け操作のメッセージ記録中...")
+    
+    ' 5秒後に自動的に記録を停止
+    Dim timer As New Timer With {.Interval = 5000}
+    AddHandler timer.Tick, Sub(s, args)
+                               isPasteRecording = False
+                               timer.Stop()
+                               AnalyzePasteMessages()
+                           End Sub
+    timer.Start()
+End Sub
+
+Protected Overrides Sub WndProc(ByRef m As Message)
+    ' メッセージID（uint）を取得
+    Dim msgId As UInteger = CUInt(m.Msg)
+    
+    If isBaselineRecording Then
+        normalMessages.Add(msgId)
+    ElseIf isPasteRecording Then
+        pasteRelatedMessages.Add(msgId)
+    End If
+    
+    MyBase.WndProc(m)
+End Sub
+
+Private Sub AnalyzePasteMessages()
+    ' 通常操作にはなく、貼り付け操作にだけあるメッセージを検出
+    Dim uniqueToPaste As New List(Of UInteger)
+    
+    For Each msgId In pasteRelatedMessages
+        If Not normalMessages.Contains(msgId) Then
+            uniqueToPaste.Add(msgId)
+        End If
+    Next
+    
+    Debug.WriteLine($"貼り付け操作固有のメッセージ: {uniqueToPaste.Count}個")
+    For Each msgId In uniqueToPaste
+        Debug.WriteLine($"候補メッセージID: 0x{msgId:X4}")
+    Next
+End Sub
+```
+
+## 2. タイムスタンプベースの分析
+
+メッセージの発生時間を詳細に記録し、貼り付け操作の直前・直後のメッセージに焦点を当てます：
+
+```vb
+Private messageTimeline As New List(Of (Time As DateTime, MessageId As UInteger, WParam As IntPtr, LParam As IntPtr))
+Private isRecording As Boolean = False
+Private pasteTimestamp As DateTime = DateTime.MinValue
+
+Protected Overrides Sub WndProc(ByRef m As Message)
+    If isRecording Then
+        messageTimeline.Add((DateTime.Now, CUInt(m.Msg), m.WParam, m.LParam))
+    End If
+    
+    MyBase.WndProc(m)
+End Sub
+
+Private Sub StartRecordingButton_Click(sender As Object, e As EventArgs) Handles StartRecordingButton.Click
+    messageTimeline.Clear()
+    isRecording = True
+    Debug.WriteLine("メッセージ記録開始...")
+End Sub
+
+Private Sub PasteMarkerButton_Click(sender As Object, e As EventArgs) Handles PasteMarkerButton.Click
+    ' 貼り付け操作が行われた時間をマーク
+    pasteTimestamp = DateTime.Now
+    Debug.WriteLine($"貼り付けタイムスタンプ設定: {pasteTimestamp:HH:mm:ss.fff}")
+End Sub
+
+Private Sub StopAndAnalyzeButton_Click(sender As Object, e As EventArgs) Handles StopAndAnalyzeButton.Click
+    isRecording = False
+    Debug.WriteLine("メッセージ記録停止、分析中...")
+    
+    ' 貼り付け操作の前後100ミリ秒のメッセージを抽出
+    Const WINDOW_MS As Integer = 100
+    
+    Dim relevantMessages = messageTimeline.Where(Function(record) 
+        Math.Abs((record.Time - pasteTimestamp).TotalMilliseconds) <= WINDOW_MS
+    ).OrderBy(Function(record) record.Time).ToList()
+    
+    Debug.WriteLine($"貼り付け前後のメッセージ: {relevantMessages.Count}個")
+    For Each record In relevantMessages
+        Dim relativeTime As Double = (record.Time - pasteTimestamp).TotalMilliseconds
+        Debug.WriteLine($"相対時間: {relativeTime:F1}ms, メッセージID: 0x{record.MessageId:X4}, WParam: 0x{record.WParam:X}")
+    Next
+End Sub
+```
+
+## 3. 特定のメッセージのみをフィルタリング
+
+貼り付け操作に関連する可能性が高いメッセージだけをフィルタリングして表示します：
+
+```vb
+Private ReadOnly knownPasteRelatedMessages As New HashSet(Of UInteger) From {
+    &H302,  ' WM_PASTE
+    &H111,  ' WM_COMMAND
+    &H100,  ' WM_KEYDOWN
+    &H101,  ' WM_KEYUP
+    &H300,  ' WM_CUT
+    &H301,  ' WM_COPY
+    &H7B2,  ' EM_PASTESPECIAL
+    &H1,    ' WM_CREATE
+    &H7DD,  ' EM_SETCUEBANNER (メニュー関連)
+    &H1C,   ' WM_ACTIVATEAPP
+    &H18,   ' WM_SHOWWINDOW
+    &H83,   ' WM_NCCALCSIZE
+    &H214,  ' WM_SIZING
+    &H46,   ' WM_WINDOWPOSCHANGING
+    &H281   ' WM_IME_SETCONTEXT
+}
+
+Protected Overrides Sub WndProc(ByRef m As Message)
+    ' 既知の関連メッセージのみを記録
+    Dim msgId As UInteger = CUInt(m.Msg)
+    If knownPasteRelatedMessages.Contains(msgId) Then
+        Debug.WriteLine($"関連メッセージ: 0x{msgId:X4}, WParam: 0x{m.WParam:X}, LParam: 0x{m.LParam:X}")
+    End If
+    
+    MyBase.WndProc(m)
+End Sub
+```
+
+## 4. wParam/lParamによるフィルタリング
+
+コンテキストメニューの貼り付けコマンドが特定のコマンドIDを持っている場合、wParam値でフィルタリングします：
+
+```vb
+Protected Overrides Sub WndProc(ByRef m As Message)
+    ' WM_COMMANDのみに注目し、wParamの値を詳細に調べる
+    If m.Msg = &H111 Then  ' WM_COMMAND
+        Dim cmdId As Integer = m.WParam.ToInt32() And &HFFFF
+        Dim notifyCode As Integer = (m.WParam.ToInt32() >> 16) And &HFFFF
+        Dim hwndCtl As IntPtr = m.LParam
+        
+        Debug.WriteLine($"コマンド: ID=0x{cmdId:X4}, NotifyCode=0x{notifyCode:X4}, HwndCtl=0x{hwndCtl:X}")
+        
+        ' 既知の貼り付けコマンドID範囲
+        ' 通常、Editコントロールでは貼り付けは ID_EDIT_PASTE = 0xE122 などの値
+        If cmdId >= &HE100 AndAlso cmdId <= &HE200 Then
+            Debug.WriteLine($"貼り付け関連の可能性があるコマンド: 0x{cmdId:X4}")
+        End If
+    End If
+    
+    MyBase.WndProc(m)
+End Sub
+```
+
+## 5. コンパクトなWndProcモニタリング関数
+
+メッセージの記録形式を最適化して、必要な情報だけをコンパクトに表示します：
+
+```vb
+
+## 6. フォーカスを当てたアプローチ：コンテキストメニュー表示時のみ監視
+
+コンテキストメニューが表示される瞬間から貼り付け操作が完了するまでのみ、詳細なメッセージ監視を行います：
+
+```vb
+Private isContextMenuActive As Boolean = False
+
+Protected Overrides Sub WndProc(ByRef m As Message)
+    ' コンテキストメニューの表示を検出
+    If m.Msg = &H204 Then  ' WM_RBUTTONDOWN
+        Debug.WriteLine("=== コンテキストメニュー表示 ===")
+        isContextMenuActive = True
+    End If
+    
+    ' コンテキストメニューがアクティブな間だけメッセージを詳細に監視
+    If isContextMenuActive Then
+        Debug.WriteLine($"メッセージ: 0x{m.Msg:X4}, WParam: 0x{m.WParam:X}, LParam: 0x{m.LParam:X}")
+        
+        ' 貼り付け操作が完了した可能性のあるメッセージを検出（テキスト変更など）
+        If m.Msg = &H1C Then  ' WM_ACTIVATEAPP (メニュー終了の可能性)
+            Debug.WriteLine("=== コンテキストメニュー処理完了の可能性 ===")
+            isContextMenuActive = False
+        End If
+    End If
+    
+    MyBase.WndProc(m)
+End Sub
+```
+
+## 7. クリップボードの監視と組み合わせる
+
+クリップボードへのアクセスイベントと組み合わせて、貼り付け操作を特定します：
+
+```vb
+Private isPotentialPasteSequence As Boolean = False
+
+Protected Overrides Sub WndProc(ByRef m As Message)
+    ' クリップボードアクセスを示唆するメッセージ
+    If m.Msg = &H308 Then  ' WM_DRAWCLIPBOARD
+        Debug.WriteLine("クリップボードアクセス検出")
+        isPotentialPasteSequence = True
+        
+        ' 次の数個のメッセージを詳細に監視
+        Dim messageCount As Integer = 0
+        Dim timer As New Timer With {.Interval = 50}
+        AddHandler timer.Tick, Sub(s, args)
+                                   messageCount += 1
+                                   If messageCount > 10 Then
+                                       isPotentialPasteSequence = False
+                                       timer.Stop()
+                                   End If
+                               End Sub
+        timer.Start()
+    End If
+    
+    ' 潜在的な貼り付けシーケンス中のメッセージを監視
+    If isPotentialPasteSequence Then
+        Debug.WriteLine($"貼り付け候補: 0x{m.Msg:X4}, WParam: 0x{m.WParam:X}")
+    End If
+    
+    MyBase.WndProc(m)
+End Sub
+```
+
+これらの方法を使用すると、メッセージの量を大幅に減らし、貼り付け操作に関連するメッセージを特定しやすくなります。特に、コンテキストメニューの表示から選択までに発生するWM_COMMANDメッセージと、その特定のwParamの値に注目することで、GCTextBoxで使用されている貼り付けコマンドのIDを見つけることができる可能性が高まります。
+------------
+# ネットワーク非接続環境でClosedXMLを使用する方法
+
+VMware上のネットワーク非接続ゲストOSでClosedXMLを使用するには、「オフラインNuGet」アプローチが必要です。以下の手順で実現できます：
+
+## 手順1: ホストOSでパッケージをダウンロード
+
+1. **nuget.exeの入手**:
+   - [nuget.org/downloads](https://www.nuget.org/downloads)からNuGet CLIツール(nuget.exe)をダウンロード
+
+2. **必要なパッケージをダウンロード**:
+   - コマンドプロンプトを開き、以下のコマンドを実行：
+   ```
+   nuget.exe install ClosedXML -OutputDirectory C:\Temp\Packages
+   ```
+   - これによりClosedXMLとその依存パッケージがダウンロードされます
+   - 主な依存パッケージ：DocumentFormat.OpenXml、ExcelNumberFormat、SixLabors.Fonts
+
+## 手順2: パッケージをゲストOSに転送
+
+1. **転送方法**:
+   - VMwareの共有フォルダ機能を使用
+   - または仮想ディスク（.isoファイル）を作成してマウント
+   - または仮想マシン設定でUSBドライブを接続
+
+2. **転送先**:
+   - ゲストOS上の任意のフォルダ（例：C:\NuGetPackages）
+
+## 手順3: ゲストOSでローカルNuGetリポジトリを設定
+
+1. **Visual Studioでローカルパッケージソースを追加**:
+   - ツール → NuGetパッケージマネージャー → パッケージマネージャーの設定
+   - パッケージソース → 「+」ボタンをクリック
+   - 名前（例：「ローカルパッケージ」）とパス（C:\NuGetPackages）を入力
+
+2. **プロジェクトにClosedXMLパッケージをインストール**:
+   - ソリューションエクスプローラーでプロジェクトを右クリック
+   - NuGetパッケージの管理を選択
+   - パッケージソースを「ローカルパッケージ」に切り替え
+   - ClosedXMLを選択してインストール
+
+## 代替手順: 手動でDLLを参照に追加
+
+より直接的な方法として：
+
+1. ダウンロードしたパッケージフォルダから必要なDLLファイルを探す:
+   - `ClosedXML.X.X.X\lib\net40\ClosedXML.dll`
+   - `DocumentFormat.OpenXml.X.X.X\lib\net40\DocumentFormat.OpenXml.dll`
+   - その他依存DLL
+
+2. これらのDLLをプロジェクトの任意のフォルダ（例：Libs）にコピー
+
+3. Visual Studioでプロジェクトに参照を追加:
+   - プロジェクト → 参照の追加 → 参照 → 参照の追加からDLLを選択
+
+このアプローチならパッケージマネージャーを使わずに直接DLLを参照できますが、バージョン管理は手動で行う必要があります。
+---------------
+# OpenXML SDKをオフラインでNuGetインストールする手順
+
+以下に、ネットワーク接続のないゲストOSのVisual Studioで、OpenXML SDKをインストールする具体的な手順を説明します。
+
+## ステップ1: ホストOS側での準備（インターネット接続あり）
+
+1. **nuget.exeのダウンロード**
+   - [nuget.org/downloads](https://www.nuget.org/downloads) から最新の「nuget.exe」をダウンロード
+
+2. **OpenXML SDKパッケージをダウンロード**
+   - コマンドプロンプトを開き、nuget.exeをダウンロードしたディレクトリに移動
+   - 以下のコマンドを実行してパッケージをダウンロード
+   ```
+   nuget.exe install DocumentFormat.OpenXml -OutputDirectory C:\Temp\NuGetPackages
+   ```
+   - これでOpenXML SDKとその依存パッケージが指定フォルダにダウンロードされます
+
+3. **パッケージフォルダをゲストOSへ転送する準備**
+   - 上記でダウンロードしたC:\Temp\NuGetPackagesフォルダを圧縮するか、そのままの状態で転送準備
+
+## ステップ2: ゲストOSへのパッケージ転送
+
+以下のいずれかの方法でホストOSからゲストOSにファイルを転送します：
+
+1. **VMware共有フォルダを使用**
+   - VMware設定で共有フォルダを有効化
+   - ホストOSのNuGetPackagesフォルダを共有設定
+   - ゲストOSから共有フォルダにアクセスしてコピー
+
+2. **仮想ISOを作成**
+   - ホストOSでNuGetPackagesフォルダを含むISOファイルを作成
+   - VMware設定でISOを仮想CD/DVDドライブとしてマウント
+   - ゲストOSでマウントしたドライブからコピー
+
+3. **USBドライブ経由で転送**
+   - パッケージをUSBにコピー
+   - VMwareでUSBをゲストOSに接続してコピー
+
+## ステップ3: ゲストOSでのパッケージインストール（オフライン環境）
+
+1. **ローカルNuGetリポジトリの設定**
+   - Visual Studioを起動
+   - メニューから「ツール」→「オプション」を選択
+   - 左側のツリーから「NuGetパッケージマネージャー」→「パッケージソース」を選択
+   - 「+」ボタンをクリックして新しいソースを追加
+     - 名前: 「ローカルOpenXML」（任意の名前）
+     - パス: 転送したNuGetPackagesフォルダのパス（例: C:\NuGetPackages）
+   - 「更新」ボタンをクリック
+   - 「OK」ボタンをクリックして設定を保存
+
+2. **プロジェクトにOpenXML SDKをインストール**
+   - 対象プロジェクトを右クリック
+   - 「NuGetパッケージの管理」を選択
+   - 画面右上の「パッケージソース」ドロップダウンから先ほど作成した「ローカルOpenXML」を選択
+   - 「参照」タブで「DocumentFormat.OpenXml」を検索
+   - パッケージを選択し「インストール」ボタンをクリック
+
+## 補足: NuGetパッケージ管理が難しい場合
+
+もし上記の方法が複雑に感じる場合は、より直接的なアプローチも可能です：
+
+1. ダウンロードしたパッケージから以下のDLLファイルを見つける
+   - `DocumentFormat.OpenXml.X.X.X\lib\net40\DocumentFormat.OpenXml.dll`
+   （Xはバージョン番号）
+
+2. このDLLをプロジェクトに直接追加
+   - プロジェクト内に「Libs」などのフォルダを作成してDLLをコピー
+   - プロジェクトを右クリック→「追加」→「既存の項目」でDLLを追加
+   - 追加したDLLを選択し、プロパティウィンドウで「出力ディレクトリにコピー」を「新しい場合はコピーする」に設定
+
+3. DLLを参照に追加
+   - プロジェクトの「参照」を右クリック→「参照の追加」
+   - 「参照」タブ→「参照」ボタンでコピーしたDLLを選択
+
+この方法では、NuGetパッケージマネージャーを介さずに直接DLLを参照できますが、バージョン管理などは手動で行う必要があります。

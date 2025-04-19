@@ -1,0 +1,465 @@
+VB memo
+
+VB6, VBA, VB.NETのmemo
+
+---------------------------------------
+■
+
+<VB6>
+                                // [Ret]        [理由]
+Len("あ")                       // 1            文字数
+LenB("あ")                      // 2            SJIS変換後のバイト数
+
+Asc("あ")                       // -32096       0x82A0 → "あ"のSJISコード
+AscB("あ")                      // 66           0x42 → "あ"のUTF16コードである3042の下位コード
+AscW("あ")                      // 12354        Unicodeのコードポイント
+
+InStr("アイウエオ", "ウ")       // 3            "ウ"は3文字目
+InStrB("アイウエオ", "ウ")      // 5            "ウ"はSJIS変換後のバイト数で5バイト目(1始まり)
+
+Mid("アイウエオ", 3, 2)         // ウエ         3文字目から2文字を抜き出す
+MidB("アイウエオ", 3, 2)        // イ           3バイト目から2バイトを抜き出す
+
+Left("アイウエオ", 2)           // アイ         左から2文字を抜き出す
+LeftB("アイウエオ", 2)          // ア           左から2バイトを抜き出す
+
+Right("アイウエオ", 2)          // エオ         右から2文字を抜き出す
+RightB("アイウエオ", 2)         // オ           右から2バイトを抜き出す
+
+String(10, "A")                 // AAAAAAAAAA   
+
+VB 6の文字列は内部的にはUnicode（UTF-16）で管理されており、
+文字列の長さや位置は、Unicodeを基準に扱われている。
+→なので以下コードのようにS-JISに変換してもイミディエイトウィンドウには表示できない。
+StrConv("ABC", vbFromUnicode)
+
+しかし、Asc関数やChr関数は例外的にS-JISを基準としており、
+Unicodeで処理するにはWの付いた関数を使わねばならない。
+
+
+<VB.NET>  ※B系はないのでコメントアウト
+
+Len("あ")                                       // 1
+'LenB("あ")                                     // 
+
+Asc("あ")                                       // -32096
+'AscB("あ")                                     // 
+AscW("あ")                                      // 12354
+
+InStr("アイウエオ", "ウ")                       // 3
+'InStrB("アイウエオ", "ウ")                     // 
+
+Mid("アイウエオ", 3, 2)                         // ウエ
+'MidB("アイウエオ", 3, 2)                       // 
+
+Microsoft.VisualBasic.Left("アイウエオ", 2)     // アイ
+'LeftB("アイウエオ", 2)                         // 
+
+Microsoft.VisualBasic.Right("アイウエオ", 2)    // エオ
+'RightB("アイウエオ", 2)                        // 
+
+New String("A", 10)                             // AAAAAAAAAA
+
+
+---------------------------------------
+■StrConv
+
+文字列の文字種を変換する関数
+
+引数には (文字列, 文字種) を指定します。
+
+<文字種>
+vbUpperCase   ：大文字に変換します。
+vbLowerCase   ：小文字に変換します。
+vbProperCase  ：各単語の先頭の文字を大文字に変換します。
+vbWide        ：半角文字を全角文字に変換します。
+vbNarrow      ：全角文字を半角文字に変換します。
+vbKatakana    ：ひらがなをカタカナに変換します。
+vbHiragana    ：カタカナをひらがなに変換します。
+vbUnicode     ：システムの既定のコード ページを使って Unicode に変換します。
+vbFromUnicode ：Unicode からシステムの既定のコード ページ (S-JIS) に変換します。
+
+---------------------------------------
+■文字コードを変換する
+LenB("ABC")                 // 6  →半角も全角もUTF-16なので。
+i = LenB("ＡＢＣ")          // 6  →半角も全角もUTF-16なので。
+
+s = StrConv("ABC", vbFromUnicode)       // UTF-16 を Shift_JIS に変換
+LenB(s)                                 // 3
+s = StrConv("ＡＢＣ", vbFromUnicode)    // UTF-16 を Shift_JIS に変換
+LenB(s)                                 // 6
+
+s = StrConv("ABC", vbFromUnicode)       // UTF-16 を Shift_JIS に変換
+s = StrConv(s, vbUnicode)               // Shift_JIS を UTF-16 に変換
+LenB(s)                                 // 6
+
+s = StrConv("ＡＢＣ", vbFromUnicode)    // UTF-16 を Shift_JIS に変換
+s = StrConv(s, vbUnicode)               // Shift_JIS を UTF-16 に変換
+LenB(s)                                 // 6
+
+---------------------------------------
+■VB6にあって、VB.NETにないもの。
+
+・固定長文字列
+	Ex.Dim s As String * 4
+
+・Option Base
+
+・末尾に記号($, %)が付く関数
+	Ex.Left$()  →文字列を返すLeft関数のこと。$がないとVariantを返す。
+
+・デフォルト・プロパティ
+    Ex. TextBox1 = "hoge"   →TextBox1.Textが省略出来る
+
+---------------------------------------
+■チェック観点（ビルドエラーで検知できない系）
+・配列添え字の下限
+・配列のサイズ変更
+・配列の次元数の変更
+・固定長文字列
+・日付と時刻の相違
+・日付時刻の書式化
+・ByVal/ByRef未指定時の違い
+  VB6：ByRef, VB.NET：ByVal
+・可変長引数の違い (ParamArray)
+  VB6：参照渡し、VB.NET：値渡し
+
+
+---------------------------------------
+■予約語
+
+VB6											VB.NET
+------------------------------------------------------------
+Abs											ない
+AddressOf									ある
+And											ある
+Any											ない
+Array										ない
+As											ある
+Attribute									ない
+Boolean										ある
+ByRef										ある
+Byte										ある
+ByVal										ある
+Call										ある
+Case										ある
+Cbool										ある
+Cbyte										ある
+Ccur										ない
+Cdate										ある
+CDbl										ある
+Cdec										ある
+Cdecl										ある
+Cint										ある
+Circle										ない
+CLng										ある
+CLngLng										ない
+CLngPtr										ない
+Close										ない
+Const										ある
+CSng										ある
+CStr										ある
+Currency									ない
+CVar										ない
+CVErr										ない
+Date										ある
+Debug										ない
+Decimal										ある
+Declare										ある
+DefBool										ない
+DefByte										ない
+DefCur										ない
+DefDate										ない
+DefDbl										ない
+DefDec										ない
+DefInt										ない
+DefLng										ない
+DefLngLng									ない
+DefLngPtr									ない
+DefObj										ない
+DefSng										ない
+DefStr										ない
+DefVar										ない
+Dim											ある
+Do											ある
+DoEvents									ない
+Double										ある
+Each										
+Else										ある
+ElseIf										ある
+empty										
+End											ある
+EndIf										ある
+Enum										
+Eqv											
+Erase										
+Event										
+Exit										ある
+false										ある
+Fix											
+For											ある
+Friend										
+Function									ある
+Get											
+Global										
+GoSub										なし
+GoTo										ある
+If											ある
+Imp											
+Implements									
+In											
+Input										
+InputB										
+Int											
+Integer										
+Is											
+Lbound										ある
+Len											
+LenB										
+Let											
+Like										
+LINEINPUT									
+Lock										
+Long										
+LongLong									
+LongPtr										
+Loop										ある
+Lset										
+Me											
+Mod											
+New											
+Next										
+Not											
+nothing										
+null										Nothing
+On											
+Open										
+Option										ある
+Optional									ある
+Or											ある
+ParamArray									ある
+Preserve									ある
+Print										
+Private										ある
+PSet										
+Public										ある
+Put											
+RaiseEvent									
+ReDim										ある
+Rem											ある
+Resume										
+Return										ある
+Rset										
+Scale										
+Seek										
+Select										
+Set											
+Sgn											
+Shared										
+Single										
+Spc											
+Static										ある
+Stop										
+String										ある
+Sub											ある
+Tab											
+Then										ある
+To											ある
+true										ある
+Type										なし
+TypeOf										
+Ubound										ある
+Unlock										
+Until										
+Variant										なし
+VB_Base										なし
+VB_Control									なし
+VB_Creatable								なし
+VB_Customizable								なし
+VB_Description								なし
+VB_Exposed									なし
+VB_Ext_KEY									なし
+VB_GlobalNameSpace							なし
+VB_HelpID									なし
+VB_Invoke_Func								なし
+VB_Invoke_Property							なし
+VB_Invoke_PropertyPut						なし
+VB_Invoke_PropertyPutRefVB_MemberFlags		なし
+VB_Name										なし
+VB_PredeclaredId							なし
+VB_ProcData									なし
+VB_TemplateDerived							なし
+VB_UserMemId								なし
+VB_VarDescription							なし
+VB_VarHelpID								なし
+VB_VarMemberFlags							なし
+VB_VarProcData								なし
+VB_VarUserMemId								なし
+Wend										
+While										
+With										
+WithEvents									
+Write										
+Xor											
+
+---------------------------------------
+■DefObj A-Z
+データ型を指定しない変数では、デフォルトのデータ型を（Variant ではなく）Object に設定します。
+A-Z は、その範囲の文字で始まる名前の変数に適用されることを意味します。
+（この場合はすべての文字なので、すべての変数に適用されます）。
+
+
+---------------------------------------
+■各言語の比較
+https://learn.microsoft.com/ja-jp/previous-versions/visualstudio/visual-studio-2012/zwkz3536(v=vs.110)?redirectedfrom=MSDN
+
+---------------------------------------
+■VB.NETのキーワード
+My
+	プロジェクト全体の設定や構成、または特定のファイルやリソースにアクセスするためのショートカットとして使用されます。
+	"My"キーワードを使用することで、プロジェクトの設定やリソースに簡単にアクセスできます。
+	たとえば、My.Settingsを使用すると、ユーザー設定を簡単に保存および読み取ることができます。
+	また、My.Computer.FileSystemオブジェクトを使用すると、ファイルシステムに関するさまざまなタスクを実行できます。
+
+MyBase
+	C#のbaseと同じ。
+
+Me
+	C#のthisと同じ。
+
+MyClass
+	C#に該当機能なし。よく分らん。。
+
+Shared
+	C#のstaticと同じ。
+
+Shadows
+	よく分らん。。メソッドの再定義？(であればC#のメソッドにつけるnewと同じかも)
+
+MustOverride
+	C#のabstractと同じ。
+
+Static
+	C#に該当機能なし。VBではローカル変数を静的に出来る。
+
+---------------------------------------
+■VB6 BATからコンパイル
+
+REM vbpのフォルダにCD
+CD /d "D:\Zerowork\kawasaki\Lab\Redmine\110¥VB6"
+
+REM コンパイル (/out を指定しないとエラー時にポップアップが出てしまう)
+"C:\Program Files\Microsoft Visual Studio\VB98\VB6.exe" /m Project1.vbp /out out.log
+
+
+エラー例(out.log)
+ﾌｧｲﾙ内のｺﾝﾊﾟｲﾙｴﾗｰ - 'D:\Zerowork¥kawasaki\Lab¥Redmine #110\VB6\Form1.frm', 行番号 - 4 : 変数が定義されていません。
+'Projectl.exe' のﾋﾞﾙﾄﾞに失敗しました。
+
+正常例 (out.log)
+'Project1.exe' のﾋﾞﾙﾄﾞが正常に終了しました。 
+
+残念なのは、エラーでも終了コード (echo %errorlevel%) が0となること。 
+なので、成否の判断はexeが出来たかどうかだが、
+exe名を取得するのがメンドイので、ログファイルを「失敗」とかGREPするしかないかも。
+
+ログファイルへの追記。
+echo ABC >> out.log
+
+Win100VS2019
+"C:\Program Files (x86)\Microsoft Visual Studio¥2019\Professional\MSBuild¥Current\Bin\MSBuild.exe"
+
+---------------------------------------
+■標準出力、標準エラー出力
+
+https://maku77.github.io/windows/io/redirect-stdout-and-stderr.html
+
+1.stdout と stderr への出力を別々にファイルに保存する
+  Ex.my.exe > stdout.txt 2> stderr.txt
+
+2.stdout と stderr への出力をまとめて1つのファイルへ保存する
+  Ex1.my.exe > log.txt 2>&1    '標準エラーを標準出力にマージする
+  Ex2.my.exe > log.txt 1>&2    '標準出力を標準エラーにマージする
+
+3.エラーを表示しない
+  Ex.my.exe 2> nul
+
+---------------------------------------
+■VB6のRESファイルフォーマットについて
+
+ネットに情報がないので、以下のプログラムを参考にするしかない。
+https://www.vbforums.com/showthread.php?802399-VB6-ResDecomp-Class-Decompiles-RES-Files
+ResDecomp
+
+---------------------------------------
+■\演算子について
+
+整数除算演算子　※整数同士の割り算に使う。
+Ex. 10 \ 3 = 3
+
+---------------------------------------
+■Functionの構文
+
+https://learn.microsoft.com/ja-jp/office/vba/language/reference/user-interface-help/function-statement
+
+[Public] | Private | Friend][ Static ] 関数名 [ ( arglist ) ] [ As type ]
+[ statements ]
+[ name=式 ]
+[ Exit Function ]
+[ statements ]
+[ name=式 ]
+End Function
+
+---------------------------------------
+■再帰コード例
+Sub RecursivelySearchFolder(ByVal sRootFolder As String)
+    ' ルートフォルダのファイルとサブフォルダを取得する
+    Dim fso As New Scripting.FileSystemObject
+    Dim ds As Scripting.Directory
+    Set ds = fso.GetFolder(sRootFolder)
+
+    ' ファイルとサブフォルダをループで処理する
+    For Each f In ds.Files
+        ' ファイル名を出力する
+        Debug.Print f.Name
+    Next
+
+    For Each d In ds.SubFolders
+        ' サブフォルダ名を出力する
+        Debug.Print d.Name
+        ' サブフォルダを再帰的に探索する
+        RecursivelySearchFolder d.Path
+    Next
+End Sub
+
+
+
+---------------------------------------
+■再帰コード例
+Sub SecureFTPScript()
+    Dim tempFilePath As String
+    Dim fileNum As Integer
+    Dim ftpCommands As String
+    
+    ' テンポラリファイルのパスを取得
+    tempFilePath = Environ$("TEMP") & "\secure_ftp_script.txt"
+    
+    ' FTPコマンドを文字列として準備
+    ftpCommands = "open ftp.example.com" & vbCrLf & _
+                  "username" & vbCrLf & _
+                  "password" & vbCrLf & _
+                  "get filename.txt" & vbCrLf & _
+                  "bye"
+    
+    ' テンポラリファイルを作成
+    fileNum = FreeFile
+    Open tempFilePath For Output As #fileNum
+    Print #fileNum, ftpCommands
+    Close #fileNum
+    
+    ' シェルコマンドを実行
+    Shell "ftp -s:" & tempFilePath, vbHide
+    
+    ' テンポラリファイルを削除
+    Kill tempFilePath
+End Sub

@@ -11,5 +11,6 @@ namespace SimpleFileSearch
         public List<string> FolderPathHistory { get; set; } = new List<string>();
         public bool UseRegex { get; set; } = false;
         public bool IncludeFolderNames { get; set; } = false;
+        public bool UsePartialMatch { get; set; } = false;
     }
 }

@@ -39,6 +39,7 @@
             this.columnFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.chkIncludeFolderNames = new System.Windows.Forms.CheckBox();
             this.labelResult = new System.Windows.Forms.Label();
+            this.chkPartialMatch = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -80,6 +81,7 @@
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(632, 20);
             this.cmbKeyword.TabIndex = 0;
+            this.cmbKeyword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.cmbKeyword_KeyDown);
             // 
             // cmbFolderPath
             // 
@@ -154,6 +156,15 @@
             this.labelResult.Size = new System.Drawing.Size(38, 12);
             this.labelResult.TabIndex = 8;
             this.labelResult.Text = "Result";
+
+            this.chkPartialMatch.AutoSize = true;
+            this.chkPartialMatch.Location = new System.Drawing.Point(440, 81);
+            this.chkPartialMatch.Name = "chkPartialMatch";
+            this.chkPartialMatch.Size = new System.Drawing.Size(120, 16);
+            this.chkPartialMatch.TabIndex = 9;
+            this.chkPartialMatch.Text = "Partial Match Mode";
+            this.chkPartialMatch.UseVisualStyleBackColor = true;
+
             // 
             // MainForm
             // 
@@ -170,6 +181,7 @@
             this.Controls.Add(this.cmbFolderPath);
             this.Controls.Add(this.cmbKeyword);
             this.Controls.Add(this.btnBrowse);
+            this.Controls.Add(this.chkPartialMatch);
             this.Name = "MainForm";
             this.Text = "Simple File Search";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
@@ -177,7 +189,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion
@@ -193,6 +204,9 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn columnFilePath;
         private System.Windows.Forms.CheckBox chkIncludeFolderNames;
         private System.Windows.Forms.Label labelResult;
+
+        // 変数宣言部分に追加
+        private System.Windows.Forms.CheckBox chkPartialMatch;
     }
 }
 

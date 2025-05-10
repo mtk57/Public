@@ -109,17 +109,29 @@ namespace SimpleFileSearch
                 }
                 else
                 {
-                    // ワイルドカードモード
+                    // 部分一致モードまたはワイルドカードモード
+                    bool usePartialMatch = chkPartialMatch.Checked;
+    
                     try
                     {
-                        // ファイル検索（ワイルドカード）
-                        foundFiles.AddRange(Directory.GetFiles(cmbFolderPath.Text, searchPattern, SearchOption.AllDirectories));
-                        
-                        // フォルダ名も検索対象に含める場合
-                        if (includeFolderNames)
+                        if (usePartialMatch)
                         {
+                            // 部分一致モード - 正規表現に変換して検索
+                            Regex regex = new Regex(Regex.Escape(searchPattern), RegexOptions.IgnoreCase);
                             string rootPath = cmbFolderPath.Text;
-                            SearchFoldersWithWildcard(rootPath, searchPattern, foundFiles);
+                            SearchFilesAndFoldersWithRegex(rootPath, regex, includeFolderNames, foundFiles);
+                        }
+                        else
+                        {
+                            // 通常のワイルドカードモード
+                            foundFiles.AddRange(Directory.GetFiles(cmbFolderPath.Text, searchPattern, SearchOption.AllDirectories));
+            
+                            // フォルダ名も検索対象に含める場合
+                            if (includeFolderNames)
+                            {
+                                string rootPath = cmbFolderPath.Text;
+                                SearchFoldersWithWildcard(rootPath, searchPattern, foundFiles);
+                            }
                         }
                     }
                     catch (ArgumentException ex)
@@ -259,6 +271,18 @@ namespace SimpleFileSearch
             }
         }
 
+        private void cmbKeyword_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                // Enterキーが押された場合、検索ボタンクリックイベントを呼び出す
+                btnSearch_Click(this, EventArgs.Empty);
+                // キーイベントを処理済みとしてマーク
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
         #region コンボボックス履歴の管理
 
         private void UpdateComboBoxHistory(ComboBox comboBox, string item)
@@ -293,7 +317,8 @@ namespace SimpleFileSearch
                     KeywordHistory = new List<string>(),
                     FolderPathHistory = new List<string>(),
                     UseRegex = chkUseRegex.Checked,
-                    IncludeFolderNames = chkIncludeFolderNames.Checked
+                    IncludeFolderNames = chkIncludeFolderNames.Checked,
+                    UsePartialMatch = chkPartialMatch.Checked
                 };
 
                 // キーワード履歴を保存
@@ -360,6 +385,9 @@ namespace SimpleFileSearch
 
                     // フォルダ名検索の設定を読み込み
                     chkIncludeFolderNames.Checked = settings.IncludeFolderNames;
+
+                    // 部分一致モードの設定を読み込み (追加)
+                    chkPartialMatch.Checked = settings.UsePartialMatch;
 
                     // 最新の項目をテキストボックスに表示
                     if (cmbKeyword.Items.Count > 0)

@@ -139,6 +139,7 @@ namespace SimpleExcelGrep
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(528, 20);
             this.cmbKeyword.TabIndex = 4;
+            this.cmbKeyword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.cmbKeyword_KeyDown);
             // 
             // chkRegex
             // 

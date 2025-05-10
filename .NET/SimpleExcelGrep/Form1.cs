@@ -538,6 +538,18 @@ namespace SimpleExcelGrep
             }
         }
 
+        private void cmbKeyword_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                // Enterキーが押された場合、検索ボタンクリックイベントを呼び出す
+                BtnStartSearch_Click(this, EventArgs.Empty);
+                // キーイベントを処理済みとしてマーク
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
         // 検索結果をグリッドに表示するメソッド
         private void DisplaySearchResults(List<SearchResult> results)
         {

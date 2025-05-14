@@ -12,9 +12,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-// Microsoft.Office.Interop.Excel への参照は使用しない
 
 namespace SimpleExcelGrep
 {
@@ -28,8 +28,8 @@ namespace SimpleExcelGrep
         private bool _isLoading = false;
 
         // ログファイルのパス
-        private string _logFilePath = Path.Combine(
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+        private string _logFilePath = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
             "SimpleExcelGrep_log.txt");
 
         // モデルクラス - 設定の保存/読み込み用
@@ -65,6 +65,9 @@ namespace SimpleExcelGrep
             
             [DataMember]
             public bool FirstHitOnly { get; set; } = false; // 追加: 最初のヒットのみ検索設定
+
+            [DataMember]
+            public bool SearchShapes { get; set; } = false; // 図形内の文字列を検索するかどうか
         }
 
         // 検索結果を格納するクラス
@@ -125,6 +128,15 @@ namespace SimpleExcelGrep
             
             // 最初のヒットのみチェックボックスの状態変更イベントを登録
             chkFirstHitOnly.CheckedChanged += (s, e) => {
+                if (!_isLoading)
+                {
+                    // 設定を保存
+                    SaveSettings();
+                }
+            };
+
+            // 図形内検索チェックボックスの状態変更イベントを登録
+            chkSearchShapes.CheckedChanged += (s, e) => {
                 if (!_isLoading)
                 {
                     // 設定を保存
@@ -264,6 +276,9 @@ namespace SimpleExcelGrep
                         
                         // 最初のヒットのみ設定
                         chkFirstHitOnly.Checked = settings.FirstHitOnly;
+
+                        // 図形内検索設定
+                        chkSearchShapes.Checked = settings.SearchShapes;
                         
                         LogMessage("設定の読み込みが成功しました");
                     }
@@ -346,7 +361,8 @@ namespace SimpleExcelGrep
                     IgnoreKeywordsHistory = ignoreKeywordsHistory,
                     RealTimeDisplay = chkRealTimeDisplay.Checked,
                     MaxParallelism = (int)nudParallelism.Value,
-                    FirstHitOnly = chkFirstHitOnly.Checked // 最初のヒットのみ設定を保存
+                    FirstHitOnly = chkFirstHitOnly.Checked,
+                    SearchShapes = chkSearchShapes.Checked
                 };
 
                 // DataContractJsonSerializerを使用してJSON保存
@@ -491,7 +507,7 @@ namespace SimpleExcelGrep
 
                 // 検索処理を実行
                 bool isRealTimeDisplay = chkRealTimeDisplay.Checked;
-                LogMessage($"リアルタイム表示: {isRealTimeDisplay}, 最初のヒットのみ: {chkFirstHitOnly.Checked}, 並列数: {nudParallelism.Value}");
+                LogMessage($"リアルタイム表示: {isRealTimeDisplay}, 最初のヒットのみ: {chkFirstHitOnly.Checked}, 図形内検索: {chkSearchShapes.Checked}, 並列数: {nudParallelism.Value}");
                 
                 // 検索結果を取得
                 List<SearchResult> results = await SearchExcelFilesAsync(
@@ -501,6 +517,7 @@ namespace SimpleExcelGrep
                     regex,
                     ignoreKeywords,
                     isRealTimeDisplay,
+                    chkSearchShapes.Checked,
                     _cancellationTokenSource.Token);
 
                 // リアルタイム表示がOFFの場合または検索が途中でキャンセルされた場合に、
@@ -568,7 +585,7 @@ namespace SimpleExcelGrep
             // 結果をグリッドに表示
             foreach (var result in results)
             {
-                string fileName = Path.GetFileName(result.FilePath);
+                string fileName = System.IO.Path.GetFileName(result.FilePath);
                 grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
                 LogMessage($"グリッドに行を追加: {result.SheetName}, {result.CellPosition}, {result.CellValue}");
             }
@@ -585,7 +602,7 @@ namespace SimpleExcelGrep
                 return;
             }
             
-            string fileName = Path.GetFileName(result.FilePath);
+            string fileName = System.IO.Path.GetFileName(result.FilePath);
             grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
             
             // 最新の行にスクロール
@@ -633,7 +650,7 @@ namespace SimpleExcelGrep
                 // Shift+ダブルクリック：フォルダを開く
                 try
                 {
-                    string folderPath = Path.GetDirectoryName(filePath);
+                    string folderPath = System.IO.Path.GetDirectoryName(filePath);
                     LogMessage($"フォルダを開きます: {folderPath}");
                     System.Diagnostics.Process.Start("explorer.exe", folderPath);
                     lblStatus.Text = $"{folderPath} フォルダを開きました";
@@ -676,7 +693,7 @@ namespace SimpleExcelGrep
                 LogMessage("通常の方法でファイルを開きます");
                 System.Diagnostics.Process.Start(filePath);
                 
-                lblStatus.Text = $"{Path.GetFileName(filePath)} を開きました。シート '{sheetName}' のセル {cellPosition} を確認してください。";
+                lblStatus.Text = $"{System.IO.Path.GetFileName(filePath)} を開きました。シート '{sheetName}' のセル {cellPosition} を確認してください。";
             }
             catch (Exception ex)
             {
@@ -840,7 +857,7 @@ namespace SimpleExcelGrep
                 }
                 
                 // ステータス更新
-                lblStatus.Text = $"{Path.GetFileName(filePath)} のシート '{sheetName}' のセル {cellPosition} を開きました";
+                lblStatus.Text = $"{System.IO.Path.GetFileName(filePath)} のシート '{sheetName}' のセル {cellPosition} を開きました";
                 LogMessage("Excel Interopの処理が完了しました (Late Binding方式)");
                 return true;
             }
@@ -1054,10 +1071,11 @@ namespace SimpleExcelGrep
             Regex regex,
             List<string> ignoreKeywords,
             bool isRealTimeDisplay,
+            bool searchShapes,
             CancellationToken cancellationToken)
         {
             LogMessage($"SearchExcelFilesAsync 開始: フォルダ={folderPath}");
-            LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={chkFirstHitOnly.Checked}");
+            LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={chkFirstHitOnly.Checked}, 図形内検索={searchShapes}");
     
             // 結果グリッドをクリア
             if (isRealTimeDisplay)
@@ -1184,7 +1202,7 @@ namespace SimpleExcelGrep
                                 LogMessage($"ファイル処理: {filePath}");
                                 LogMessage($"ファイル処理開始: {filePath}");
                                 // ファイル拡張子によって処理を分ける
-                                string extension = Path.GetExtension(filePath).ToLower();
+                                string extension = System.IO.Path.GetExtension(filePath).ToLower();
                                 List<SearchResult> fileResults = new List<SearchResult>();
 
                                 if (extension == ".xlsx")
@@ -1192,7 +1210,7 @@ namespace SimpleExcelGrep
                                     // .xlsx ファイルを処理
                                     fileResults = SearchInXlsxFileParallel(
                                         filePath, keyword, useRegex, regex, pendingResults, 
-                                        isRealTimeDisplay, firstHitOnly, cancellationToken);
+                                        isRealTimeDisplay, firstHitOnly, searchShapes, cancellationToken);
                             
                                     LogMessage($"ファイル処理完了: {filePath}, 見つかった結果: {fileResults.Count}件");
                             
@@ -1272,7 +1290,8 @@ namespace SimpleExcelGrep
             Regex regex,
             System.Collections.Concurrent.ConcurrentQueue<SearchResult> pendingResults,
             bool isRealTimeDisplay,
-            bool firstHitOnly, // 追加: 最初のヒットのみフラグ
+            bool firstHitOnly,
+            bool searchShapes,
             CancellationToken cancellationToken)
         {
             List<SearchResult> results = new List<SearchResult>();
@@ -1442,5 +1461,100 @@ namespace SimpleExcelGrep
                 lblStatus.Text = message;
             }
         }
+
+        // 図形内テキスト取得の実験 >>
+        private void button1_Click ( object sender, EventArgs e )
+        {
+            try
+            {
+                string filePath = @"C:\_git\Public\.NET\SimpleExcelGrep\testdata\test.xlsx"; // 対象のExcelファイルパス
+                string searchText = "HOGE"; // 検索する文字列
+
+                ExcelShapeTextFinder.FindTextInShapes(filePath, searchText);
+            }
+            catch ( Exception ex )
+            {
+                MessageBox.Show( $"エラー: {ex.Message}" );
+            }
+            finally
+            {
+            }
+        }
+        // 図形内テキスト取得の実験 <<
     }
+
+    // 図形内テキスト取得の実験 >>
+    public class ExcelShapeTextFinder
+    {
+        public static void FindTextInShapes(string filePath, string searchText)
+        {
+            using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+            {
+                WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
+                if (workbookPart == null) return;
+
+                foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
+                {
+                    DrawingsPart drawingsPart = worksheetPart.DrawingsPart;
+                    if (drawingsPart != null)
+                    {
+                        // Xdr (TwoCellAnchor) や Wps (Shape) など、図形の種類によって構造が異なる場合があります。
+                        // ここでは一般的なShape内のテキストを想定します。
+
+                        // TwoCellAnchor は図形の位置などを定義します。
+                        foreach (var twoCellAnchor in drawingsPart.WorksheetDrawing.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.TwoCellAnchor>())
+                        {
+                            // Shape要素を取得
+                            var shape = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().FirstOrDefault();
+                            if (shape != null && shape.TextBody != null)
+                            {
+                                foreach (var paragraph in shape.TextBody.Elements<Paragraph>())
+                                {
+                                    foreach (var run in paragraph.Elements<DocumentFormat.OpenXml.Drawing.Run>())
+                                    {
+                                        var text = run.Text;
+                                        if (text != null && text.InnerText.Contains(searchText))
+                                        {
+                                            // ここで一致した図形に対する処理を記述
+                                            // 例: 図形のIDや位置、テキストなどを出力
+                                            System.Console.WriteLine($"Found '{searchText}' in a shape on worksheet: {worksheetPart.Uri}");
+                                            // 必要であれば、図形の詳細情報（位置など）も取得できます。
+                                            // 例: fromRow = twoCellAnchor.FromMarker.RowId.InnerText;
+                                            //     fromCol = twoCellAnchor.FromMarker.ColumnId.InnerText;
+                                        }
+                                    }
+                                }
+                            }
+
+                            //// GraphicFrame 内のテキストも考慮する場合 (例: SmartArt やグラフ内のテキストボックスなど)
+                            //var graphicFrame = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GraphicFrame>().FirstOrDefault();
+                            //if (graphicFrame != null)
+                            //{
+                            //    // GraphicFrame内のテキスト構造はさらに複雑になることがあります。
+                            //    // a:graphicData/a:txBody/a:p/a:r/a:t のような階層を辿る必要があります。
+                            //    var graphicData = graphicFrame.Graphic?.GraphicData;
+                            //    if (graphicData != null)
+                            //    {
+                            //        // ここでは簡略化のため、テキストボディ内の段落とランを直接探すようなイメージです。
+                            //        // 実際には、より詳細な要素の探索が必要になる場合があります。
+                            //        foreach (var p in graphicData.Descendants<Paragraph>())
+                            //        {
+                            //            foreach (var r in p.Elements<DocumentFormat.OpenXml.Drawing.Run>())
+                            //            {
+                            //                var t = r.Text;
+                            //                if (t != null && t.InnerText.Contains(searchText))
+                            //                {
+                            //                    System.Console.WriteLine($"Found '{searchText}' in a graphic frame on worksheet: {worksheetPart.Uri}");
+                            //                }
+                            //            }
+                            //        }
+                            //    }
+                            //}
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // 図形内テキスト取得の実験 <<
 }

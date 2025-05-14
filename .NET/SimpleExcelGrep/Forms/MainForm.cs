@@ -27,19 +27,22 @@ namespace SimpleExcelGrep.Forms
         private bool _isLoading = false;
         private List<SearchResult> _searchResults = new List<SearchResult>();
 
+        private System.Windows.Forms.Timer _uiTimer;
+
         public MainForm()
         {
             InitializeComponent();
-            
+    
             // サービスの初期化
             _logService = new LogService(lblStatus);
             _settingsService = new SettingsService(_logService);
             _excelSearchService = new ExcelSearchService(_logService);
             _excelInteropService = new ExcelInteropService(_logService);
-            
+            _uiTimer = null;
+    
             // イベントハンドラの登録
             RegisterEventHandlers();
-            
+    
             // UIの初期設定
             InitializeUI();
         }
@@ -263,7 +266,7 @@ namespace SimpleExcelGrep.Forms
                     try
                     {
                         _logService.LogMessage($"正規表現を使用: {cmbKeyword.Text}");
-                        regex = new Regex(cmbKeyword.Text, RegexOptions.Compiled | RegexOptions.IgnoreCase); // 大文字小文字を区別しないオプションを追加
+                        regex = new Regex(cmbKeyword.Text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
                     }
                     catch (Exception ex)
                     {
@@ -279,70 +282,94 @@ namespace SimpleExcelGrep.Forms
                 bool firstHitOnly = chkFirstHitOnly.Checked;
                 bool searchShapes = chkSearchShapes.Checked;
                 int maxParallelism = (int)nudParallelism.Value;
-                
+        
                 _logService.LogMessage($"リアルタイム表示: {isRealTimeDisplay}, 最初のヒットのみ: {firstHitOnly}, 図形内検索: {searchShapes}, 並列数: {maxParallelism}");
 
                 // 検索結果をキューで受け取るための準備
                 var pendingResults = new ConcurrentQueue<SearchResult>();
 
-                using (var uiTimer = new System.Windows.Forms.Timer { Interval = 100 })
+                // タイマーを作成して開始（クラスフィールドを使用）
+                _uiTimer = new System.Windows.Forms.Timer { Interval = 100 };
+                var uiUpdateEvent = new AutoResetEvent(false);
+
+                // UI更新のためのタイマー処理を設定
+                StartResultUpdateTimer(_uiTimer, pendingResults, isRealTimeDisplay, uiUpdateEvent);
+                _logService.LogMessage($"StartResultUpdateTimer呼び出し後: タイマーの状態={_uiTimer.Enabled}");
+
+                try
                 {
-                    var uiUpdateEvent = new AutoResetEvent(false);
-
-                    // UI更新のためのタイマー処理を設定
-                    StartResultUpdateTimer(uiTimer, pendingResults, isRealTimeDisplay, uiUpdateEvent);
-
-                    try
+                    // 検索を実行
+                    _searchResults = await _excelSearchService.SearchExcelFilesAsync(
+                        cmbFolderPath.Text,
+                        cmbKeyword.Text,
+                        chkRegex.Checked,
+                        regex,
+                        ignoreKeywords,
+                        isRealTimeDisplay,
+                        searchShapes,
+                        firstHitOnly,
+                        maxParallelism,
+                        pendingResults,
+                        UpdateStatus,
+                        _cancellationTokenSource.Token);
+    
+                    // リアルタイム表示でも非リアルタイム表示でも、最終結果を確実に表示する
+                    _logService.LogMessage($"最終結果をまとめて表示: {_searchResults.Count}件");
+                    DisplaySearchResults(_searchResults);
+    
+                    // 一度実行されていることを確認するために追加の処理実行
+                    _logService.LogMessage($"pendingResultsキューの残り: {pendingResults.Count}件");
+                    List<SearchResult> remainingResults = new List<SearchResult>();
+                    while (pendingResults.TryDequeue(out SearchResult result))
                     {
-                        // 検索を実行
-                        _searchResults = await _excelSearchService.SearchExcelFilesAsync(
-                            cmbFolderPath.Text,
-                            cmbKeyword.Text,
-                            chkRegex.Checked,
-                            regex,
-                            ignoreKeywords,
-                            isRealTimeDisplay,
-                            searchShapes,
-                            firstHitOnly,
-                            maxParallelism,
-                            pendingResults,
-                            UpdateStatus,
-                            _cancellationTokenSource.Token);
-
-                        // リアルタイム表示がOFFの場合に、結果をまとめて表示
-                        if (!isRealTimeDisplay)
-                        {
-                            _logService.LogMessage($"最終結果をまとめて表示: {_searchResults.Count}件");
-                            DisplaySearchResults(_searchResults);
-                        }
-
-                        UpdateStatus($"検索完了: {_searchResults.Count} 件見つかりました");
+                        remainingResults.Add(result);
                     }
-                    catch (OperationCanceledException)
+                    if (remainingResults.Count > 0)
                     {
-                        UpdateStatus($"検索は中止されました: {_searchResults.Count} 件見つかりました");
-
-                        // キャンセル時は現在までの結果を表示
-                        if (!isRealTimeDisplay)
+                        _logService.LogMessage($"キューから{remainingResults.Count}件の未処理結果を追加");
+                        foreach (var result in remainingResults)
                         {
-                            DisplaySearchResults(_searchResults);
+                            if (!_searchResults.Contains(result))
+                            {
+                                _searchResults.Add(result);
+                            }
                         }
+                        // 結果を再表示
+                        DisplaySearchResults(_searchResults);
                     }
-                    catch (Exception ex)
-                    {
-                        _logService.LogMessage($"検索中にエラーが発生しました: {ex.Message}");
-                        MessageBox.Show($"検索中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        UpdateStatus("エラーが発生しました");
+    
+                    UpdateStatus($"検索完了: {_searchResults.Count} 件見つかりました");
+                }
+                catch (OperationCanceledException)
+                {
+                    UpdateStatus($"検索は中止されました: {_searchResults.Count} 件見つかりました");
 
-                        // エラー時は現在までの結果を表示
-                        if (!isRealTimeDisplay)
-                        {
-                            DisplaySearchResults(_searchResults);
-                        }
-                    }
-                    finally
+                    // キャンセル時は現在までの結果を表示
+                    if (!isRealTimeDisplay)
                     {
-                        uiTimer.Stop();
+                        DisplaySearchResults(_searchResults);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logService.LogMessage($"検索中にエラーが発生しました: {ex.Message}");
+                    MessageBox.Show($"検索中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    UpdateStatus("エラーが発生しました");
+
+                    // エラー時は現在までの結果を表示
+                    if (!isRealTimeDisplay)
+                    {
+                        DisplaySearchResults(_searchResults);
+                    }
+                }
+                finally
+                {
+                    // タイマーを停止して破棄
+                    if (_uiTimer != null)
+                    {
+                        _uiTimer.Stop();
+                        _uiTimer.Dispose();
+                        _uiTimer = null;
                         _logService.LogMessage("UIタイマーを停止しました。");
                     }
                 }
@@ -363,17 +390,22 @@ namespace SimpleExcelGrep.Forms
             {
                 int batchSize = 0;
                 const int MaxUpdatesPerTick = 100;
-                
+                List<SearchResult> tempResults = new List<SearchResult>();
+        
                 while (batchSize < MaxUpdatesPerTick && pendingResults.TryDequeue(out SearchResult result))
                 {
                     _searchResults.Add(result);
-                    
-                    if (isRealTimeDisplay)
+                    tempResults.Add(result);
+                    batchSize++;
+                }
+        
+                if (isRealTimeDisplay && tempResults.Count > 0)
+                {
+                    _logService.LogMessage($"UIタイマーTick: {tempResults.Count}件の結果を追加");
+                    foreach (var result in tempResults)
                     {
                         AddSearchResult(result);
                     }
-                    
-                    batchSize++;
                 }
             };
 
@@ -621,26 +653,36 @@ namespace SimpleExcelGrep.Forms
         /// </summary>
         private void DisplaySearchResults(List<SearchResult> results)
         {
-            if (this.InvokeRequired)
+            try
             {
-                _logService.LogMessage($"DisplaySearchResults: UIスレッドへの呼び出しが必要です。結果件数={results.Count}");
-                this.Invoke(new Action(() => DisplaySearchResults(results)));
-                return;
+                if (this.InvokeRequired)
+                {
+                    _logService.LogMessage($"DisplaySearchResults: UIスレッドへの呼び出しが必要です。結果件数={results.Count}");
+                    this.Invoke(new Action(() => DisplaySearchResults(results)));
+                    return;
+                }
+
+                _logService.LogMessage($"DisplaySearchResults: グリッドをクリアして結果を表示します。件数={results.Count}");
+
+                // 結果グリッドをクリア
+                grdResults.Rows.Clear();
+
+                // 結果をグリッドに表示
+                foreach (var result in results)
+                {
+                    string fileName = Path.GetFileName(result.FilePath);
+                    grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
+                }
+
+                // UIの更新を強制
+                grdResults.Refresh();
+
+                _logService.LogMessage($"グリッドに {results.Count} 件の結果を表示しました");
             }
-
-            _logService.LogMessage($"DisplaySearchResults: グリッドをクリアして結果を表示します。件数={results.Count}");
-
-            // 結果グリッドをクリア
-            grdResults.Rows.Clear();
-
-            // 結果をグリッドに表示
-            foreach (var result in results)
+            catch (Exception ex)
             {
-                string fileName = Path.GetFileName(result.FilePath);
-                grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
+                _logService.LogMessage($"DisplaySearchResults エラー: {ex.Message}");
             }
-
-            _logService.LogMessage($"グリッドに {results.Count} 件の結果を表示しました");
         }
 
         /// <summary>
@@ -648,19 +690,33 @@ namespace SimpleExcelGrep.Forms
         /// </summary>
         private void AddSearchResult(SearchResult result)
         {
-            if (this.InvokeRequired)
+            try
             {
-                this.Invoke(new Action(() => AddSearchResult(result)));
-                return;
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action(() => AddSearchResult(result)));
+                    return;
+                }
+
+                string fileName = Path.GetFileName(result.FilePath);
+        
+                // デバッグ情報を追加
+                _logService.LogMessage($"結果追加: {fileName}, シート={result.SheetName}, セル={result.CellPosition}");
+        
+                int rowIndex = grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
+
+                // 最新の行にスクロール
+                if (grdResults.Rows.Count > 0)
+                {
+                    grdResults.FirstDisplayedScrollingRowIndex = grdResults.Rows.Count - 1;
+                }
+        
+                // UIの更新を強制
+                grdResults.Refresh();
             }
-
-            string fileName = Path.GetFileName(result.FilePath);
-            grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
-
-            // 最新の行にスクロール
-            if (grdResults.Rows.Count > 0)
+            catch (Exception ex)
             {
-                grdResults.FirstDisplayedScrollingRowIndex = grdResults.Rows.Count - 1;
+                _logService.LogMessage($"AddSearchResult エラー: {ex.Message}");
             }
         }
 

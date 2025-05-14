@@ -51,7 +51,6 @@ namespace SimpleExcelGrep
             this.lblKeyword = new System.Windows.Forms.Label();
             this.cmbFolderPath = new System.Windows.Forms.ComboBox();
             this.grdResults = new System.Windows.Forms.DataGridView();
-            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -288,23 +287,13 @@ namespace SimpleExcelGrep
             this.grdResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.grdResults.Size = new System.Drawing.Size(824, 229);
             this.grdResults.TabIndex = 30;
-            // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(514, 149);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 48;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
-            this.Controls.Add(this.button1);
             this.Controls.Add(this.btnStartSearch);
             this.Controls.Add(this.btnCancelSearch);
             this.Controls.Add(this.chkRealTimeDisplay);
@@ -359,6 +348,5 @@ namespace SimpleExcelGrep
         private System.Windows.Forms.Label lblKeyword;
         private System.Windows.Forms.ComboBox cmbFolderPath;
         private System.Windows.Forms.DataGridView grdResults;
-        private System.Windows.Forms.Button button1;
     }
 }

@@ -34,7 +34,7 @@ namespace SimpleExcelGrep.Forms
             InitializeComponent();
     
             // サービスの初期化
-            _logService = new LogService(lblStatus);
+            _logService = new LogService(lblStatus, false);
             _settingsService = new SettingsService(_logService);
             _excelSearchService = new ExcelSearchService(_logService);
             _excelInteropService = new ExcelInteropService(_logService);

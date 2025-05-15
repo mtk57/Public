@@ -51,6 +51,8 @@ namespace SimpleExcelGrep.Services
                 else
                 {
                     _logger.LogMessage("設定ファイルが見つかりません");
+                    // デフォルト値を設定ファイルに保存
+                    SaveSettings(settings);
                 }
             }
             catch (Exception ex)
@@ -72,10 +74,11 @@ namespace SimpleExcelGrep.Services
             try
             {
                 // DataContractJsonSerializerを使用してJSON保存
-                using (FileStream fs = new FileStream(_settingsFilePath, FileMode.Create))
+                using (MemoryStream ms = new MemoryStream())
                 {
                     DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Settings));
-                    serializer.WriteObject(fs, settings);
+                    serializer.WriteObject(ms, settings);
+                    File.WriteAllBytes(_settingsFilePath, ms.ToArray());
                 }
 
                 _logger.LogMessage("設定の保存が成功しました");
@@ -121,12 +124,12 @@ namespace SimpleExcelGrep.Services
         public List<string> CreateHistoryListFromComboBox(ComboBox comboBox)
         {
             List<string> history = new List<string>();
-            
+
             if (!string.IsNullOrEmpty(comboBox.Text))
             {
                 history.Add(comboBox.Text);
             }
-            
+
             foreach (var item in comboBox.Items)
             {
                 string value = item.ToString();
@@ -135,7 +138,7 @@ namespace SimpleExcelGrep.Services
                     history.Add(value);
                 }
             }
-            
+
             return history;
         }
     }

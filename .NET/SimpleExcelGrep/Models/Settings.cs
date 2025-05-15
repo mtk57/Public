@@ -42,5 +42,8 @@ namespace SimpleExcelGrep.Models
 
         [DataMember]
         public bool SearchShapes { get; set; } = false; // 図形内の文字列を検索するかどうか
+
+        [DataMember]
+        public double IgnoreFileSizeMB { get; set; } = 0; // 無視するファイルサイズ (MB単位)
     }
 }

@@ -43,19 +43,22 @@ namespace SimpleExcelGrep.Services
             bool searchShapes,
             bool firstHitOnly,
             int maxParallelism,
+            double ignoreFileSizeMB, // 追加
             ConcurrentQueue<SearchResult> resultQueue,
             Action<string> statusUpdateCallback,
             CancellationToken cancellationToken)
         {
             _logger.LogMessage($"SearchExcelFilesAsync 開始: フォルダ={folderPath}");
-            _logger.LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}");
+            _logger.LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
 
             List<SearchResult> results = new List<SearchResult>();
-            
+
             try
             {
-                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", SearchOption.AllDirectories).ToArray();
-                _logger.LogMessage($"{excelFiles.Length} 個のExcelファイル(.xlsx)が見つかりました");
+                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", SearchOption.AllDirectories)
+                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", SearchOption.AllDirectories))
+                                          .ToArray();
+                _logger.LogMessage($"{excelFiles.Length} 個のExcelファイル(.xlsx, .xlsm)が見つかりました");
 
                 int totalFiles = excelFiles.Length;
                 int processedFiles = 0;
@@ -71,7 +74,7 @@ namespace SimpleExcelGrep.Services
                     Parallel.ForEach(excelFiles, parallelOptions, (filePath) =>
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        
+
                         // 無視キーワードチェック
                         if (ignoreKeywords.Any(k => filePath.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0))
                         {
@@ -80,26 +83,49 @@ namespace SimpleExcelGrep.Services
                             statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
                             return;
                         }
-                        
+
+                        // ファイルサイズチェック
+                        if (ignoreFileSizeMB > 0)
+                        {
+                            try
+                            {
+                                FileInfo fileInfo = new FileInfo(filePath);
+                                double fileSizeMB = (double)fileInfo.Length / (1024 * 1024);
+                                if (fileSizeMB > ignoreFileSizeMB)
+                                {
+                                    _logger.LogMessage($"ファイルサイズ超過のためスキップ ({fileSizeMB:F2}MB > {ignoreFileSizeMB}MB): {filePath}");
+                                    Interlocked.Increment(ref processedFiles);
+                                    statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                                    return;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogMessage($"ファイルサイズ取得エラー: {filePath}, {ex.Message}");
+                                // エラーの場合は処理を続行（スキップしない）
+                            }
+                        }
+
+
                         try
                         {
                             _logger.LogMessage($"ファイル処理開始: {filePath}");
                             string extension = Path.GetExtension(filePath).ToLowerInvariant();
-                            
-                            if (extension == ".xlsx")
+
+                            if (extension == ".xlsx" || extension == ".xlsm")
                             {
                                 List<SearchResult> fileResults = SearchInXlsxFile(
                                     filePath, keyword, useRegex, regex, resultQueue,
                                     firstHitOnly, searchShapes, cancellationToken);
-                                
+
                                 _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
-                                
+
                                 lock (results)
                                 {
                                     results.AddRange(fileResults);
                                 }
                             }
-                            
+
                             Interlocked.Increment(ref processedFiles);
                             statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
                         }
@@ -133,7 +159,7 @@ namespace SimpleExcelGrep.Services
         }
 
         /// <summary>
-        /// 単一のXLSXファイルを検索
+        /// 単一のXLSX/XLSMファイルを検索
         /// </summary>
         private List<SearchResult> SearchInXlsxFile(
             string filePath,
@@ -155,7 +181,7 @@ namespace SimpleExcelGrep.Services
                     WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
                     if (workbookPart == null) return localResults;
 
-                    SharedStringTablePart sharedStringTablePart = workbookPart.SharedStringTablePart;
+                    SharedStringTablePart sharedStringTablePart = workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
                     SharedStringTable sharedStringTable = sharedStringTablePart?.SharedStringTable;
 
                     foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
@@ -164,22 +190,22 @@ namespace SimpleExcelGrep.Services
                         if (firstHitOnly && foundHitInFile) break;
 
                         string sheetName = GetSheetName(workbookPart, worksheetPart) ?? "不明なシート";
-                        
+
                         // 1. セル内のテキスト検索
                         foundHitInFile = SearchInCells(
-                            filePath, sheetName, worksheetPart, sharedStringTable, 
-                            keyword, useRegex, regex, pendingResults, 
+                            filePath, sheetName, worksheetPart, sharedStringTable,
+                            keyword, useRegex, regex, pendingResults,
                             localResults, firstHitOnly, foundHitInFile, cancellationToken);
-                        
+
                         // 2. 図形内のテキスト検索
                         if (searchShapes)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
                             if (firstHitOnly && foundHitInFile) break;
-                            
+
                             foundHitInFile = SearchInShapes(
                                 filePath, sheetName, worksheetPart,
-                                keyword, useRegex, regex, pendingResults, 
+                                keyword, useRegex, regex, pendingResults,
                                 localResults, firstHitOnly, foundHitInFile, cancellationToken);
                         }
                     }
@@ -194,7 +220,7 @@ namespace SimpleExcelGrep.Services
             {
                 _logger.LogMessage($"Excel処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
             }
-            
+
             return localResults;
         }
 
@@ -202,14 +228,14 @@ namespace SimpleExcelGrep.Services
         /// ワークシート内のセルを検索
         /// </summary>
         private bool SearchInCells(
-            string filePath, string sheetName, WorksheetPart worksheetPart, 
-            SharedStringTable sharedStringTable, string keyword, bool useRegex, 
-            Regex regex, ConcurrentQueue<SearchResult> pendingResults, 
-            List<SearchResult> localResults, bool firstHitOnly, 
+            string filePath, string sheetName, WorksheetPart worksheetPart,
+            SharedStringTable sharedStringTable, string keyword, bool useRegex,
+            Regex regex, ConcurrentQueue<SearchResult> pendingResults,
+            List<SearchResult> localResults, bool firstHitOnly,
             bool foundHitInFile, CancellationToken cancellationToken)
         {
             if (worksheetPart.Worksheet == null) return foundHitInFile;
-            
+
             SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
             if (sheetData == null) return foundHitInFile;
 
@@ -217,40 +243,40 @@ namespace SimpleExcelGrep.Services
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (firstHitOnly && foundHitInFile) break;
-                
+
                 foreach (Cell cell in row.Elements<Cell>())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (firstHitOnly && foundHitInFile) break;
-                    
+
                     string cellValue = GetCellValue(cell, sharedStringTable);
                     if (string.IsNullOrEmpty(cellValue)) continue;
-                    
+
                     bool isMatch = useRegex && regex != null ?
                                    regex.IsMatch(cellValue) :
                                    cellValue.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-                    
+
                     if (isMatch)
                     {
                         SearchResult result = new SearchResult
                         {
-                            FilePath = filePath, 
+                            FilePath = filePath,
                             SheetName = sheetName,
-                            CellPosition = GetCellReference(cell), 
+                            CellPosition = GetCellReference(cell),
                             CellValue = cellValue
                         };
-                        
+
                         pendingResults.Enqueue(result);
                         localResults.Add(result);
                         foundHitInFile = true;
-                        
+
                         _logger.LogMessage($"セル内一致: {filePath} - {sheetName} - {result.CellPosition} - '{TruncateString(result.CellValue)}'");
-                        
+
                         if (firstHitOnly) break;
                     }
                 }
             }
-            
+
             return foundHitInFile;
         }
 
@@ -258,9 +284,9 @@ namespace SimpleExcelGrep.Services
         /// ワークシート内の図形を検索
         /// </summary>
         private bool SearchInShapes(
-            string filePath, string sheetName, WorksheetPart worksheetPart, 
+            string filePath, string sheetName, WorksheetPart worksheetPart,
             string keyword, bool useRegex, Regex regex,
-            ConcurrentQueue<SearchResult> pendingResults, List<SearchResult> localResults, 
+            ConcurrentQueue<SearchResult> pendingResults, List<SearchResult> localResults,
             bool firstHitOnly, bool foundHitInFile, CancellationToken cancellationToken)
         {
             DrawingsPart drawingsPart = worksheetPart.DrawingsPart;
@@ -278,26 +304,26 @@ namespace SimpleExcelGrep.Services
                     string shapeText = _shapeTextExtractor.GetTextFromShapeTextBody(shape.TextBody);
                     if (!string.IsNullOrEmpty(shapeText))
                     {
-                        bool isMatch = useRegex && regex != null ? 
-                                      regex.IsMatch(shapeText) : 
+                        bool isMatch = useRegex && regex != null ?
+                                      regex.IsMatch(shapeText) :
                                       shapeText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-                        
+
                         if (isMatch)
                         {
                             SearchResult result = new SearchResult
                             {
-                                FilePath = filePath, 
+                                FilePath = filePath,
                                 SheetName = sheetName,
-                                CellPosition = "図形内", 
+                                CellPosition = "図形内",
                                 CellValue = TruncateString(shapeText)
                             };
-                            
+
                             pendingResults.Enqueue(result);
                             localResults.Add(result);
                             foundHitInFile = true;
-                            
+
                             _logger.LogMessage($"図形内一致 (Shape): {filePath} - {sheetName} - '{result.CellValue}'");
-                            
+
                             if (firstHitOnly) break;
                         }
                     }
@@ -310,32 +336,32 @@ namespace SimpleExcelGrep.Services
                     string frameText = _shapeTextExtractor.GetTextFromGraphicFrame(graphicFrame);
                     if (!string.IsNullOrEmpty(frameText))
                     {
-                        bool isMatch = useRegex && regex != null ? 
-                                      regex.IsMatch(frameText) : 
+                        bool isMatch = useRegex && regex != null ?
+                                      regex.IsMatch(frameText) :
                                       frameText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-                        
+
                         if (isMatch)
                         {
                             SearchResult result = new SearchResult
                             {
-                                FilePath = filePath, 
+                                FilePath = filePath,
                                 SheetName = sheetName,
-                                CellPosition = "図形内 (GF)", 
+                                CellPosition = "図形内 (GF)",
                                 CellValue = TruncateString(frameText)
                             };
-                            
+
                             pendingResults.Enqueue(result);
                             localResults.Add(result);
                             foundHitInFile = true;
-                            
+
                             _logger.LogMessage($"図形内一致 (GraphicFrame): {filePath} - {sheetName} - '{result.CellValue}'");
-                            
+
                             if (firstHitOnly) break;
                         }
                     }
                 }
             }
-            
+
             return foundHitInFile;
         }
 

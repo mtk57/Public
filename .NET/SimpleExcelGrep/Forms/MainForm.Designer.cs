@@ -51,26 +51,30 @@
             this.cmbFolderPath = new System.Windows.Forms.ComboBox();
             this.colCellValue = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.grdResults = new System.Windows.Forms.DataGridView();
+            this.lblIgnoreFileSize = new System.Windows.Forms.Label();
+            this.txtIgnoreFileSizeMB = new System.Windows.Forms.TextBox();
+            this.lblIgnoreFileSizeUnit = new System.Windows.Forms.Label();
+            this.btnLoadTsv = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
             // 
             // btnStartSearch
             // 
-            this.btnStartSearch.Location = new System.Drawing.Point(11, 179);
+            this.btnStartSearch.Location = new System.Drawing.Point(11, 207);
             this.btnStartSearch.Name = "btnStartSearch";
             this.btnStartSearch.Size = new System.Drawing.Size(94, 30);
-            this.btnStartSearch.TabIndex = 61;
+            this.btnStartSearch.TabIndex = 10;
             this.btnStartSearch.Text = "検索開始";
             this.btnStartSearch.UseVisualStyleBackColor = true;
             // 
             // btnCancelSearch
             // 
             this.btnCancelSearch.Enabled = false;
-            this.btnCancelSearch.Location = new System.Drawing.Point(117, 180);
+            this.btnCancelSearch.Location = new System.Drawing.Point(117, 208);
             this.btnCancelSearch.Name = "btnCancelSearch";
             this.btnCancelSearch.Size = new System.Drawing.Size(100, 28);
-            this.btnCancelSearch.TabIndex = 62;
+            this.btnCancelSearch.TabIndex = 11;
             this.btnCancelSearch.Text = "検索中止";
             this.btnCancelSearch.UseVisualStyleBackColor = true;
             // 
@@ -79,27 +83,27 @@
             this.chkRealTimeDisplay.AutoSize = true;
             this.chkRealTimeDisplay.Checked = true;
             this.chkRealTimeDisplay.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkRealTimeDisplay.Location = new System.Drawing.Point(223, 180);
+            this.chkRealTimeDisplay.Location = new System.Drawing.Point(233, 213);
             this.chkRealTimeDisplay.Name = "chkRealTimeDisplay";
-            this.chkRealTimeDisplay.Padding = new System.Windows.Forms.Padding(10, 5, 0, 0);
-            this.chkRealTimeDisplay.Size = new System.Drawing.Size(111, 21);
-            this.chkRealTimeDisplay.TabIndex = 63;
+            this.chkRealTimeDisplay.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
+            this.chkRealTimeDisplay.Size = new System.Drawing.Size(111, 16);
+            this.chkRealTimeDisplay.TabIndex = 12;
             this.chkRealTimeDisplay.Text = "リアルタイム表示";
             this.chkRealTimeDisplay.UseVisualStyleBackColor = true;
             // 
             // lblParallelism
             // 
             this.lblParallelism.AutoSize = true;
-            this.lblParallelism.Location = new System.Drawing.Point(340, 180);
+            this.lblParallelism.Location = new System.Drawing.Point(350, 214);
             this.lblParallelism.Name = "lblParallelism";
-            this.lblParallelism.Padding = new System.Windows.Forms.Padding(10, 5, 0, 0);
-            this.lblParallelism.Size = new System.Drawing.Size(53, 17);
-            this.lblParallelism.TabIndex = 64;
+            this.lblParallelism.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
+            this.lblParallelism.Size = new System.Drawing.Size(46, 12);
+            this.lblParallelism.TabIndex = 13;
             this.lblParallelism.Text = "並列数:";
             // 
             // nudParallelism
             // 
-            this.nudParallelism.Location = new System.Drawing.Point(399, 181);
+            this.nudParallelism.Location = new System.Drawing.Point(402, 212);
             this.nudParallelism.Maximum = new decimal(new int[] {
             32,
             0,
@@ -112,7 +116,7 @@
             0});
             this.nudParallelism.Name = "nudParallelism";
             this.nudParallelism.Size = new System.Drawing.Size(50, 19);
-            this.nudParallelism.TabIndex = 65;
+            this.nudParallelism.TabIndex = 14;
             this.nudParallelism.Value = new decimal(new int[] {
             4,
             0,
@@ -122,41 +126,41 @@
             // chkSearchShapes
             // 
             this.chkSearchShapes.AutoSize = true;
-            this.chkSearchShapes.Location = new System.Drawing.Point(256, 150);
+            this.chkSearchShapes.Location = new System.Drawing.Point(256, 178);
             this.chkSearchShapes.Name = "chkSearchShapes";
             this.chkSearchShapes.Size = new System.Drawing.Size(81, 16);
-            this.chkSearchShapes.TabIndex = 60;
+            this.chkSearchShapes.TabIndex = 9;
             this.chkSearchShapes.Text = "図形も検索";
             this.chkSearchShapes.UseVisualStyleBackColor = true;
             // 
             // chkFirstHitOnly
             // 
             this.chkFirstHitOnly.AutoSize = true;
-            this.chkFirstHitOnly.Location = new System.Drawing.Point(133, 150);
+            this.chkFirstHitOnly.Location = new System.Drawing.Point(133, 178);
             this.chkFirstHitOnly.Name = "chkFirstHitOnly";
             this.chkFirstHitOnly.Size = new System.Drawing.Size(102, 16);
-            this.chkFirstHitOnly.TabIndex = 59;
+            this.chkFirstHitOnly.TabIndex = 8;
             this.chkFirstHitOnly.Text = "最初のヒットのみ";
             this.chkFirstHitOnly.UseVisualStyleBackColor = true;
             // 
             // chkRegex
             // 
             this.chkRegex.AutoSize = true;
-            this.chkRegex.Location = new System.Drawing.Point(13, 150);
+            this.chkRegex.Location = new System.Drawing.Point(13, 178);
             this.chkRegex.Name = "chkRegex";
             this.chkRegex.Size = new System.Drawing.Size(105, 16);
-            this.chkRegex.TabIndex = 58;
+            this.chkRegex.TabIndex = 7;
             this.chkRegex.Text = "正規表現を使用";
             this.chkRegex.UseVisualStyleBackColor = true;
             // 
             // lblIgnoreHint
             // 
             this.lblIgnoreHint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblIgnoreHint.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblIgnoreHint.Font = new System.Drawing.Font("MS UI Gothic", 9F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.lblIgnoreHint.Location = new System.Drawing.Point(741, 95);
             this.lblIgnoreHint.Name = "lblIgnoreHint";
             this.lblIgnoreHint.Size = new System.Drawing.Size(78, 28);
-            this.lblIgnoreHint.TabIndex = 57;
+            this.lblIgnoreHint.TabIndex = 5;
             this.lblIgnoreHint.Text = "カンマ区切り";
             this.lblIgnoreHint.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -168,14 +172,14 @@
             this.cmbIgnoreKeywords.Location = new System.Drawing.Point(107, 100);
             this.cmbIgnoreKeywords.Name = "cmbIgnoreKeywords";
             this.cmbIgnoreKeywords.Size = new System.Drawing.Size(610, 20);
-            this.cmbIgnoreKeywords.TabIndex = 56;
+            this.cmbIgnoreKeywords.TabIndex = 4;
             // 
             // lblIgnore
             // 
             this.lblIgnore.Location = new System.Drawing.Point(11, 95);
             this.lblIgnore.Name = "lblIgnore";
             this.lblIgnore.Size = new System.Drawing.Size(88, 28);
-            this.lblIgnore.TabIndex = 55;
+            this.lblIgnore.TabIndex = 61;
             this.lblIgnore.Text = "無視キーワード:";
             this.lblIgnore.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -211,7 +215,7 @@
             this.cmbKeyword.Location = new System.Drawing.Point(107, 57);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(606, 20);
-            this.cmbKeyword.TabIndex = 54;
+            this.cmbKeyword.TabIndex = 2;
             // 
             // btnSelectFolder
             // 
@@ -219,7 +223,7 @@
             this.btnSelectFolder.Location = new System.Drawing.Point(728, 11);
             this.btnSelectFolder.Name = "btnSelectFolder";
             this.btnSelectFolder.Size = new System.Drawing.Size(57, 22);
-            this.btnSelectFolder.TabIndex = 52;
+            this.btnSelectFolder.TabIndex = 1;
             this.btnSelectFolder.Text = "選択...";
             this.btnSelectFolder.UseVisualStyleBackColor = true;
             // 
@@ -228,16 +232,16 @@
             this.lblFolder.Location = new System.Drawing.Point(10, 9);
             this.lblFolder.Name = "lblFolder";
             this.lblFolder.Size = new System.Drawing.Size(81, 28);
-            this.lblFolder.TabIndex = 51;
+            this.lblFolder.TabIndex = 60;
             this.lblFolder.Text = "フォルダパス:";
             this.lblFolder.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // lblStatus
             // 
-            this.lblStatus.Location = new System.Drawing.Point(9, 217);
+            this.lblStatus.Location = new System.Drawing.Point(10, 242);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(376, 28);
-            this.lblStatus.TabIndex = 49;
+            this.lblStatus.Size = new System.Drawing.Size(442, 28);
+            this.lblStatus.TabIndex = 16;
             this.lblStatus.Text = "準備完了";
             this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -246,7 +250,7 @@
             this.lblKeyword.Location = new System.Drawing.Point(9, 52);
             this.lblKeyword.Name = "lblKeyword";
             this.lblKeyword.Size = new System.Drawing.Size(90, 28);
-            this.lblKeyword.TabIndex = 53;
+            this.lblKeyword.TabIndex = 59;
             this.lblKeyword.Text = "検索キーワード:";
             this.lblKeyword.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -258,7 +262,7 @@
             this.cmbFolderPath.Location = new System.Drawing.Point(107, 13);
             this.cmbFolderPath.Name = "cmbFolderPath";
             this.cmbFolderPath.Size = new System.Drawing.Size(610, 20);
-            this.cmbFolderPath.TabIndex = 50;
+            this.cmbFolderPath.TabIndex = 0;
             // 
             // colCellValue
             // 
@@ -281,18 +285,59 @@
             this.colSheetName,
             this.colCellPosition,
             this.colCellValue});
-            this.grdResults.Location = new System.Drawing.Point(11, 251);
+            this.grdResults.Location = new System.Drawing.Point(11, 278);
             this.grdResults.Name = "grdResults";
             this.grdResults.ReadOnly = true;
+            this.grdResults.RowTemplate.Height = 21;
             this.grdResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.grdResults.Size = new System.Drawing.Size(824, 229);
-            this.grdResults.TabIndex = 48;
+            this.grdResults.Size = new System.Drawing.Size(824, 202);
+            this.grdResults.TabIndex = 17;
+            // 
+            // lblIgnoreFileSize
+            // 
+            this.lblIgnoreFileSize.Location = new System.Drawing.Point(11, 137);
+            this.lblIgnoreFileSize.Name = "lblIgnoreFileSize";
+            this.lblIgnoreFileSize.Size = new System.Drawing.Size(116, 28);
+            this.lblIgnoreFileSize.TabIndex = 62;
+            this.lblIgnoreFileSize.Text = "無視ファイルサイズ:";
+            this.lblIgnoreFileSize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // txtIgnoreFileSizeMB
+            // 
+            this.txtIgnoreFileSizeMB.Location = new System.Drawing.Point(133, 142);
+            this.txtIgnoreFileSizeMB.Name = "txtIgnoreFileSizeMB";
+            this.txtIgnoreFileSizeMB.Size = new System.Drawing.Size(60, 19);
+            this.txtIgnoreFileSizeMB.TabIndex = 5;
+            this.txtIgnoreFileSizeMB.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            // 
+            // lblIgnoreFileSizeUnit
+            // 
+            this.lblIgnoreFileSizeUnit.AutoSize = true;
+            this.lblIgnoreFileSizeUnit.Location = new System.Drawing.Point(199, 145);
+            this.lblIgnoreFileSizeUnit.Name = "lblIgnoreFileSizeUnit";
+            this.lblIgnoreFileSizeUnit.Size = new System.Drawing.Size(31, 12);
+            this.lblIgnoreFileSizeUnit.TabIndex = 6;
+            this.lblIgnoreFileSizeUnit.Text = "(MB)";
+            // 
+            // btnLoadTsv
+            // 
+            this.btnLoadTsv.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnLoadTsv.Location = new System.Drawing.Point(728, 208);
+            this.btnLoadTsv.Name = "btnLoadTsv";
+            this.btnLoadTsv.Size = new System.Drawing.Size(107, 28);
+            this.btnLoadTsv.TabIndex = 15;
+            this.btnLoadTsv.Text = "TSV読み込み";
+            this.btnLoadTsv.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
+            this.Controls.Add(this.btnLoadTsv);
+            this.Controls.Add(this.lblIgnoreFileSizeUnit);
+            this.Controls.Add(this.txtIgnoreFileSizeMB);
+            this.Controls.Add(this.lblIgnoreFileSize);
             this.Controls.Add(this.btnStartSearch);
             this.Controls.Add(this.btnCancelSearch);
             this.Controls.Add(this.chkRealTimeDisplay);
@@ -345,5 +390,9 @@
         private System.Windows.Forms.ComboBox cmbFolderPath;
         private System.Windows.Forms.DataGridViewTextBoxColumn colCellValue;
         private System.Windows.Forms.DataGridView grdResults;
+        private System.Windows.Forms.Label lblIgnoreFileSize;
+        private System.Windows.Forms.TextBox txtIgnoreFileSizeMB;
+        private System.Windows.Forms.Label lblIgnoreFileSizeUnit;
+        private System.Windows.Forms.Button btnLoadTsv;
     }
 }

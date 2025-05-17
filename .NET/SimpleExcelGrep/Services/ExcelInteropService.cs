@@ -52,7 +52,7 @@ namespace SimpleExcelGrep.Services
             }
         }
 
-         /// <summary>
+        /// <summary>
         /// Excel Interopを使用してファイルを開く実装（Late Binding方式）
         /// </summary>
         private bool OpenExcelWithInterop(string filePath, string sheetName, string cellPosition)
@@ -60,7 +60,6 @@ namespace SimpleExcelGrep.Services
             _logger.LogMessage($"OpenExcelWithInterop 開始 (Late Binding方式)");
 
             object excelApp = null;
-            object workbooks = null;
             object workbook = null;
 
             try
@@ -78,17 +77,9 @@ namespace SimpleExcelGrep.Services
                 excelApp = Activator.CreateInstance(excelType);
 
                 // バージョン情報を取得
-                object version = null;
-                try
-                {
-                    version = excelType.InvokeMember("Version",
-                        BindingFlags.GetProperty, null, excelApp, null);
-                    _logger.LogMessage($"Excel バージョン: {version}");
-                }
-                finally
-                {
-                    SafeReleaseCom(version);
-                }
+                object version = excelType.InvokeMember("Version",
+                    BindingFlags.GetProperty, null, excelApp, null);
+                _logger.LogMessage($"Excel バージョン: {version}");
 
                 // Visible プロパティを設定
                 excelType.InvokeMember("Visible",
@@ -98,7 +89,7 @@ namespace SimpleExcelGrep.Services
                 _logger.LogMessage($"ファイルを開いています: {filePath}");
 
                 // Workbooks コレクションを取得
-                workbooks = excelType.InvokeMember("Workbooks",
+                object workbooks = excelType.InvokeMember("Workbooks",
                     BindingFlags.GetProperty, null, excelApp, null);
 
                 // Open メソッドを呼び出す
@@ -154,31 +145,17 @@ namespace SimpleExcelGrep.Services
                 // リソースの解放
                 try
                 {
-                    SafeReleaseCom(workbook);
-                    SafeReleaseCom(workbooks);
+                    if (workbook != null)
+                    {
+                        _logger.LogMessage("COMオブジェクト (workbook) を解放します");
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+                    }
 
                     if (excelApp != null)
                     {
-                        try
-                        {
-                            // 明示的にアプリケーションを終了（他のインスタンスに影響しないように）
-                            Type excelType = excelApp.GetType();
-                            excelType.InvokeMember("Quit",
-                                BindingFlags.InvokeMethod, null, excelApp, null);
-                            _logger.LogMessage("Excelアプリケーションを終了しました");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogMessage($"Excel終了エラー: {ex.Message}");
-                        }
-
-                        SafeReleaseCom(excelApp);
+                        _logger.LogMessage("COMオブジェクト (excelApp) を解放します");
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
                     }
-
-                    // GCを強制的に実行して、残りのCOMオブジェクトを確実に解放
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    GC.Collect();
                 }
                 catch (Exception ex)
                 {
@@ -192,48 +169,30 @@ namespace SimpleExcelGrep.Services
         /// </summary>
         private bool TryActivateSheet(object workbook, string sheetName, string cellPosition)
         {
-            object sheets = null;
-            object targetSheet = null;
-            Type sheetsType = null;
-            object count = null;
-    
             try
             {
                 Type workbookType = workbook.GetType();
-                sheets = workbookType.InvokeMember("Sheets",
+                object sheets = workbookType.InvokeMember("Sheets",
                     BindingFlags.GetProperty, null, workbook, null);
-                sheetsType = sheets.GetType();
+                Type sheetsType = sheets.GetType();
 
                 // シート名一覧をログに出力
                 _logger.LogMessage("利用可能なシート:");
-                count = sheetsType.InvokeMember("Count",
+                object count = sheetsType.InvokeMember("Count",
                     BindingFlags.GetProperty, null, sheets, null);
-        
+                
                 for (int i = 1; i <= (int)count; i++)
                 {
-                    object sheet = null;
-                    object name = null;
-            
-                    try
-                    {
-                        sheet = sheetsType.InvokeMember("Item",
-                            BindingFlags.GetProperty, null, sheets, new object[] { i });
-                
-                        Type sheetType = sheet.GetType();
-                        name = sheetType.InvokeMember("Name",
-                            BindingFlags.GetProperty, null, sheet, null);
-                
-                        _logger.LogMessage($" - [{name}]");
-                    }
-                    finally
-                    {
-                        SafeReleaseCom(sheet);
-                        SafeReleaseCom(name);
-                    }
+                    object sheet = sheetsType.InvokeMember("Item",
+                        BindingFlags.GetProperty, null, sheets, new object[] { i });
+                    object name = sheet.GetType().InvokeMember("Name",
+                        BindingFlags.GetProperty, null, sheet, null);
+                    _logger.LogMessage($" - [{name}]");
                 }
 
                 // 指定されたシート名のシートを取得
                 _logger.LogMessage($"シート '{sheetName}' を検索中...");
+                object targetSheet = null;
 
                 try
                 {
@@ -260,10 +219,9 @@ namespace SimpleExcelGrep.Services
                     if (!string.IsNullOrEmpty(cellPosition) && 
                         cellPosition != "図形内" && cellPosition != "図形内 (GF)")
                     {
-                        bool result = TrySelectCell(targetSheet, cellPosition);
-                        return result;
+                        return TrySelectCell(targetSheet, cellPosition);
                     }
-            
+                    
                     return true;
                 }
                 else
@@ -277,35 +235,27 @@ namespace SimpleExcelGrep.Services
                 _logger.LogMessage($"シートのアクティブ化エラー: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                SafeReleaseCom(targetSheet);
-                SafeReleaseCom(sheets);
-                SafeReleaseCom(count);
-            }
         }
 
-         /// <summary>
+        /// <summary>
         /// 指定したシート上のセルを選択
         /// </summary>
         private bool TrySelectCell(object sheet, string cellPosition)
         {
             _logger.LogMessage($"セル {cellPosition} を選択します");
-            object range = null;
-    
             try
             {
                 Type sheetType = sheet.GetType();
-        
+                
                 // Rangeを取得
-                range = sheetType.InvokeMember("Range",
+                object range = sheetType.InvokeMember("Range",
                     BindingFlags.GetProperty, null, sheet, new object[] { cellPosition });
 
                 // セルを選択
                 Type rangeType = range.GetType();
                 rangeType.InvokeMember("Select",
                     BindingFlags.InvokeMethod, null, range, null);
-        
+                
                 _logger.LogMessage("セルの選択に成功しました");
                 return true;
             }
@@ -313,29 +263,6 @@ namespace SimpleExcelGrep.Services
             {
                 _logger.LogMessage($"セル選択エラー: {ex.Message}");
                 return false;
-            }
-            finally
-            {
-                SafeReleaseCom(range);
-            }
-        }
-
-        /// <summary>
-        /// COMオブジェクトを安全に解放するヘルパーメソッド（最適化版）
-        /// </summary>
-        private void SafeReleaseCom(object obj)
-        {
-            if (obj != null)
-            {
-                try
-                {
-                    // IsComObject チェックを省略して直接解放を試みる（速度向上）
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
-                }
-                catch (Exception)
-                {
-                    // エラーログを省略（速度優先）
-                }
             }
         }
     }

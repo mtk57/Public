@@ -15,12 +15,6 @@ namespace SimpleExcelGrep.Services
         private readonly bool _isLoggingEnabled;
         private readonly Label _statusLabel;
 
-        // クラスのフィールドとして追加
-        private DateTime? _lastMemoryLogTime = null;
-
-        // フィールドを追加
-        private System.Threading.Timer _memoryMonitorTimer;
-
         /// <summary>
         /// LogServiceのコンストラクタ
         /// </summary>
@@ -85,47 +79,22 @@ namespace SimpleExcelGrep.Services
                 Type excelType = Type.GetTypeFromProgID("Excel.Application");
                 if (excelType != null)
                 {
-                    object excelApp = null;
-                    object version = null;
-                    object build = null;
-                    
-                    try
-                    {
-                        excelApp = Activator.CreateInstance(excelType);
+                    object excelApp = Activator.CreateInstance(excelType);
 
-                        // バージョン情報を取得
-                        version = excelType.InvokeMember("Version",
-                            System.Reflection.BindingFlags.GetProperty,
-                            null, excelApp, null);
-                        LogMessage($"Excel バージョン: {version}");
+                    // バージョン情報を取得
+                    object version = excelType.InvokeMember("Version",
+                        System.Reflection.BindingFlags.GetProperty,
+                        null, excelApp, null);
+                    LogMessage($"Excel バージョン: {version}");
 
-                        // ビルド情報を取得
-                        build = excelType.InvokeMember("Build",
-                            System.Reflection.BindingFlags.GetProperty,
-                            null, excelApp, null);
-                        LogMessage($"Excel ビルド: {build}");
-                    }
-                    finally
-                    {
-                        // 修正: COMオブジェクトの解放
-                        if (build != null && System.Runtime.InteropServices.Marshal.IsComObject(build))
-                        {
-                            System.Runtime.InteropServices.Marshal.ReleaseComObject(build);
-                            build = null;
-                        }
-                        
-                        if (version != null && System.Runtime.InteropServices.Marshal.IsComObject(version))
-                        {
-                            System.Runtime.InteropServices.Marshal.ReleaseComObject(version);
-                            version = null;
-                        }
-                        
-                        if (excelApp != null)
-                        {
-                            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
-                            excelApp = null;
-                        }
-                    }
+                    // ビルド情報を取得
+                    object build = excelType.InvokeMember("Build",
+                        System.Reflection.BindingFlags.GetProperty,
+                        null, excelApp, null);
+                    LogMessage($"Excel ビルド: {build}");
+
+                    // COMの早期解放
+                    try { System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp); } catch { }
                 }
                 else
                 {
@@ -154,120 +123,6 @@ namespace SimpleExcelGrep.Services
             else
             {
                 _statusLabel.Text = message;
-            }
-        }
-
-        /// <summary>
-        /// 現在のメモリ使用量をログに記録（最適化版）
-        /// </summary>
-        public void LogMemoryUsage(string contextInfo)
-        {
-            // 処理速度優先のため、メモリログは制限する
-            // 静的変数で最後のログ出力時間を記録
-            if (_lastMemoryLogTime != null && (DateTime.Now - _lastMemoryLogTime.Value).TotalSeconds < 30)
-            {
-                // 前回のログから30秒以内なら出力をスキップ
-                return;
-            }
-    
-            _lastMemoryLogTime = DateTime.Now;
-    
-            // プロセスの総メモリ使用量のみ取得（軽量）
-            long processMemory = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64;
-            double processMemoryMB = processMemory / (1024.0 * 1024.0);
-    
-            // ログに記録
-            LogMessage($"メモリ使用量 ({contextInfo}): 総メモリ={processMemoryMB:F2}MB");
-        }
-
-        /// <summary>
-        /// メモリリークの可能性がある場所を診断
-        /// </summary>
-        public void DiagnoseMemoryLeak(string methodName, Action action)
-        {
-            LogMessage($"メモリリーク診断開始: {methodName}");
-    
-            // 実行前のメモリ使用量を取得
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-            long memoryBefore = GC.GetTotalMemory(true);
-    
-            try
-            {
-                // テスト対象のコードを実行
-                action();
-            }
-            finally
-            {
-                // 実行後のメモリ使用量を取得
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
-                long memoryAfter = GC.GetTotalMemory(true);
-        
-                // 差分を計算
-                double diffMB = (memoryAfter - memoryBefore) / (1024.0 * 1024.0);
-        
-                if (diffMB > 0.5) // 0.5MB以上の差がある場合は警告
-                {
-                    LogMessage($"警告: {methodName} で {diffMB:F2}MB のメモリが解放されていない可能性があります。");
-                }
-                else
-                {
-                    LogMessage($"メモリリーク診断完了: {methodName}, 差分={diffMB:F2}MB");
-                }
-            }
-        }
-
-        /// <summary>
-        /// アプリケーションのメモリ使用状況をモニタリング
-        /// </summary>
-        public void StartMemoryMonitoring(int intervalSeconds = 30)
-        {
-            if (_memoryMonitorTimer != null) return;
-    
-            _memoryMonitorTimer = new System.Threading.Timer(state =>
-            {
-                try
-                {
-                    long memoryUsage = Process.GetCurrentProcess().WorkingSet64;
-                    double memoryUsageMB = memoryUsage / (1024.0 * 1024.0);
-            
-                    // メモリ使用量を記録
-                    LogMessage($"メモリモニタリング: 現在の使用量 {memoryUsageMB:F2}MB");
-            
-                    // メモリ使用量が閾値を超えた場合に強制GC
-                    if (memoryUsageMB > 4000) // 4GB以上で強制GC
-                    {
-                        LogMessage($"メモリ使用量が高すぎる ({memoryUsageMB:F2}MB)。強制クリーンアップを実行");
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForPendingFinalizers();
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                
-                        // クリーンアップ後のメモリ使用量
-                        long afterMemory = Process.GetCurrentProcess().WorkingSet64;
-                        double afterMemoryMB = afterMemory / (1024.0 * 1024.0);
-                        LogMessage($"クリーンアップ後のメモリ使用量: {afterMemoryMB:F2}MB (削減: {memoryUsageMB - afterMemoryMB:F2}MB)");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogMessage($"メモリモニタリングエラー: {ex.Message}");
-                }
-            }, null, TimeSpan.FromSeconds(intervalSeconds), TimeSpan.FromSeconds(intervalSeconds));
-        }
-
-        /// <summary>
-        /// メモリモニタリングを停止
-        /// </summary>
-        public void StopMemoryMonitoring()
-        {
-            if (_memoryMonitorTimer != null)
-            {
-                _memoryMonitorTimer.Dispose();
-                _memoryMonitorTimer = null;
-                LogMessage("メモリモニタリングを停止しました");
             }
         }
     }

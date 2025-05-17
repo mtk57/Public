@@ -200,7 +200,8 @@ namespace SimpleExcelGrep.Services
             object sheets = null;
             object targetSheet = null;
             Type sheetsType = null;
-            
+            object count = null; // count 変数をここで宣言
+    
             try
             {
                 Type workbookType = workbook.GetType();
@@ -210,23 +211,23 @@ namespace SimpleExcelGrep.Services
 
                 // シート名一覧をログに出力
                 _logger.LogMessage("利用可能なシート:");
-                object count = sheetsType.InvokeMember("Count",
+                count = sheetsType.InvokeMember("Count",
                     BindingFlags.GetProperty, null, sheets, null);
-                
+        
                 for (int i = 1; i <= (int)count; i++)
                 {
                     object sheet = null;
                     object name = null;
-                    
+            
                     try
                     {
                         sheet = sheetsType.InvokeMember("Item",
                             BindingFlags.GetProperty, null, sheets, new object[] { i });
-                        
+                
                         Type sheetType = sheet.GetType();
                         name = sheetType.InvokeMember("Name",
                             BindingFlags.GetProperty, null, sheet, null);
-                            
+                        
                         _logger.LogMessage($" - [{name}]");
                     }
                     finally
@@ -237,7 +238,7 @@ namespace SimpleExcelGrep.Services
                             System.Runtime.InteropServices.Marshal.ReleaseComObject(sheet);
                             sheet = null;
                         }
-                        
+                
                         // 修正: name オブジェクトも解放する
                         if (name != null && System.Runtime.InteropServices.Marshal.IsComObject(name))
                         {
@@ -278,7 +279,7 @@ namespace SimpleExcelGrep.Services
                         bool result = TrySelectCell(targetSheet, cellPosition);
                         return result;
                     }
-                    
+            
                     return true;
                 }
                 else
@@ -300,13 +301,13 @@ namespace SimpleExcelGrep.Services
                     System.Runtime.InteropServices.Marshal.ReleaseComObject(targetSheet);
                     targetSheet = null;
                 }
-                
+        
                 if (sheets != null)
                 {
                     System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
                     sheets = null;
                 }
-                
+        
                 // 修正: count オブジェクトも解放する
                 if (count != null && System.Runtime.InteropServices.Marshal.IsComObject(count))
                 {

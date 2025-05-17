@@ -52,7 +52,7 @@ namespace SimpleExcelGrep.Services
             }
         }
 
-        /// <summary>
+         /// <summary>
         /// Excel Interopを使用してファイルを開く実装（Late Binding方式）
         /// </summary>
         private bool OpenExcelWithInterop(string filePath, string sheetName, string cellPosition)
@@ -78,9 +78,17 @@ namespace SimpleExcelGrep.Services
                 excelApp = Activator.CreateInstance(excelType);
 
                 // バージョン情報を取得
-                object version = excelType.InvokeMember("Version",
-                    BindingFlags.GetProperty, null, excelApp, null);
-                _logger.LogMessage($"Excel バージョン: {version}");
+                object version = null;
+                try
+                {
+                    version = excelType.InvokeMember("Version",
+                        BindingFlags.GetProperty, null, excelApp, null);
+                    _logger.LogMessage($"Excel バージョン: {version}");
+                }
+                finally
+                {
+                    SafeReleaseCom(version);
+                }
 
                 // Visible プロパティを設定
                 excelType.InvokeMember("Visible",
@@ -146,19 +154,8 @@ namespace SimpleExcelGrep.Services
                 // リソースの解放
                 try
                 {
-                    if (workbook != null)
-                    {
-                        _logger.LogMessage("COMオブジェクト (workbook) を解放します");
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
-                        workbook = null;
-                    }
-
-                    if (workbooks != null)
-                    {
-                        _logger.LogMessage("COMオブジェクト (workbooks) を解放します");
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks);
-                        workbooks = null;
-                    }
+                    SafeReleaseCom(workbook);
+                    SafeReleaseCom(workbooks);
 
                     if (excelApp != null)
                     {
@@ -175,9 +172,7 @@ namespace SimpleExcelGrep.Services
                             _logger.LogMessage($"Excel終了エラー: {ex.Message}");
                         }
 
-                        _logger.LogMessage("COMオブジェクト (excelApp) を解放します");
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
-                        excelApp = null;
+                        SafeReleaseCom(excelApp);
                     }
 
                     // GCを強制的に実行して、残りのCOMオブジェクトを確実に解放
@@ -200,7 +195,7 @@ namespace SimpleExcelGrep.Services
             object sheets = null;
             object targetSheet = null;
             Type sheetsType = null;
-            object count = null; // count 変数をここで宣言
+            object count = null;
     
             try
             {
@@ -227,24 +222,13 @@ namespace SimpleExcelGrep.Services
                         Type sheetType = sheet.GetType();
                         name = sheetType.InvokeMember("Name",
                             BindingFlags.GetProperty, null, sheet, null);
-                        
+                
                         _logger.LogMessage($" - [{name}]");
                     }
                     finally
                     {
-                        // 繰り返し処理の中で取得したCOMオブジェクトを解放
-                        if (sheet != null)
-                        {
-                            System.Runtime.InteropServices.Marshal.ReleaseComObject(sheet);
-                            sheet = null;
-                        }
-                
-                        // 修正: name オブジェクトも解放する
-                        if (name != null && System.Runtime.InteropServices.Marshal.IsComObject(name))
-                        {
-                            System.Runtime.InteropServices.Marshal.ReleaseComObject(name);
-                            name = null;
-                        }
+                        SafeReleaseCom(sheet);
+                        SafeReleaseCom(name);
                     }
                 }
 
@@ -295,40 +279,24 @@ namespace SimpleExcelGrep.Services
             }
             finally
             {
-                // すべてのCOMオブジェクトを解放
-                if (targetSheet != null)
-                {
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(targetSheet);
-                    targetSheet = null;
-                }
-        
-                if (sheets != null)
-                {
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
-                    sheets = null;
-                }
-        
-                // 修正: count オブジェクトも解放する
-                if (count != null && System.Runtime.InteropServices.Marshal.IsComObject(count))
-                {
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(count);
-                    count = null;
-                }
+                SafeReleaseCom(targetSheet);
+                SafeReleaseCom(sheets);
+                SafeReleaseCom(count);
             }
         }
 
-        /// <summary>
+         /// <summary>
         /// 指定したシート上のセルを選択
         /// </summary>
         private bool TrySelectCell(object sheet, string cellPosition)
         {
             _logger.LogMessage($"セル {cellPosition} を選択します");
             object range = null;
-            
+    
             try
             {
                 Type sheetType = sheet.GetType();
-                
+        
                 // Rangeを取得
                 range = sheetType.InvokeMember("Range",
                     BindingFlags.GetProperty, null, sheet, new object[] { cellPosition });
@@ -337,7 +305,7 @@ namespace SimpleExcelGrep.Services
                 Type rangeType = range.GetType();
                 rangeType.InvokeMember("Select",
                     BindingFlags.InvokeMethod, null, range, null);
-                
+        
                 _logger.LogMessage("セルの選択に成功しました");
                 return true;
             }
@@ -348,11 +316,27 @@ namespace SimpleExcelGrep.Services
             }
             finally
             {
-                // Rangeオブジェクトを解放
-                if (range != null)
+                SafeReleaseCom(range);
+            }
+        }
+
+        /// <summary>
+        /// COMオブジェクトを安全に解放するヘルパーメソッド
+        /// </summary>
+        private void SafeReleaseCom(object obj)
+        {
+            if (obj != null)
+            {
+                try
                 {
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(range);
-                    range = null;
+                    if (System.Runtime.InteropServices.Marshal.IsComObject(obj))
+                    {
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogMessage($"COMオブジェクト解放エラー: {ex.Message}");
                 }
             }
         }

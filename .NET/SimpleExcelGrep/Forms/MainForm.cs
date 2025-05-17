@@ -462,34 +462,76 @@ namespace SimpleExcelGrep.Forms
             }
         }
 
-        /// <summary>
+         /// <summary>
         /// 結果更新用タイマーを開始
         /// </summary>
         private void StartResultUpdateTimer(System.Windows.Forms.Timer timer, ConcurrentQueue<SearchResult> pendingResults, bool isRealTimeDisplay, AutoResetEvent uiUpdateEvent)
         {
+            if (timer == null) return;
+    
             // イベントハンドラを参照変数に格納
             _timerTickHandler = (s, e) =>
             {
+                if (this.IsDisposed || !this.IsHandleCreated) return;
+        
                 int batchSize = 0;
                 const int MaxUpdatesPerTick = 100;
                 List<SearchResult> tempResults = new List<SearchResult>();
 
+                // 一時リストにキューからデータを移動
                 while (batchSize < MaxUpdatesPerTick && pendingResults.TryDequeue(out SearchResult result))
                 {
-                    // _searchResults への追加は最後に行うか、DisplaySearchResultsで行う
-                    // ここではリアルタイム表示用のキューから取得したものを一時リストに保持
                     tempResults.Add(result);
                     batchSize++;
                 }
 
                 if (isRealTimeDisplay && tempResults.Count > 0)
                 {
-                    _logService.LogMessage($"UIタイマーTick: {tempResults.Count}件の結果を追加");
-                    foreach (var result in tempResults)
+                    try
                     {
-                        _searchResults.Add(result); // 検索結果のメインリストにも追加
-                        AddSearchResultToGrid(result); // グリッドに1件ずつ追加
+                        _logService.LogMessage($"UIタイマーTick: {tempResults.Count}件の結果を追加");
+                
+                        // UIスレッドで実行するためInvokeを使用
+                        if (this.InvokeRequired)
+                        {
+                            this.Invoke(new Action(() => 
+                            {
+                                foreach (var result in tempResults)
+                                {
+                                    _searchResults.Add(result); // 検索結果のメインリストに追加
+                                    AddSearchResultToGrid(result); // グリッドに1件ずつ追加
+                                }
+                            }));
+                        }
+                        else
+                        {
+                            foreach (var result in tempResults)
+                            {
+                                _searchResults.Add(result);
+                                AddSearchResultToGrid(result);
+                            }
+                        }
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        // フォームが閉じられている場合は無視
+                        timer.Stop();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // ハンドルが無効な場合も無視
+                        timer.Stop();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logService.LogMessage($"結果追加エラー: {ex.Message}");
+                    }
+                }
+        
+                // メモリ使用量が増加しすぎた場合、強制的にGCを実行
+                if (_searchResults.Count % 1000 == 0)
+                {
+                    _logService.LogMemoryUsage("結果追加時");
                 }
             };
 
@@ -706,7 +748,7 @@ namespace SimpleExcelGrep.Forms
             }
         }
 
-        /// <summary>
+         /// <summary>
         /// フォーム終了時の処理
         /// </summary>
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -718,14 +760,14 @@ namespace SimpleExcelGrep.Forms
                 _logService.LogMessage("実行中の検索をキャンセルします");
                 _cancellationTokenSource.Cancel();
         
-                // 修正: キャンセル時に少し待機してから終了
+                // キャンセル時に少し待機してから終了
                 Thread.Sleep(100);
             }
 
             // タイマーのクリーンアップ
             CleanupTimer();
     
-            // 修正: CancellationTokenSource の解放を追加
+            // CancellationTokenSource の解放
             if (_cancellationTokenSource != null)
             {
                 _cancellationTokenSource.Dispose();
@@ -734,7 +776,10 @@ namespace SimpleExcelGrep.Forms
 
             SaveCurrentSettings();
     
-            // 修正: 終了時に強制的にメモリを解放
+            // イベントハンドラの解除
+            UnregisterEventHandlers();
+    
+            // 終了時に強制的にメモリを解放
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
@@ -1082,6 +1127,61 @@ namespace SimpleExcelGrep.Forms
                 return unescaped.Replace("\"\"", "\"");
             }
             return field;
+        }
+
+         /// <summary>
+        /// イベントハンドラを解除
+        /// </summary>
+        private void UnregisterEventHandlers()
+        {
+            _logService.LogMessage("イベントハンドラを解除");
+    
+            try
+            {
+                // フォームイベント
+                this.FormClosing -= MainForm_FormClosing;
+                this.Load -= MainForm_Load;
+        
+                // ボタンイベント
+                btnSelectFolder.Click -= BtnSelectFolder_Click;
+                btnStartSearch.Click -= BtnStartSearch_Click;
+                btnCancelSearch.Click -= BtnCancelSearch_Click;
+                btnLoadTsv.Click -= BtnLoadTsv_Click;
+        
+                // データグリッドイベント
+                grdResults.DoubleClick -= GrdResults_DoubleClick;
+                grdResults.KeyDown -= GrdResults_KeyDown;
+        
+                // キーボードイベント
+                cmbKeyword.KeyDown -= CmbKeyword_KeyDown;
+        
+                // チェックボックスとNumericUpDownのイベント
+                // 匿名メソッドなのでイベント登録時に保存されたハンドラ参照が必要
+                // 匿名メソッドを解除するには元の登録時のラムダ式への参照を保持する必要がある
+        
+                // コンテキストメニューの削除
+                if (grdResults.ContextMenuStrip != null)
+                {
+                    // イベントハンドラを解除
+                    foreach (var item in grdResults.ContextMenuStrip.Items)
+                    {
+                        if (item is ToolStripMenuItem menuItem)
+                        {
+                            // 具体的なイベントハンドラ参照があれば解除する
+                            // ここではメニューアイテムのClickイベントは匿名メソッドなので
+                            // 保存されていない限り解除は困難
+                        }
+                    }
+            
+                    grdResults.ContextMenuStrip.Items.Clear();
+                    grdResults.ContextMenuStrip.Dispose();
+                    grdResults.ContextMenuStrip = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logService.LogMessage($"イベントハンドラ解除エラー: {ex.Message}");
+            }
         }
     }
 }

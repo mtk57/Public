@@ -150,5 +150,78 @@ namespace SimpleExcelGrep.Services
                 _statusLabel.Text = message;
             }
         }
+
+        /// <summary>
+        /// 現在のメモリ使用量をログに記録
+        /// </summary>
+        public void LogMemoryUsage(string contextInfo)
+        {
+            // GC前のメモリ使用量を取得
+            long memoryBeforeCollect = GC.GetTotalMemory(false);
+            double memoryBeforeMB = memoryBeforeCollect / (1024.0 * 1024.0);
+    
+            // GCを実行
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+    
+            // GC後のメモリ使用量を取得
+            long memoryAfterCollect = GC.GetTotalMemory(true);
+            double memoryAfterMB = memoryAfterCollect / (1024.0 * 1024.0);
+    
+            // プロセスの総メモリ使用量を取得 (より正確)
+            long processMemory = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64;
+            double processMemoryMB = processMemory / (1024.0 * 1024.0);
+    
+            // ログに記録
+            LogMessage($"メモリ使用量 ({contextInfo}): GC前={memoryBeforeMB:F2}MB, " +
+                       $"GC後={memoryAfterMB:F2}MB, プロセス合計={processMemoryMB:F2}MB");
+    
+            // メモリリークの可能性がある場合に警告
+            if (memoryAfterMB > 200 || (memoryBeforeMB - memoryAfterMB) > 50)
+            {
+                LogMessage($"警告: メモリ使用量が高い、または解放されていないメモリがある可能性があります。GC差分={(memoryBeforeMB - memoryAfterMB):F2}MB");
+            }
+        }
+
+        /// <summary>
+        /// メモリリークの可能性がある場所を診断
+        /// </summary>
+        public void DiagnoseMemoryLeak(string methodName, Action action)
+        {
+            LogMessage($"メモリリーク診断開始: {methodName}");
+    
+            // 実行前のメモリ使用量を取得
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long memoryBefore = GC.GetTotalMemory(true);
+    
+            try
+            {
+                // テスト対象のコードを実行
+                action();
+            }
+            finally
+            {
+                // 実行後のメモリ使用量を取得
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                long memoryAfter = GC.GetTotalMemory(true);
+        
+                // 差分を計算
+                double diffMB = (memoryAfter - memoryBefore) / (1024.0 * 1024.0);
+        
+                if (diffMB > 0.5) // 0.5MB以上の差がある場合は警告
+                {
+                    LogMessage($"警告: {methodName} で {diffMB:F2}MB のメモリが解放されていない可能性があります。");
+                }
+                else
+                {
+                    LogMessage($"メモリリーク診断完了: {methodName}, 差分={diffMB:F2}MB");
+                }
+            }
+        }
     }
 }

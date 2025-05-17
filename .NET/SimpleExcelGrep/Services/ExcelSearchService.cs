@@ -31,7 +31,7 @@ namespace SimpleExcelGrep.Services
             _shapeTextExtractor = new ShapeTextExtractor();
         }
 
-        /// <summary>
+         /// <summary>
         /// 指定されたフォルダ内のExcelファイルを検索
         /// </summary>
         public async Task<List<SearchResult>> SearchExcelFilesAsync(
@@ -53,7 +53,6 @@ namespace SimpleExcelGrep.Services
             _logger.LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
 
             List<SearchResult> results = new List<SearchResult>();
-            // スレッドセーフな結果リスト
             ConcurrentBag<SearchResult> concurrentResults = new ConcurrentBag<SearchResult>();
 
             try
@@ -67,115 +66,132 @@ namespace SimpleExcelGrep.Services
                 int processedFiles = 0;
                 int processedBatch = 0;
 
+                // ファイルの総サイズを計算して最適なバッチサイズを決定
+                int optimalBatchSize = CalculateOptimalBatchSize(excelFiles, ignoreFileSizeMB, maxParallelism);
+                _logger.LogMessage($"最適なバッチサイズを計算: {optimalBatchSize}");
+
                 var parallelOptions = new ParallelOptions
                 {
                     MaxDegreeOfParallelism = maxParallelism,
                     CancellationToken = cancellationToken
                 };
 
-                await Task.Run(() =>
+                await Task.Run(async () =>
                 {
-                    // Parallel.ForEach を使用して並列処理
-                    Parallel.ForEach(excelFiles, parallelOptions, (filePath) =>
+                    // ファイルをバッチで処理
+                    for (int batchStart = 0; batchStart < excelFiles.Length; batchStart += optimalBatchSize)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-
-                        // 無視キーワードチェック
-                        if (ignoreKeywords.Any(k => filePath.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0))
+                
+                        // 現在のバッチのファイル取得
+                        string[] batchFiles = excelFiles.Skip(batchStart)
+                                                      .Take(Math.Min(optimalBatchSize, excelFiles.Length - batchStart))
+                                                      .ToArray();
+                
+                        _logger.LogMessage($"バッチ処理開始: {batchStart + 1}～{batchStart + batchFiles.Length}/{totalFiles}");
+                
+                        // バッチ内でParallel.ForEachを使用
+                        Parallel.ForEach(batchFiles, parallelOptions, (filePath) =>
                         {
-                            _logger.LogMessage($"無視キーワードが含まれるため処理をスキップ: {filePath}");
-                            Interlocked.Increment(ref processedFiles);
-                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
-                            return;
-                        }
+                            cancellationToken.ThrowIfCancellationRequested();
 
-                        // ファイルサイズチェック
-                        if (ignoreFileSizeMB > 0)
-                        {
+                            // 無視キーワードチェック
+                            if (ignoreKeywords.Any(k => filePath.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0))
+                            {
+                                _logger.LogMessage($"無視キーワードが含まれるため処理をスキップ: {filePath}");
+                                Interlocked.Increment(ref processedFiles);
+                                statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
+                                return;
+                            }
+
+                            // ファイルサイズチェック
+                            if (ignoreFileSizeMB > 0)
+                            {
+                                try
+                                {
+                                    FileInfo fileInfo = new FileInfo(filePath);
+                                    double fileSizeMB = (double)fileInfo.Length / (1024 * 1024);
+                                    if (fileSizeMB > ignoreFileSizeMB)
+                                    {
+                                        _logger.LogMessage($"ファイルサイズ超過のためスキップ ({fileSizeMB:F2}MB > {ignoreFileSizeMB}MB): {filePath}");
+                                        Interlocked.Increment(ref processedFiles);
+                                        statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
+                                        return;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogMessage($"ファイルサイズ取得エラー: {filePath}, {ex.Message}");
+                                }
+                            }
+
                             try
                             {
-                                FileInfo fileInfo = new FileInfo(filePath);
-                                double fileSizeMB = (double)fileInfo.Length / (1024 * 1024);
-                                if (fileSizeMB > ignoreFileSizeMB)
+                                _logger.LogMessage($"ファイル処理開始: {filePath}");
+                                string extension = Path.GetExtension(filePath).ToLowerInvariant();
+
+                                if (extension == ".xlsx" || extension == ".xlsm")
                                 {
-                                    _logger.LogMessage($"ファイルサイズ超過のためスキップ ({fileSizeMB:F2}MB > {ignoreFileSizeMB}MB): {filePath}");
-                                    Interlocked.Increment(ref processedFiles);
-                                    statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
-                                    return;
+                                    List<SearchResult> fileResults = SearchInXlsxFile(
+                                        filePath, keyword, useRegex, regex, resultQueue,
+                                        firstHitOnly, searchShapes, cancellationToken);
+
+                                    _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
+
+                                    foreach (var result in fileResults)
+                                    {
+                                        concurrentResults.Add(result);
+                                    }
                                 }
+
+                                int filesProcessed = Interlocked.Increment(ref processedFiles);
+                                statusUpdateCallback($"処理中... {filesProcessed}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                _logger.LogMessage($"ファイル処理がキャンセルされました: {filePath}");
+                                throw;
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogMessage($"ファイルサイズ取得エラー: {filePath}, {ex.Message}");
-                                // エラーの場合は処理を続行（スキップしない）
+                                _logger.LogMessage($"ファイル処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
+                                Interlocked.Increment(ref processedFiles);
+                                statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
                             }
-                        }
-
-                        try
-                        {
-                            _logger.LogMessage($"ファイル処理開始: {filePath}");
-                            string extension = Path.GetExtension(filePath).ToLowerInvariant();
-
-                            if (extension == ".xlsx" || extension == ".xlsm")
-                            {
-                                List<SearchResult> fileResults = SearchInXlsxFile(
-                                    filePath, keyword, useRegex, regex, resultQueue,
-                                    firstHitOnly, searchShapes, cancellationToken);
-
-                                _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
-
-                                // 修正: スレッドセーフなConcurrentBagにまず追加
-                                foreach (var result in fileResults)
-                                {
-                                    concurrentResults.Add(result);
-                                }
-                            }
-
-                            int filesProcessed = Interlocked.Increment(ref processedFiles);
-                            statusUpdateCallback($"処理中... {filesProcessed}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
-                            
-                            // 修正: 一定間隔でメモリクリーンアップを実行
-                            if (Interlocked.Increment(ref processedBatch) % MEMORY_CLEANUP_INTERVAL == 0)
-                            {
-                                _logger.LogMessage("定期的なメモリクリーンアップを実行");
-                                GC.Collect();
-                                GC.WaitForPendingFinalizers();
-                            }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            _logger.LogMessage($"ファイル処理がキャンセルされました: {filePath}");
-                            throw;
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogMessage($"ファイル処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
-                            Interlocked.Increment(ref processedFiles);
-                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
-                        }
-                    });
-                    
-                    // 修正: 並列処理完了後にConcurrentBagから普通のリストに移す
+                        });
+                
+                        // バッチ処理終了後にメモリクリーンアップ
+                        _logger.LogMessage("バッチ処理後のメモリクリーンアップを実行");
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        GC.Collect();
+                
+                        // メモリ使用量を記録
+                        _logger.LogMemoryUsage("バッチ処理後");
+                
+                        // バッチ処理しながら進捗を示すためにショートディレイ
+                        await Task.Delay(50, cancellationToken);
+                    }
+            
+                    // 並列処理完了後にConcurrentBagから普通のリストに移す
                     results.AddRange(concurrentResults);
                 }, cancellationToken);
             }
             catch (OperationCanceledException)
             {
                 _logger.LogMessage("SearchExcelFilesAsync内のタスクがキャンセルされました。");
-                // 修正: キャンセル時にも結果を保存
                 results.AddRange(concurrentResults);
                 throw;
             }
             catch (Exception ex)
             {
                 _logger.LogMessage($"SearchExcelFilesAsync内のタスクで予期せぬエラー: {ex.Message}");
-                // 修正: エラー時にも結果を保存
                 results.AddRange(concurrentResults);
                 throw;
             }
             finally
             {
-                // 修正: 明示的にメモリクリーンアップ
+                // 明示的にメモリクリーンアップ
                 _logger.LogMessage("SearchExcelFilesAsync 終了時のメモリクリーンアップ実行");
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
@@ -186,7 +202,7 @@ namespace SimpleExcelGrep.Services
             return results;
         }
 
-        /// <summary>
+         /// <summary>
         /// 単一のXLSX/XLSMファイルを検索
         /// </summary>
         private List<SearchResult> SearchInXlsxFile(
@@ -236,10 +252,12 @@ namespace SimpleExcelGrep.Services
                                 keyword, useRegex, regex, pendingResults,
                                 localResults, firstHitOnly, foundHitInFile, cancellationToken);
                         }
+                
+                        // 各WorksheetPartの詳細なクリーンアップ
+                        CleanupWorksheetPart(worksheetPart);
                     }
-                    
-                    // 修正: workbookPart に関連するオブジェクトを解放
-                    // workbookPart 自体は using ブロックで自動解放されるが、子オブジェクトの一部は明示的に解放する必要がある
+            
+                    // workbookPart に関連するオブジェクトの解放
                     if (sharedStringTable != null && sharedStringTable.HasChildren)
                     {
                         foreach (var child in sharedStringTable.Elements())
@@ -248,6 +266,9 @@ namespace SimpleExcelGrep.Services
                         }
                         sharedStringTable.RemoveAllChildren();
                     }
+            
+                    // ワークブック関連の追加クリーンアップ
+                    CleanupWorkbookPart(workbookPart);
                 }
             }
             catch (OperationCanceledException)
@@ -455,6 +476,203 @@ namespace SimpleExcelGrep.Services
         {
             if (string.IsNullOrEmpty(value)) return value;
             return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+        }
+
+        /// <summary>
+        /// WorksheetPartのリソースを解放
+        /// </summary>
+        private void CleanupWorksheetPart(WorksheetPart worksheetPart)
+        {
+            if (worksheetPart == null) return;
+
+            try
+            {
+                // シートデータのクリーンアップ
+                if (worksheetPart.Worksheet != null)
+                {
+                    var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+                    if (sheetData != null && sheetData.HasChildren)
+                    {
+                        foreach (var row in sheetData.Elements<Row>())
+                        {
+                            if (row.HasChildren)
+                            {
+                                foreach (var cell in row.Elements<Cell>())
+                                {
+                                    if (cell.CellValue != null)
+                                    {
+                                        cell.CellValue.RemoveAllChildren();
+                                    }
+                                    cell.RemoveAllChildren();
+                                }
+                                row.RemoveAllChildren();
+                            }
+                        }
+                        sheetData.RemoveAllChildren();
+                    }
+            
+                    // WorksheetのOtherChildren (Hyperlinks, MergedCells, etc.)
+                    foreach (var element in worksheetPart.Worksheet.ChildElements)
+                    {
+                        if (element.HasChildren)
+                        {
+                            element.RemoveAllChildren();
+                        }
+                    }
+                }
+        
+                // 図形データのクリーンアップ
+                if (worksheetPart.DrawingsPart != null && worksheetPart.DrawingsPart.WorksheetDrawing != null)
+                {
+                    var drawing = worksheetPart.DrawingsPart.WorksheetDrawing;
+            
+                    // TwoCellAnchorの子要素をクリーンアップ
+                    foreach (var anchor in drawing.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.TwoCellAnchor>())
+                    {
+                        if (anchor.HasChildren)
+                        {
+                            var shapes = anchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().ToList();
+                            foreach (var shape in shapes)
+                            {
+                                if (shape.TextBody != null && shape.TextBody.HasChildren)
+                                {
+                                    shape.TextBody.RemoveAllChildren();
+                                }
+                                shape.RemoveAllChildren();
+                            }
+                    
+                            var graphicFrames = anchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GraphicFrame>().ToList();
+                            foreach (var frame in graphicFrames)
+                            {
+                                if (frame.Graphic != null && frame.Graphic.GraphicData != null)
+                                {
+                                    frame.Graphic.GraphicData.RemoveAllChildren();
+                                }
+                                if (frame.Graphic != null)
+                                {
+                                    frame.Graphic.RemoveAllChildren();
+                                }
+                                frame.RemoveAllChildren();
+                            }
+                    
+                            anchor.RemoveAllChildren();
+                        }
+                    }
+            
+                    drawing.RemoveAllChildren();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogMessage($"WorksheetPartクリーンアップエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// WorkbookPartのリソースを解放
+        /// </summary>
+        private void CleanupWorkbookPart(WorkbookPart workbookPart)
+        {
+            if (workbookPart == null) return;
+
+            try
+            {
+                // Sheets, DefinedNames, BookViewsのクリーンアップ
+                if (workbookPart.Workbook != null)
+                {
+                    var sheets = workbookPart.Workbook.GetFirstChild<Sheets>();
+                    if (sheets != null && sheets.HasChildren)
+                    {
+                        sheets.RemoveAllChildren();
+                    }
+            
+                    var definedNames = workbookPart.Workbook.GetFirstChild<DefinedNames>();
+                    if (definedNames != null && definedNames.HasChildren)
+                    {
+                        definedNames.RemoveAllChildren();
+                    }
+            
+                    var bookViews = workbookPart.Workbook.GetFirstChild<BookViews>();
+                    if (bookViews != null && bookViews.HasChildren)
+                    {
+                        bookViews.RemoveAllChildren();
+                    }
+                }
+        
+                // Styles, Theme, Calculation Propertiesなどの追加部品もクリーンアップ
+                if (workbookPart.WorkbookStylesPart != null)
+                {
+                    var styles = workbookPart.WorkbookStylesPart.Stylesheet;
+                    if (styles != null)
+                    {
+                        // スタイル情報をクリア
+                        styles.RemoveAllChildren();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogMessage($"WorkbookPartクリーンアップエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 最適なバッチサイズを計算
+        /// </summary>
+        private int CalculateOptimalBatchSize(string[] files, double ignoreFileSizeMB, int maxParallelism)
+        {
+            // ファイル数が少ない場合はバッチ分けしない
+            if (files.Length <= maxParallelism * 2)
+            {
+                return files.Length;
+            }
+
+            try
+            {
+                // サンプルファイルのサイズを取得してバッチサイズを推定
+                long totalSampleSize = 0;
+                int sampleCount = Math.Min(10, files.Length);
+        
+                for (int i = 0; i < sampleCount; i++)
+                {
+                    try
+                    {
+                        FileInfo fileInfo = new FileInfo(files[i]);
+                        totalSampleSize += fileInfo.Length;
+                    }
+                    catch
+                    {
+                        // ファイルアクセスエラーは無視
+                    }
+                }
+        
+                // 平均ファイルサイズ (バイト)
+                double avgFileSizeMB = (double)totalSampleSize / (sampleCount * 1024 * 1024);
+        
+                // 使用可能メモリを考慮したバッチサイズ (目安: 1ファイルあたり平均サイズの5倍のメモリを使用すると仮定)
+                long availableMemory = GC.GetTotalMemory(false);
+                double memoryPerFileMB = Math.Max(1, avgFileSizeMB * 5); // 最低1MBと仮定
+        
+                // 利用可能メモリの80%を使用すると仮定
+                double usableMemoryMB = Math.Max(100, availableMemory / (1024 * 1024) * 0.8);
+        
+                // バッチサイズを計算 (メモリベース)
+                int memoryBasedBatchSize = (int)Math.Max(1, Math.Min(100, usableMemoryMB / memoryPerFileMB));
+        
+                // 並列処理数ベースのバッチサイズ (通常は並列数の2-5倍がバランスが良い)
+                int threadBasedBatchSize = maxParallelism * 3;
+        
+                // 最終的なバッチサイズを決定（小さい方を選択）
+                int batchSize = Math.Min(memoryBasedBatchSize, threadBasedBatchSize);
+        
+                // 極端に小さいか大きい値にならないよう制限
+                return Math.Max(5, Math.Min(50, batchSize));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogMessage($"バッチサイズ計算エラー: {ex.Message}");
+                return maxParallelism * 2; // デフォルト値
+            }
         }
     }
 }

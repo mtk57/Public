@@ -15,6 +15,9 @@ namespace SimpleExcelGrep.Services
         private readonly bool _isLoggingEnabled;
         private readonly Label _statusLabel;
 
+        // クラスのフィールドとして追加
+        private DateTime? _lastMemoryLogTime = null;
+
         /// <summary>
         /// LogServiceのコンストラクタ
         /// </summary>
@@ -152,36 +155,26 @@ namespace SimpleExcelGrep.Services
         }
 
         /// <summary>
-        /// 現在のメモリ使用量をログに記録
+        /// 現在のメモリ使用量をログに記録（最適化版）
         /// </summary>
         public void LogMemoryUsage(string contextInfo)
         {
-            // GC前のメモリ使用量を取得
-            long memoryBeforeCollect = GC.GetTotalMemory(false);
-            double memoryBeforeMB = memoryBeforeCollect / (1024.0 * 1024.0);
+            // 処理速度優先のため、メモリログは制限する
+            // 静的変数で最後のログ出力時間を記録
+            if (_lastMemoryLogTime != null && (DateTime.Now - _lastMemoryLogTime.Value).TotalSeconds < 30)
+            {
+                // 前回のログから30秒以内なら出力をスキップ
+                return;
+            }
     
-            // GCを実行
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
+            _lastMemoryLogTime = DateTime.Now;
     
-            // GC後のメモリ使用量を取得
-            long memoryAfterCollect = GC.GetTotalMemory(true);
-            double memoryAfterMB = memoryAfterCollect / (1024.0 * 1024.0);
-    
-            // プロセスの総メモリ使用量を取得 (より正確)
+            // プロセスの総メモリ使用量のみ取得（軽量）
             long processMemory = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64;
             double processMemoryMB = processMemory / (1024.0 * 1024.0);
     
             // ログに記録
-            LogMessage($"メモリ使用量 ({contextInfo}): GC前={memoryBeforeMB:F2}MB, " +
-                       $"GC後={memoryAfterMB:F2}MB, プロセス合計={processMemoryMB:F2}MB");
-    
-            // メモリリークの可能性がある場合に警告
-            if (memoryAfterMB > 200 || (memoryBeforeMB - memoryAfterMB) > 50)
-            {
-                LogMessage($"警告: メモリ使用量が高い、または解放されていないメモリがある可能性があります。GC差分={(memoryBeforeMB - memoryAfterMB):F2}MB");
-            }
+            LogMessage($"メモリ使用量 ({contextInfo}): 総メモリ={processMemoryMB:F2}MB");
         }
 
         /// <summary>

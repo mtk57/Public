@@ -321,7 +321,7 @@ namespace SimpleExcelGrep.Services
         }
 
         /// <summary>
-        /// COMオブジェクトを安全に解放するヘルパーメソッド
+        /// COMオブジェクトを安全に解放するヘルパーメソッド（最適化版）
         /// </summary>
         private void SafeReleaseCom(object obj)
         {
@@ -329,14 +329,12 @@ namespace SimpleExcelGrep.Services
             {
                 try
                 {
-                    if (System.Runtime.InteropServices.Marshal.IsComObject(obj))
-                    {
-                        System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
-                    }
+                    // IsComObject チェックを省略して直接解放を試みる（速度向上）
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _logger.LogMessage($"COMオブジェクト解放エラー: {ex.Message}");
+                    // エラーログを省略（速度優先）
                 }
             }
         }

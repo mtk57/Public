@@ -256,7 +256,12 @@ namespace SimpleExcelGrep.Forms
             // UIを検索中の状態に変更
             SetSearchingState(true);
 
-            // キャンセルトークンを作成
+            // 既存のCancellationTokenSourceを破棄し、新しいものを作成
+            if (_cancellationTokenSource != null)
+            {
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = null;
+            }
             _cancellationTokenSource = new CancellationTokenSource();
 
             // 検索結果リストをクリア
@@ -292,6 +297,13 @@ namespace SimpleExcelGrep.Forms
                         _logService.LogMessage($"正規表現エラー: {ex.Message}");
                         MessageBox.Show($"正規表現が無効です: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         SetSearchingState(false);
+                
+                        // 修正: CancellationTokenSource の解放
+                        if (_cancellationTokenSource != null)
+                        {
+                            _cancellationTokenSource.Dispose();
+                            _cancellationTokenSource = null;
+                        }
                         return;
                     }
                 }
@@ -306,7 +318,6 @@ namespace SimpleExcelGrep.Forms
                 {
                     ignoreFileSize = size;
                 }
-
 
                 _logService.LogMessage($"リアルタイム表示: {isRealTimeDisplay}, 最初のヒットのみ: {firstHitOnly}, 図形内検索: {searchShapes}, 並列数: {maxParallelism}, 無視ファイルサイズ: {ignoreFileSize}MB");
 
@@ -403,19 +414,30 @@ namespace SimpleExcelGrep.Forms
                 {
                     // タイマーを停止して破棄
                     CleanupTimer();
+            
+                    // 修正: UI更新用のイベントを解放
+                    if (uiUpdateEvent != null)
+                    {
+                        uiUpdateEvent.Dispose();
+                    }
                 }
             }
             finally
             {
                 // UIを通常の状態に戻す
                 SetSearchingState(false);
-                
+        
                 // 修正: 未解放のCancellationTokenSourceを解放
                 if (_cancellationTokenSource != null)
                 {
                     _cancellationTokenSource.Dispose();
                     _cancellationTokenSource = null;
                 }
+        
+                // 修正: 明示的にGCを実行してメモリを解放
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
             }
         }
 
@@ -427,13 +449,13 @@ namespace SimpleExcelGrep.Forms
             if (_uiTimer != null)
             {
                 _uiTimer.Stop();
-                
+        
                 if (_timerTickHandler != null)
                 {
                     _uiTimer.Tick -= _timerTickHandler;
                     _timerTickHandler = null;
                 }
-                
+        
                 _uiTimer.Dispose();
                 _uiTimer = null;
                 _logService.LogMessage("UIタイマーを停止しました。");
@@ -695,13 +717,14 @@ namespace SimpleExcelGrep.Forms
             {
                 _logService.LogMessage("実行中の検索をキャンセルします");
                 _cancellationTokenSource.Cancel();
-                // キャンセル処理が完了するのを少し待つか、非同期処理の完了を待つ設計にする
-                // ここでは単純にキャンセル要求のみ
+        
+                // 修正: キャンセル時に少し待機してから終了
+                Thread.Sleep(100);
             }
 
             // タイマーのクリーンアップ
             CleanupTimer();
-            
+    
             // 修正: CancellationTokenSource の解放を追加
             if (_cancellationTokenSource != null)
             {
@@ -710,6 +733,11 @@ namespace SimpleExcelGrep.Forms
             }
 
             SaveCurrentSettings();
+    
+            // 修正: 終了時に強制的にメモリを解放
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
         }
 
         /// <summary>

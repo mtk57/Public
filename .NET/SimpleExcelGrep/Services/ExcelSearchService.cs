@@ -19,6 +19,7 @@ namespace SimpleExcelGrep.Services
     {
         private readonly LogService _logger;
         private readonly ShapeTextExtractor _shapeTextExtractor;
+        private const int MEMORY_CLEANUP_INTERVAL = 50; // 50ファイルごとにGCを強制
 
         /// <summary>
         /// ExcelSearchServiceのコンストラクタ
@@ -43,7 +44,7 @@ namespace SimpleExcelGrep.Services
             bool searchShapes,
             bool firstHitOnly,
             int maxParallelism,
-            double ignoreFileSizeMB, // 追加
+            double ignoreFileSizeMB,
             ConcurrentQueue<SearchResult> resultQueue,
             Action<string> statusUpdateCallback,
             CancellationToken cancellationToken)
@@ -52,6 +53,8 @@ namespace SimpleExcelGrep.Services
             _logger.LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
 
             List<SearchResult> results = new List<SearchResult>();
+            // スレッドセーフな結果リスト
+            ConcurrentBag<SearchResult> concurrentResults = new ConcurrentBag<SearchResult>();
 
             try
             {
@@ -62,6 +65,7 @@ namespace SimpleExcelGrep.Services
 
                 int totalFiles = excelFiles.Length;
                 int processedFiles = 0;
+                int processedBatch = 0;
 
                 var parallelOptions = new ParallelOptions
                 {
@@ -71,6 +75,7 @@ namespace SimpleExcelGrep.Services
 
                 await Task.Run(() =>
                 {
+                    // Parallel.ForEach を使用して並列処理
                     Parallel.ForEach(excelFiles, parallelOptions, (filePath) =>
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -80,7 +85,7 @@ namespace SimpleExcelGrep.Services
                         {
                             _logger.LogMessage($"無視キーワードが含まれるため処理をスキップ: {filePath}");
                             Interlocked.Increment(ref processedFiles);
-                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
                             return;
                         }
 
@@ -95,7 +100,7 @@ namespace SimpleExcelGrep.Services
                                 {
                                     _logger.LogMessage($"ファイルサイズ超過のためスキップ ({fileSizeMB:F2}MB > {ignoreFileSizeMB}MB): {filePath}");
                                     Interlocked.Increment(ref processedFiles);
-                                    statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                                    statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
                                     return;
                                 }
                             }
@@ -105,7 +110,6 @@ namespace SimpleExcelGrep.Services
                                 // エラーの場合は処理を続行（スキップしない）
                             }
                         }
-
 
                         try
                         {
@@ -120,14 +124,23 @@ namespace SimpleExcelGrep.Services
 
                                 _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
 
-                                lock (results)
+                                // 修正: スレッドセーフなConcurrentBagにまず追加
+                                foreach (var result in fileResults)
                                 {
-                                    results.AddRange(fileResults);
+                                    concurrentResults.Add(result);
                                 }
                             }
 
-                            Interlocked.Increment(ref processedFiles);
-                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                            int filesProcessed = Interlocked.Increment(ref processedFiles);
+                            statusUpdateCallback($"処理中... {filesProcessed}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
+                            
+                            // 修正: 一定間隔でメモリクリーンアップを実行
+                            if (Interlocked.Increment(ref processedBatch) % MEMORY_CLEANUP_INTERVAL == 0)
+                            {
+                                _logger.LogMessage("定期的なメモリクリーンアップを実行");
+                                GC.Collect();
+                                GC.WaitForPendingFinalizers();
+                            }
                         }
                         catch (OperationCanceledException)
                         {
@@ -138,20 +151,35 @@ namespace SimpleExcelGrep.Services
                         {
                             _logger.LogMessage($"ファイル処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
                             Interlocked.Increment(ref processedFiles);
-                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({concurrentResults.Count} 件見つかりました)");
                         }
                     });
+                    
+                    // 修正: 並列処理完了後にConcurrentBagから普通のリストに移す
+                    results.AddRange(concurrentResults);
                 }, cancellationToken);
             }
             catch (OperationCanceledException)
             {
                 _logger.LogMessage("SearchExcelFilesAsync内のタスクがキャンセルされました。");
+                // 修正: キャンセル時にも結果を保存
+                results.AddRange(concurrentResults);
                 throw;
             }
             catch (Exception ex)
             {
                 _logger.LogMessage($"SearchExcelFilesAsync内のタスクで予期せぬエラー: {ex.Message}");
+                // 修正: エラー時にも結果を保存
+                results.AddRange(concurrentResults);
                 throw;
+            }
+            finally
+            {
+                // 修正: 明示的にメモリクリーンアップ
+                _logger.LogMessage("SearchExcelFilesAsync 終了時のメモリクリーンアップ実行");
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
             }
 
             _logger.LogMessage($"SearchExcelFilesAsync 完了: {results.Count}件の結果");
@@ -208,6 +236,17 @@ namespace SimpleExcelGrep.Services
                                 keyword, useRegex, regex, pendingResults,
                                 localResults, firstHitOnly, foundHitInFile, cancellationToken);
                         }
+                    }
+                    
+                    // 修正: workbookPart に関連するオブジェクトを解放
+                    // workbookPart 自体は using ブロックで自動解放されるが、子オブジェクトの一部は明示的に解放する必要がある
+                    if (sharedStringTable != null && sharedStringTable.HasChildren)
+                    {
+                        foreach (var child in sharedStringTable.Elements())
+                        {
+                            child.RemoveAllChildren();
+                        }
+                        sharedStringTable.RemoveAllChildren();
                     }
                 }
             }

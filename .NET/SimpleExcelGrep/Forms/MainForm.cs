@@ -409,6 +409,13 @@ namespace SimpleExcelGrep.Forms
             {
                 // UIを通常の状態に戻す
                 SetSearchingState(false);
+                
+                // 修正: 未解放のCancellationTokenSourceを解放
+                if (_cancellationTokenSource != null)
+                {
+                    _cancellationTokenSource.Dispose();
+                    _cancellationTokenSource = null;
+                }
             }
         }
 
@@ -694,6 +701,13 @@ namespace SimpleExcelGrep.Forms
 
             // タイマーのクリーンアップ
             CleanupTimer();
+            
+            // 修正: CancellationTokenSource の解放を追加
+            if (_cancellationTokenSource != null)
+            {
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = null;
+            }
 
             SaveCurrentSettings();
         }

@@ -79,22 +79,47 @@ namespace SimpleExcelGrep.Services
                 Type excelType = Type.GetTypeFromProgID("Excel.Application");
                 if (excelType != null)
                 {
-                    object excelApp = Activator.CreateInstance(excelType);
+                    object excelApp = null;
+                    object version = null;
+                    object build = null;
+                    
+                    try
+                    {
+                        excelApp = Activator.CreateInstance(excelType);
 
-                    // バージョン情報を取得
-                    object version = excelType.InvokeMember("Version",
-                        System.Reflection.BindingFlags.GetProperty,
-                        null, excelApp, null);
-                    LogMessage($"Excel バージョン: {version}");
+                        // バージョン情報を取得
+                        version = excelType.InvokeMember("Version",
+                            System.Reflection.BindingFlags.GetProperty,
+                            null, excelApp, null);
+                        LogMessage($"Excel バージョン: {version}");
 
-                    // ビルド情報を取得
-                    object build = excelType.InvokeMember("Build",
-                        System.Reflection.BindingFlags.GetProperty,
-                        null, excelApp, null);
-                    LogMessage($"Excel ビルド: {build}");
-
-                    // COMの早期解放
-                    try { System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp); } catch { }
+                        // ビルド情報を取得
+                        build = excelType.InvokeMember("Build",
+                            System.Reflection.BindingFlags.GetProperty,
+                            null, excelApp, null);
+                        LogMessage($"Excel ビルド: {build}");
+                    }
+                    finally
+                    {
+                        // 修正: COMオブジェクトの解放
+                        if (build != null && System.Runtime.InteropServices.Marshal.IsComObject(build))
+                        {
+                            System.Runtime.InteropServices.Marshal.ReleaseComObject(build);
+                            build = null;
+                        }
+                        
+                        if (version != null && System.Runtime.InteropServices.Marshal.IsComObject(version))
+                        {
+                            System.Runtime.InteropServices.Marshal.ReleaseComObject(version);
+                            version = null;
+                        }
+                        
+                        if (excelApp != null)
+                        {
+                            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
+                            excelApp = null;
+                        }
+                    }
                 }
                 else
                 {

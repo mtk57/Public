@@ -237,6 +237,13 @@ namespace SimpleExcelGrep.Services
                             System.Runtime.InteropServices.Marshal.ReleaseComObject(sheet);
                             sheet = null;
                         }
+                        
+                        // 修正: name オブジェクトも解放する
+                        if (name != null && System.Runtime.InteropServices.Marshal.IsComObject(name))
+                        {
+                            System.Runtime.InteropServices.Marshal.ReleaseComObject(name);
+                            name = null;
+                        }
                     }
                 }
 
@@ -298,6 +305,13 @@ namespace SimpleExcelGrep.Services
                 {
                     System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets);
                     sheets = null;
+                }
+                
+                // 修正: count オブジェクトも解放する
+                if (count != null && System.Runtime.InteropServices.Marshal.IsComObject(count))
+                {
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(count);
+                    count = null;
                 }
             }
         }

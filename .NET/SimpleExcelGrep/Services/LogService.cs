@@ -18,6 +18,9 @@ namespace SimpleExcelGrep.Services
         // クラスのフィールドとして追加
         private DateTime? _lastMemoryLogTime = null;
 
+        // フィールドを追加
+        private System.Threading.Timer _memoryMonitorTimer;
+
         /// <summary>
         /// LogServiceのコンストラクタ
         /// </summary>
@@ -214,6 +217,57 @@ namespace SimpleExcelGrep.Services
                 {
                     LogMessage($"メモリリーク診断完了: {methodName}, 差分={diffMB:F2}MB");
                 }
+            }
+        }
+
+        /// <summary>
+        /// アプリケーションのメモリ使用状況をモニタリング
+        /// </summary>
+        public void StartMemoryMonitoring(int intervalSeconds = 30)
+        {
+            if (_memoryMonitorTimer != null) return;
+    
+            _memoryMonitorTimer = new System.Threading.Timer(state =>
+            {
+                try
+                {
+                    long memoryUsage = Process.GetCurrentProcess().WorkingSet64;
+                    double memoryUsageMB = memoryUsage / (1024.0 * 1024.0);
+            
+                    // メモリ使用量を記録
+                    LogMessage($"メモリモニタリング: 現在の使用量 {memoryUsageMB:F2}MB");
+            
+                    // メモリ使用量が閾値を超えた場合に強制GC
+                    if (memoryUsageMB > 4000) // 4GB以上で強制GC
+                    {
+                        LogMessage($"メモリ使用量が高すぎる ({memoryUsageMB:F2}MB)。強制クリーンアップを実行");
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
+                        GC.WaitForPendingFinalizers();
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
+                
+                        // クリーンアップ後のメモリ使用量
+                        long afterMemory = Process.GetCurrentProcess().WorkingSet64;
+                        double afterMemoryMB = afterMemory / (1024.0 * 1024.0);
+                        LogMessage($"クリーンアップ後のメモリ使用量: {afterMemoryMB:F2}MB (削減: {memoryUsageMB - afterMemoryMB:F2}MB)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"メモリモニタリングエラー: {ex.Message}");
+                }
+            }, null, TimeSpan.FromSeconds(intervalSeconds), TimeSpan.FromSeconds(intervalSeconds));
+        }
+
+        /// <summary>
+        /// メモリモニタリングを停止
+        /// </summary>
+        public void StopMemoryMonitoring()
+        {
+            if (_memoryMonitorTimer != null)
+            {
+                _memoryMonitorTimer.Dispose();
+                _memoryMonitorTimer = null;
+                LogMessage("メモリモニタリングを停止しました");
             }
         }
     }

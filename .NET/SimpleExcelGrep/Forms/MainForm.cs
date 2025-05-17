@@ -105,6 +105,10 @@ namespace SimpleExcelGrep.Forms
         {
             _logService.LogMessage("アプリケーション起動");
             _logService.LogEnvironmentInfo();
+
+            // メモリモニタリングを開始
+            _logService.StartMemoryMonitoring(60); // 60秒間隔でモニタリング
+
             LoadSettings();
         }
 
@@ -755,6 +759,9 @@ namespace SimpleExcelGrep.Forms
         {
             _logService.LogMessage("アプリケーションを終了します");
 
+            // メモリモニタリングを停止
+            _logService.StopMemoryMonitoring();
+
             if (_isSearching && _cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
                 _logService.LogMessage("実行中の検索をキャンセルします");
@@ -861,7 +868,7 @@ namespace SimpleExcelGrep.Forms
             return true;
         }
 
-        /// <summary>
+         /// <summary>
         /// 検索結果をグリッドに表示 (リスト全体)
         /// </summary>
         private void DisplaySearchResults(List<SearchResult> results)
@@ -870,7 +877,6 @@ namespace SimpleExcelGrep.Forms
             {
                 if (this.InvokeRequired)
                 {
-                    _logService.LogMessage($"DisplaySearchResults: UIスレッドへの呼び出しが必要です。結果件数={results.Count}");
                     this.Invoke(new Action(() => DisplaySearchResults(results)));
                     return;
                 }
@@ -880,10 +886,32 @@ namespace SimpleExcelGrep.Forms
                 // 結果グリッドをクリア
                 grdResults.Rows.Clear();
 
-                // 結果をグリッドに表示
-                foreach (var result in results)
+                // 結果が多すぎる場合は段階的に表示
+                const int batchSize = 1000;
+                int totalBatches = (results.Count + batchSize - 1) / batchSize;
+        
+                for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
                 {
-                    AddSearchResultToGrid(result);
+                    int startIndex = batchIndex * batchSize;
+                    int count = Math.Min(batchSize, results.Count - startIndex);
+            
+                    grdResults.SuspendLayout();
+            
+                    for (int i = 0; i < count; i++)
+                    {
+                        var result = results[startIndex + i];
+                        AddSearchResultToGrid(result);
+                    }
+            
+                    grdResults.ResumeLayout();
+            
+                    // 大量の結果を一度に表示するとUIがフリーズするので、
+                    // 一定間隔でUIスレッドに制御を戻す
+                    if (batchIndex < totalBatches - 1)
+                    {
+                        UpdateStatus($"結果を表示中... {Math.Min((batchIndex + 1) * batchSize, results.Count)}/{results.Count}");
+                        Application.DoEvents();
+                    }
                 }
 
                 // UIの更新を強制

@@ -31,6 +31,7 @@ namespace SimpleExcelGrep.Forms
         private List<SearchResult> _searchResults = new List<SearchResult>();
 
         private System.Windows.Forms.Timer _uiTimer;
+        private EventHandler _timerTickHandler; // タイマーイベントハンドラを保持
 
         public MainForm()
         {
@@ -42,6 +43,7 @@ namespace SimpleExcelGrep.Forms
             _excelSearchService = new ExcelSearchService(_logService);
             _excelInteropService = new ExcelInteropService(_logService);
             _uiTimer = null;
+            _timerTickHandler = null;
 
             // イベントハンドラの登録
             RegisterEventHandlers();
@@ -262,6 +264,8 @@ namespace SimpleExcelGrep.Forms
             // 結果グリッドをクリア
             grdResults.Rows.Clear();
 
+            // 既存のタイマーがあれば解放
+            CleanupTimer();
 
             try
             {
@@ -309,7 +313,7 @@ namespace SimpleExcelGrep.Forms
                 // 検索結果をキューで受け取るための準備
                 var pendingResults = new ConcurrentQueue<SearchResult>();
 
-                // タイマーを作成して開始（クラスフィールドを使用）
+                // タイマーを作成して開始
                 _uiTimer = new System.Windows.Forms.Timer { Interval = 100 };
                 var uiUpdateEvent = new AutoResetEvent(false);
 
@@ -398,13 +402,7 @@ namespace SimpleExcelGrep.Forms
                 finally
                 {
                     // タイマーを停止して破棄
-                    if (_uiTimer != null)
-                    {
-                        _uiTimer.Stop();
-                        _uiTimer.Dispose();
-                        _uiTimer = null;
-                        _logService.LogMessage("UIタイマーを停止しました。");
-                    }
+                    CleanupTimer();
                 }
             }
             finally
@@ -414,13 +412,34 @@ namespace SimpleExcelGrep.Forms
             }
         }
 
+        /// <summary>
+        /// タイマーリソースをクリーンアップする
+        /// </summary>
+        private void CleanupTimer()
+        {
+            if (_uiTimer != null)
+            {
+                _uiTimer.Stop();
+                
+                if (_timerTickHandler != null)
+                {
+                    _uiTimer.Tick -= _timerTickHandler;
+                    _timerTickHandler = null;
+                }
+                
+                _uiTimer.Dispose();
+                _uiTimer = null;
+                _logService.LogMessage("UIタイマーを停止しました。");
+            }
+        }
 
         /// <summary>
         /// 結果更新用タイマーを開始
         /// </summary>
         private void StartResultUpdateTimer(System.Windows.Forms.Timer timer, ConcurrentQueue<SearchResult> pendingResults, bool isRealTimeDisplay, AutoResetEvent uiUpdateEvent)
         {
-            timer.Tick += (s, e) =>
+            // イベントハンドラを参照変数に格納
+            _timerTickHandler = (s, e) =>
             {
                 int batchSize = 0;
                 const int MaxUpdatesPerTick = 100;
@@ -445,6 +464,7 @@ namespace SimpleExcelGrep.Forms
                 }
             };
 
+            timer.Tick += _timerTickHandler;
             timer.Start();
             _logService.LogMessage("UIタイマーを開始しました。");
         }
@@ -671,6 +691,9 @@ namespace SimpleExcelGrep.Forms
                 // キャンセル処理が完了するのを少し待つか、非同期処理の完了を待つ設計にする
                 // ここでは単純にキャンセル要求のみ
             }
+
+            // タイマーのクリーンアップ
+            CleanupTimer();
 
             SaveCurrentSettings();
         }

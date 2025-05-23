@@ -14,6 +14,16 @@ namespace SimpleExcelGrep.Models
         public string FilePath { get; set; }
         public string SheetName { get; set; }
         public string CellPosition { get; set; } // セル位置または "図形内" など
-        public string CellValue { get; set; }    // セルの値または図形内のテキスト
+                                                 // 大きなテキストデータのメモリ効率化
+        private string _cellValue;
+        public string CellValue
+        {
+            get => _cellValue;
+            set
+            {
+                // 大きすぎるテキストは自動的にトリム
+                _cellValue = value?.Length > 1000 ? value.Substring( 0, 1000 ) + "..." : value;
+            }
+        }
     }
 }

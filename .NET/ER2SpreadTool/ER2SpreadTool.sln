@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ER2SpreadTool", "ER2SpreadTool.csproj", "{58F2F6E6-8211-4EFE-896B-30CE56B411AB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{58F2F6E6-8211-4EFE-896B-30CE56B411AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58F2F6E6-8211-4EFE-896B-30CE56B411AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58F2F6E6-8211-4EFE-896B-30CE56B411AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58F2F6E6-8211-4EFE-896B-30CE56B411AB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E4C7E9E3-917B-4258-90AC-0E806C2BD707}
+	EndGlobalSection
+EndGlobal

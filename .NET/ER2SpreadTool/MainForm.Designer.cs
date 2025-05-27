@@ -1,4 +1,7 @@
-﻿namespace ER2SpreadTool
+﻿using System.Drawing;
+using System.Windows.Forms;
+
+namespace ER2SpreadTool
 {
     partial class MainForm
     {

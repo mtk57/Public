@@ -119,23 +119,36 @@ namespace ER2SpreadTool
                 LogAllShapes(worksheetDrawing);
 
                 // グループ化された図形を処理
-                var groupShapes = worksheetDrawing.Descendants<GroupShape>();
-                txtResults.AppendText($"グループシェイプ数: {groupShapes.Count()}\n");
+                var twoCellAnchors = worksheetDrawing.Elements<TwoCellAnchor>();
+                txtResults.AppendText($"TwoCellAnchor数: {twoCellAnchors.Count()}\n");
 
-                foreach (var groupShape in groupShapes)
+                foreach (var anchor in twoCellAnchors)
                 {
-                    var tableInfo = ExtractTableInfoFromGroup(groupShape);
-                    if (tableInfo != null)
+                    // グループ化された図形を探す
+                    var groupShapes = anchor.Elements<GroupShape>();
+                    foreach (var groupShape in groupShapes)
                     {
-                        results.Add(tableInfo);
+                        var tableInfo = ExtractTableInfoFromGroup(groupShape);
+                        if (tableInfo != null)
+                        {
+                            results.Add(tableInfo);
+                            txtResults.AppendText($"グループからテーブル抽出: {tableInfo.TableName} (列数: {tableInfo.Columns.Count})\n");
+                        }
+                    }
+
+                    // 個別の図形も処理
+                    var shapes = anchor.Elements<Shape>();
+                    if (shapes.Any())
+                    {
+                        ProcessShapesInAnchor(shapes, results);
                     }
                 }
 
-                // 個別の図形も処理
-                var shapes = worksheetDrawing.Descendants<Shape>();
-                txtResults.AppendText($"個別シェイプ数: {shapes.Count()}\n");
-
-                ProcessIndividualShapes(shapes, results);
+                // 一次元配列として処理されている図形も確認
+                var allShapes = worksheetDrawing.Descendants<Shape>();
+                txtResults.AppendText($"全図形数: {allShapes.Count()}\n");
+                
+                ProcessIndividualShapes(allShapes, results);
             }
 
             return results;
@@ -145,7 +158,6 @@ namespace ER2SpreadTool
         {
             txtResults.AppendText("=== 図形構造の調査 ===\n");
 
-            // すべての子要素を列挙
             var allElements = worksheetDrawing.ChildElements;
             txtResults.AppendText($"子要素数: {allElements.Count}\n");
 
@@ -177,13 +189,12 @@ namespace ER2SpreadTool
                 else if (child is GroupShape groupShape)
                 {
                     txtResults.AppendText("      GroupShape 内容:\n");
-                    foreach (var groupChild in groupShape.ChildElements)
+                    var groupShapes = groupShape.Elements<Shape>();
+                    txtResults.AppendText($"        グループ内Shape数: {groupShapes.Count()}\n");
+                    
+                    foreach (var groupedShape in groupShapes)
                     {
-                        txtResults.AppendText($"        {groupChild.GetType().Name}\n");
-                        if (groupChild is Shape groupedShape)
-                        {
-                            LogShapeDetails(groupedShape, "          ");
-                        }
+                        LogShapeDetails(groupedShape, "        ");
                     }
                 }
             }
@@ -191,16 +202,15 @@ namespace ER2SpreadTool
 
         private void LogShapeDetails(Shape shape, string indent)
         {
-            txtResults.AppendText($"{indent}Shape 詳細:\n");
-
             foreach (var shapeChild in shape.ChildElements)
             {
-                txtResults.AppendText($"{indent}  {shapeChild.GetType().Name}\n");
-
                 if (shapeChild is TextBody textBody)
                 {
                     var extractedText = ExtractTextFromTextBody(textBody);
-                    txtResults.AppendText($"{indent}    テキスト: '{extractedText}'\n");
+                    if (!string.IsNullOrWhiteSpace(extractedText))
+                    {
+                        txtResults.AppendText($"{indent}テキスト: '{extractedText}'\n");
+                    }
                 }
             }
         }
@@ -210,35 +220,51 @@ namespace ER2SpreadTool
             string tableName = null;
             var columns = new List<string>();
 
-            var shapes = groupShape.Descendants<Shape>();
+            // グループ内のすべてのShape要素を取得
+            var shapes = groupShape.Elements<Shape>();
             txtResults.AppendText($"グループ内のシェイプ数: {shapes.Count()}\n");
 
+            var allTexts = new List<ShapeTextInfo>();
+
+            // 各シェイプからテキストを抽出
             foreach (var shape in shapes)
             {
                 var text = ExtractTextFromShape(shape);
-                
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    txtResults.AppendText($"抽出テキスト: '{text}'\n");
-
                     var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
                                    .Select(l => l.Trim())
                                    .Where(l => !string.IsNullOrEmpty(l))
                                    .ToArray();
 
-                    if (lines.Length == 1)
+                    allTexts.Add(new ShapeTextInfo
                     {
-                        if (string.IsNullOrEmpty(tableName))
-                        {
-                            tableName = lines[0];
-                            txtResults.AppendText($"テーブル名として認識: '{tableName}'\n");
-                        }
-                    }
-                    else if (lines.Length > 1)
+                        OriginalText = text,
+                        Lines = lines
+                    });
+
+                    txtResults.AppendText($"抽出テキスト: '{text}' (行数: {lines.Length})\n");
+                }
+            }
+
+            // テーブル名とカラムを識別
+            // 1行のテキストをテーブル名、複数行のテキストをカラムとして扱う
+            foreach (var textInfo in allTexts)
+            {
+                if (textInfo.Lines.Length == 1)
+                {
+                    // 1行 = テーブル名の可能性
+                    if (string.IsNullOrEmpty(tableName))
                     {
-                        columns.AddRange(lines);
-                        txtResults.AppendText($"カラム名として認識: [{string.Join(", ", lines)}]\n");
+                        tableName = textInfo.Lines[0];
+                        txtResults.AppendText($"テーブル名として認識: '{tableName}'\n");
                     }
+                }
+                else if (textInfo.Lines.Length > 1)
+                {
+                    // 複数行 = カラム名の可能性
+                    columns.AddRange(textInfo.Lines);
+                    txtResults.AppendText($"カラム名として認識: [{string.Join(", ", textInfo.Lines)}]\n");
                 }
             }
 
@@ -254,43 +280,89 @@ namespace ER2SpreadTool
             return null;
         }
 
-        private void ProcessIndividualShapes(IEnumerable<Shape> shapes, List<TableInfo> results)
+        private void ProcessShapesInAnchor(IEnumerable<Shape> shapes, List<TableInfo> results)
         {
-            var textList = new List<string>();
+            var textInfos = new List<ShapeTextInfo>();
 
             foreach (var shape in shapes)
             {
                 var text = ExtractTextFromShape(shape);
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    textList.Add(text);
+                    var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(l => l.Trim())
+                                   .Where(l => !string.IsNullOrEmpty(l))
+                                   .ToArray();
+
+                    textInfos.Add(new ShapeTextInfo
+                    {
+                        OriginalText = text,
+                        Lines = lines
+                    });
+                }
+            }
+
+            // 隣接するテキストボックスを組み合わせる
+            CombineAdjacentTexts(textInfos, results);
+        }
+
+        private void ProcessIndividualShapes(IEnumerable<Shape> shapes, List<TableInfo> results)
+        {
+            var textInfos = new List<ShapeTextInfo>();
+
+            foreach (var shape in shapes)
+            {
+                var text = ExtractTextFromShape(shape);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(l => l.Trim())
+                                   .Where(l => !string.IsNullOrEmpty(l))
+                                   .ToArray();
+
+                    textInfos.Add(new ShapeTextInfo
+                    {
+                        OriginalText = text,
+                        Lines = lines
+                    });
+
                     txtResults.AppendText($"個別シェイプテキスト: '{text}'\n");
                 }
             }
 
-            // 簡易的な組み合わせロジック（隣接するテキストを組み合わせ）
-            for (int i = 0; i < textList.Count - 1; i++)
+            CombineAdjacentTexts(textInfos, results);
+        }
+
+        private void CombineAdjacentTexts(List<ShapeTextInfo> textInfos, List<TableInfo> results)
+        {
+            // 簡単な組み合わせロジック：1行のテキストと複数行のテキストを組み合わせる
+            for (int i = 0; i < textInfos.Count; i++)
             {
-                var current = textList[i].Trim();
-                var next = textList[i + 1].Trim();
-
-                var currentLines = current.Split('\n').Length;
-                var nextLines = next.Split('\n').Length;
-
-                if (currentLines == 1 && nextLines > 1)
+                var current = textInfos[i];
+                
+                if (current.Lines.Length == 1) // テーブル名候補
                 {
-                    var columns = next.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                                     .Select(l => l.Trim())
-                                     .Where(l => !string.IsNullOrEmpty(l))
-                                     .ToList();
-
-                    results.Add(new TableInfo
+                    // 次の要素を探してカラム候補を見つける
+                    for (int j = i + 1; j < textInfos.Count; j++)
                     {
-                        TableName = current,
-                        Columns = columns
-                    });
+                        var next = textInfos[j];
+                        if (next.Lines.Length > 1) // カラム候補
+                        {
+                            var tableInfo = new TableInfo
+                            {
+                                TableName = current.Lines[0],
+                                Columns = next.Lines.ToList()
+                            };
 
-                    txtResults.AppendText($"組み合わせ認識 - テーブル: '{current}', カラム: [{string.Join(", ", columns)}]\n");
+                            // 重複チェック
+                            if (!results.Any(r => r.TableName == tableInfo.TableName))
+                            {
+                                results.Add(tableInfo);
+                                txtResults.AppendText($"組み合わせ認識 - テーブル: '{tableInfo.TableName}', カラム: [{string.Join(", ", tableInfo.Columns)}]\n");
+                            }
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -444,4 +516,9 @@ namespace ER2SpreadTool
         public List<string> Columns { get; set; } = new List<string>();
     }
 
+    public class ShapeTextInfo
+    {
+        public string OriginalText { get; set; }
+        public string[] Lines { get; set; }
+    }
 }

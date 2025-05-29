@@ -64,7 +64,7 @@ namespace ER2SpreadTool
                 if (results.Any())
                 {
                     txtResults.AppendText($"\n抽出結果:\n{FormatResultsForDisplay(results)}");
-                    CreateOutputSheet(txtFilePath.Text, "ER図抽出結果", results); // Ensure this method works fine
+                    CreateOutputSheet(txtFilePath.Text, "ER図抽出結果", results);
                     lblStatus.Text = $"処理完了 - {results.Count}件のテーブル情報を抽出しました。";
                     MessageBox.Show("処理が完了しました。新規シート「ER図抽出結果」に結果を出力しました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -156,7 +156,6 @@ namespace ER2SpreadTool
         {
             txtResults.AppendText("  ExtractTableInfoFromSpreadsheetGroup (xdr:grpSp) 開始\n");
 
-            // Scenario 1: The xdr:grpSp contains a nested a:grpSp (Drawing.GroupShape)
             var nestedDrawingGroup = xdrGroupShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.GroupShape>();
             if (nestedDrawingGroup != null)
             {
@@ -164,13 +163,12 @@ namespace ER2SpreadTool
                 return ExtractTableInfoFromDrawingGroupShape(nestedDrawingGroup);
             }
 
-            // Scenario 2: The xdr:grpSp directly contains two xdr:sp (Spreadsheet.Shape) elements
             var xdrShapesInGroup = xdrGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().ToList();
             txtResults.AppendText($"    xdr:grpSp内のSpreadsheet.Shape (xdr:sp) 数: {xdrShapesInGroup.Count}\n");
 
-            if (xdrShapesInGroup.Count != 2)
+            if (xdrShapesInGroup.Count < 2) // Needs at least one for table name, one for columns
             {
-                txtResults.AppendText($"    xdr:grpSp内のxdr:sp数が2つではありません。現ロジックでは処理不可。\n");
+                txtResults.AppendText($"    xdr:grpSp内に少なくとも2つのxdr:spが必要です (テーブル名用1、カラム名用1以上)。実際は{xdrShapesInGroup.Count}個。\n");
                 return null;
             }
 
@@ -181,8 +179,7 @@ namespace ER2SpreadTool
                 txtResults.AppendText($"    xdr:sp {i + 1} のテキスト抽出試行...\n");
                 string textContent = string.Empty;
                 
-                // Text in an xdr:sp is usually in its xdr:txBody (Spreadsheet.TextBody)
-                var spreadsheetTextBody = xdrShape.TextBody; // This is DocumentFormat.OpenXml.Drawing.Spreadsheet.TextBody
+                var spreadsheetTextBody = xdrShape.TextBody; 
                 if (spreadsheetTextBody != null)
                 {
                     txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) を発見。\n");
@@ -210,21 +207,21 @@ namespace ER2SpreadTool
         private TableInfo ExtractTableInfoFromDrawingGroupShape(DocumentFormat.OpenXml.Drawing.GroupShape drawingGroupShape)
         {
             txtResults.AppendText("  ExtractTableInfoFromDrawingGroupShape (a:grpSp) 開始\n");
-            var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); // These are a:sp
+            var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); 
             txtResults.AppendText($"    a:grpSp内のDrawing.Shape (a:sp) 数: {shapesInDrawingGroup.Count}\n");
 
-            if (shapesInDrawingGroup.Count != 2)
+            if (shapesInDrawingGroup.Count < 2) // Needs at least one for table name, one for columns
             {
-                txtResults.AppendText($"    a:grpSp内のa:sp数が2つではありません。\n");
+                txtResults.AppendText($"    a:grpSp内に少なくとも2つのa:spが必要です (テーブル名用1、カラム名用1以上)。実際は{shapesInDrawingGroup.Count}個。\n");
                 return null;
             }
 
             var textDataFromDrawingShapes = new List<ShapeTextParseResult>();
             for (int i = 0; i < shapesInDrawingGroup.Count; i++)
             {
-                var drawingShape = shapesInDrawingGroup[i]; // This is a:sp
+                var drawingShape = shapesInDrawingGroup[i]; 
                 txtResults.AppendText($"    a:sp {i + 1} のテキスト抽出試行...\n");
-                var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); // a:sp -> a:txBody
+                var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); 
                 string textContent = string.Empty;
                 string[] lines = new string[0];
 
@@ -251,53 +248,89 @@ namespace ER2SpreadTool
         
         private TableInfo CreateTableInfoFromTextData(List<ShapeTextParseResult> textDataList, string sourceDescription)
         {
-            if (textDataList.Count != 2) {
-                 txtResults.AppendText($"    {sourceDescription}: テキスト情報を2つ取得できませんでした (実際は{textDataList.Count}個)。\n");
+            txtResults.AppendText($"    {sourceDescription}: CreateTableInfoFromTextData 開始。ShapeTextParseResult 数: {textDataList.Count}\n");
+
+            if (textDataList.Count < 2) {
+                txtResults.AppendText($"    {sourceDescription}: 少なくとも2つのテキスト情報が必要です (テーブル名用1つ、カラム名用1つ以上)。実際は{textDataList.Count}個。\n");
                 return null;
             }
 
-            ShapeTextParseResult tableShapeData = null;
-            ShapeTextParseResult columnsShapeData = null;
+            // Identify potential table name shapes (those with exactly one line of non-empty text)
+            List<ShapeTextParseResult> potentialTableShapes = textDataList
+                .Where(s => s.Lines != null && s.Lines.Length == 1 && !string.IsNullOrWhiteSpace(s.Lines[0]))
+                .ToList();
 
-            if (textDataList[0].Lines.Length == 1 && textDataList[1].Lines.Length >= 1)
+            ShapeTextParseResult tableShapeData = null;
+            List<string> columnLinesAggregated = new List<string>();
+
+            if (potentialTableShapes.Count == 1)
             {
-                tableShapeData = textDataList[0];
-                columnsShapeData = textDataList[1];
-            }
-            else if (textDataList[1].Lines.Length == 1 && textDataList[0].Lines.Length >= 1)
-            {
-                tableShapeData = textDataList[1];
-                columnsShapeData = textDataList[0];
+                tableShapeData = potentialTableShapes[0];
+                txtResults.AppendText($"    {sourceDescription}: テーブル名候補のシェイプを発見 (元テキスト: '{tableShapeData.OriginalText.Replace("\n", "\\n")}')\n");
+
+                // All other shapes contribute to columns
+                foreach (var shapeData in textDataList)
+                {
+                    if (shapeData != tableShapeData) // If it's not the table name shape
+                    {
+                        if (shapeData.Lines != null && shapeData.Lines.Length > 0)
+                        {
+                            columnLinesAggregated.AddRange(shapeData.Lines);
+                            txtResults.AppendText($"    {sourceDescription}: カラム候補のシェイプから行を追加 (元テキスト: '{shapeData.OriginalText.Replace("\n", "\\n")}', 追加行数: {shapeData.Lines.Length})\n");
+                        }
+                        else
+                        {
+                             txtResults.AppendText($"    {sourceDescription}: カラム候補シェイプに有効な行なし、または空テキスト (元テキスト: '{shapeData.OriginalText.Replace("\n", "\\n")}')\n");
+                        }
+                    }
+                }
             }
             else
             {
-                txtResults.AppendText($"    テーブル名(1行)とカラム名(1行以上)の明確な組み合わせが見つかりません ({sourceDescription})。\n");
-                txtResults.AppendText($"      Shape1 有効行数: {textDataList[0].Lines.Length} (元テキスト: '{textDataList[0].OriginalText.Replace("\n", "\\n")}')\n");
-                txtResults.AppendText($"      Shape2 有効行数: {textDataList[1].Lines.Length} (元テキスト: '{textDataList[1].OriginalText.Replace("\n", "\\n")}')\n");
+                txtResults.AppendText($"    {sourceDescription}: テーブル名となるシェイプ (テキスト1行のみ) が1つである必要がありますが、{potentialTableShapes.Count}個見つかりました。\n");
+                txtResults.AppendText($"      調査対象シェイプ数: {textDataList.Count}\n");
+                for(int i = 0; i < textDataList.Count; i++)
+                {
+                    var currentShape = textDataList[i];
+                    txtResults.AppendText($"        Shape {i+1} 有効行数: {(currentShape.Lines?.Length ?? 0)} (元テキスト: '{currentShape.OriginalText.Replace("\n", "\\n")}')\n");
+                }
                 return null;
             }
 
-            // Ensure that the identified table name shape actually has content
-            if (tableShapeData.Lines.Length == 0 || string.IsNullOrWhiteSpace(tableShapeData.Lines[0]))
+            // Validate that a table name was indeed found and is not empty.
+            // The potentialTableShapes.Count == 1 check above and s.Lines[0] null/whitespace check in LINQ should ensure tableShapeData.Lines[0] is valid.
+            if (tableShapeData == null) // Should ideally not happen if potentialTableShapes.Count == 1
             {
-                txtResults.AppendText($"    {sourceDescription}: 抽出されたテーブル名が空です。\n");
+                txtResults.AppendText($"    {sourceDescription}: テーブル名シェイプの特定に失敗しました (内部エラー)。\n");
                 return null;
             }
-            // Ensure that the identified columns shape actually has content
-             if (columnsShapeData.Lines.Length == 0)
+            string tableName = tableShapeData.Lines[0].Trim(); // Already checked for null/whitespace in LINQ, trim for safety
+
+
+            // Validate that column data was found.
+            if (columnLinesAggregated.Count == 0)
             {
-                txtResults.AppendText($"    {sourceDescription}: 抽出されたカラムリストが空です。\n");
+                txtResults.AppendText($"    {sourceDescription}: 抽出されたカラムリストが空です (テーブル名: '{tableName}')。\n");
                 return null;
             }
 
-
-            string tableName = tableShapeData.Lines[0];
-            List<string> columns = columnsShapeData.Lines.Distinct().ToList();
+            // Process and deduplicate column names
+            List<string> finalColumns = columnLinesAggregated
+                                        .Where(l => !string.IsNullOrWhiteSpace(l)) // Ensure no empty/whitespace lines become columns
+                                        .Select(l => l.Trim())                     // Trim whitespace from each column name
+                                        .Distinct(StringComparer.OrdinalIgnoreCase) // Deduplicate column names (case-insensitive)
+                                        .ToList();
+            
+            if (finalColumns.Count == 0) // After trimming and distinct, it might become empty
+            {
+                txtResults.AppendText($"    {sourceDescription}: 有効なカラム名が抽出・処理後、空になりました (テーブル名: '{tableName}')。\n");
+                return null;
+            }
             
             txtResults.AppendText($"    {sourceDescription}: テーブル名として確定: '{tableName}'\n");
-            txtResults.AppendText($"    {sourceDescription}: カラム名として確定: [{string.Join(", ", columns)}]\n");
+            txtResults.AppendText($"    {sourceDescription}: カラム名として確定 ({finalColumns.Count}件): [{string.Join(", ", finalColumns)}]\n");
 
-            return new TableInfo { TableName = tableName, Columns = columns };
+            return new TableInfo { TableName = tableName, Columns = finalColumns };
         }
 
         private string ExtractTextFromDrawingTextBody(DocumentFormat.OpenXml.Drawing.TextBody drawingTextBody) // For a:txBody
@@ -411,7 +444,6 @@ namespace ER2SpreadTool
 
         private void CreateOutputSheet(string filePath, string outputSheetName, List<TableInfo> results)
         {
-             // Using "true" to open for read/write
             using (var document = SpreadsheetDocument.Open(filePath, true))
             {
                 var workbookPart = document.WorkbookPart;
@@ -428,7 +460,7 @@ namespace ER2SpreadTool
                         workbookPart.DeletePart(existingWorksheetPart);
                     }
                     existingSheet.Remove();
-                     workbookPart.Workbook.Save(); // Save after removing sheet part and sheet element
+                     workbookPart.Workbook.Save(); 
                 }
 
                 var newWorksheetPart = workbookPart.AddNewPart<WorksheetPart>();
@@ -476,8 +508,8 @@ namespace ER2SpreadTool
                         currentRowIndex++;
                     }
                 }
-                newWorksheetPart.Worksheet.Save(); // Save the worksheet part
-                workbookPart.Workbook.Save(); // Save the workbook
+                newWorksheetPart.Worksheet.Save(); 
+                workbookPart.Workbook.Save(); 
             }
         }
 

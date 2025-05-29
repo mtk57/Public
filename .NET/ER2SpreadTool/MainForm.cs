@@ -140,8 +140,6 @@ namespace ER2SpreadTool
             }
         }
 
-        // 以下、既存のメソッド (btnProcess_Click, ProcessExcelFile, ExtractTableInfoFromSpreadsheetGroup, etc.) は変更なし
-        // ... (前の回答で提供されたExcel処理ロジックをここに含めます) ...
         private void btnProcess_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtFilePath.Text))
@@ -163,7 +161,7 @@ namespace ER2SpreadTool
             try
             {
                 lblStatus.Text = "処理中...";
-                // txtResults.Clear(); // ログのクリアタイミングは要件に応じて調整
+                // txtResults.Clear(); // ログのクリアタイミングは要望に応じて調整
                 Application.DoEvents();
 
                 var results = ProcessExcelFile(txtFilePath.Text, txtSheetName.Text);
@@ -171,9 +169,12 @@ namespace ER2SpreadTool
                 if (results.Any())
                 {
                     txtResults.AppendText($"\n抽出結果:\n{FormatResultsForDisplay(results)}");
-                    CreateOutputSheet(txtFilePath.Text, "ER図抽出結果", results);
+                    
+                    // TSVファイル出力（入力ファイルを変更しない）
+                    string outputFilePath = CreateTsvOutput(txtFilePath.Text, results);
+                    
                     lblStatus.Text = $"処理完了 - {results.Count}件のテーブル情報を抽出しました。";
-                    MessageBox.Show("処理が完了しました。新規シート「ER図抽出結果」に結果を出力しました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"処理が完了しました。\nTSVファイルを出力しました:\n{outputFilePath}", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -557,86 +558,46 @@ namespace ER2SpreadTool
             return string.Join("\n", output);
         }
 
-        private void CreateOutputSheet(string filePath, string outputSheetName, List<TableInfo> results)
+        // TSVファイル出力メソッド（新規追加）
+        private string CreateTsvOutput(string inputFilePath, List<TableInfo> results)
         {
-            // Using "true" to open for read/write
-            using (var document = SpreadsheetDocument.Open(filePath, true))
+            // 入力ファイルと同じフォルダにTSVファイルを作成
+            string inputDirectory = Path.GetDirectoryName(inputFilePath);
+            
+            // 現在日時をYYYYMMDD_hhmmssfff形式でフォーマット
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
+            string outputFileName = $"{timestamp}.tsv";
+            string outputFilePath = Path.Combine(inputDirectory, outputFileName);
+
+            try
             {
-                var workbookPart = document.WorkbookPart;
-                if (workbookPart == null) throw new InvalidOperationException("WorkbookPart is null.");
-
-                var existingSheet = workbookPart.Workbook.Descendants<Sheet>()
-                                    .FirstOrDefault(s => s.Name != null && s.Name.Value.Equals(outputSheetName, StringComparison.OrdinalIgnoreCase));
-                if (existingSheet != null)
+                using (var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8))
                 {
-                    var sheetId = existingSheet.Id.Value;
-                    var existingWorksheetPart = workbookPart.GetPartById(sheetId) as WorksheetPart;
-                    if (existingWorksheetPart != null)
+                    // ヘッダー行を出力
+                    writer.WriteLine("#\tnum\tテーブル名\tカラム名");
+
+                    // データ行を出力
+                    int overallCounter = 1;
+                    foreach (var table in results)
                     {
-                        workbookPart.DeletePart(existingWorksheetPart);
-                    }
-                    existingSheet.Remove();
-                    workbookPart.Workbook.Save(); // Save after removing sheet part and sheet element
-                }
-
-                var newWorksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-                newWorksheetPart.Worksheet = new Worksheet(new SheetData());
-
-                var sheets = workbookPart.Workbook.GetFirstChild<Sheets>();
-                if (sheets == null) sheets = workbookPart.Workbook.AppendChild(new Sheets());
-
-                uint newSheetId = 1;
-                if (sheets.Elements<Sheet>().Any())
-                {
-                    newSheetId = sheets.Elements<Sheet>().Select(s => s.SheetId.Value).Max() + 1;
-                }
-
-                var newSheet = new Sheet()
-                {
-                    Id = workbookPart.GetIdOfPart(newWorksheetPart),
-                    SheetId = newSheetId,
-                    Name = outputSheetName
-                };
-                sheets.Append(newSheet);
-
-                var sheetData = newWorksheetPart.Worksheet.GetFirstChild<SheetData>();
-
-                var headerRow = new Row() { RowIndex = 1U };
-                headerRow.Append(CreateCell("A", 1U, "#"));
-                headerRow.Append(CreateCell("B", 1U, "num"));
-                headerRow.Append(CreateCell("C", 1U, "テーブル名"));
-                headerRow.Append(CreateCell("D", 1U, "カラム名"));
-                sheetData.Append(headerRow);
-
-                uint currentRowIndex = 2U;
-                int overallCounter = 1;
-                foreach (var table in results)
-                {
-                    for (int i = 0; i < table.Columns.Count; i++)
-                    {
-                        var dataRow = new Row() { RowIndex = currentRowIndex };
-                        dataRow.Append(CreateCell("A", currentRowIndex, overallCounter.ToString()));
-                        dataRow.Append(CreateCell("B", currentRowIndex, (i + 1).ToString()));
-                        dataRow.Append(CreateCell("C", currentRowIndex, table.TableName));
-                        dataRow.Append(CreateCell("D", currentRowIndex, table.Columns[i]));
-                        sheetData.Append(dataRow);
-                        overallCounter++;
-                        currentRowIndex++;
+                        for (int i = 0; i < table.Columns.Count; i++)
+                        {
+                            writer.WriteLine($"{overallCounter}\t{i + 1}\t{table.TableName}\t{table.Columns[i]}");
+                            overallCounter++;
+                        }
                     }
                 }
-                newWorksheetPart.Worksheet.Save(); // Save the worksheet part
-                workbookPart.Workbook.Save(); // Save the workbook
+
+                txtResults.AppendText($"TSVファイルを出力しました: {outputFilePath}\n");
+                return outputFilePath;
             }
-        }
-
-        private Cell CreateCell(string columnNamePrefix, uint rowIndex, string value)
-        {
-            return new Cell()
+            catch (Exception ex)
             {
-                CellReference = columnNamePrefix + rowIndex,
-                DataType = CellValues.String,
-                CellValue = new CellValue(value)
-            };
+                string errorMessage = $"TSVファイルの出力中にエラーが発生しました: {ex.Message}";
+                txtResults.AppendText($"{errorMessage}\n");
+                MessageBox.Show(errorMessage, "出力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
+            }
         }
     }
 

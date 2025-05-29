@@ -3,30 +3,135 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using DocumentFormat.OpenXml; // For OpenXmlCompositeElement
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Spreadsheet;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-// Explicitly use full namespaces for Drawing elements to avoid ambiguity
-// Aliases can be used if preferred, but full names are clearer here.
-// using Drawing = DocumentFormat.OpenXml.Drawing;
-// using DrawingSpreadsheet = DocumentFormat.OpenXml.Drawing.Spreadsheet;
+// ★ 以下のusingディレクティブを追加
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 
 namespace ER2SpreadTool
 {
+    // 設定を保持するクラス (DataContract属性を使用)
+    [DataContract]
+    public class AppSettings
+    {
+        [DataMember]
+        public string LastFilePath { get; set; }
+
+        [DataMember]
+        public string LastSheetName { get; set; }
+    }
+
     public partial class MainForm : Form
     {
+        private readonly string settingsFilePath;
+
         public MainForm()
         {
             InitializeComponent();
+            settingsFilePath = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "er2spreadtool_settings.json");
+            this.Load += MainForm_Load;
+            this.FormClosing += MainForm_FormClosing;
         }
 
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            LoadSettings();
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveSettings();
+        }
+
+        private void LoadSettings()
+        {
+            if (!File.Exists(settingsFilePath))
+            {
+                txtResults.AppendText("設定ファイルが見つかりませんでした。初回起動または設定ファイルが削除されています。\n");
+                return;
+            }
+
+            try
+            {
+                using (FileStream fs = new FileStream(settingsFilePath, FileMode.Open, FileAccess.Read))
+                {
+                    if (fs.Length == 0) // 空のファイルの場合
+                    {
+                        txtResults.AppendText("設定ファイルは空です。\n");
+                        return;
+                    }
+                    DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    AppSettings settings = (AppSettings)serializer.ReadObject(fs);
+
+                    if (settings != null)
+                    {
+                        txtFilePath.Text = settings.LastFilePath;
+                        txtSheetName.Text = settings.LastSheetName;
+                        txtResults.AppendText("前回終了時の設定を読み込みました。\n");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定ファイルの読み込み中にエラーが発生しました:\n{ex.Message}", "設定読み込みエラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtResults.AppendText($"設定ファイルの読み込みエラー: {ex.Message}\n");
+            }
+        }
+
+        private void SaveSettings()
+        {
+            AppSettings settings = new AppSettings
+            {
+                LastFilePath = txtFilePath.Text,
+                LastSheetName = txtSheetName.Text
+            };
+
+            try
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    serializer.WriteObject(ms, settings);
+                    byte[] jsonBytes = ms.ToArray();
+                    // インデントされたJSONとして書き出すために、一度文字列に変換して手動でインデント風にするか、
+                    // またはDataContractJsonSerializerSettingsでインデントオプションを探す（標準では単純なインデントは難しい）
+                    // ここでは単純な書き出しとします。
+                    File.WriteAllBytes(settingsFilePath, jsonBytes);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定ファイルの保存中にエラーが発生しました:\n{ex.Message}", "設定保存エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // 必要であればログに書き出すなどの処理を追加
+            }
+        }
+
+        // btnBrowse_Click メソッドを少し変更して、読み込んだパスを利用
         private void btnBrowse_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.Filter = "Excelファイル (*.xlsx)|*.xlsx";
                 openFileDialog.Title = "処理対象のExcelファイルを選択してください";
+
+                // 前回値があればそれを初期値とする
+                if (!string.IsNullOrWhiteSpace(txtFilePath.Text))
+                {
+                    if (File.Exists(txtFilePath.Text))
+                    {
+                        openFileDialog.InitialDirectory = Path.GetDirectoryName(txtFilePath.Text);
+                        openFileDialog.FileName = Path.GetFileName(txtFilePath.Text);
+                    }
+                    else if (Directory.Exists(txtFilePath.Text)) // もしパスがディレクトリなら
+                    {
+                        openFileDialog.InitialDirectory = txtFilePath.Text;
+                    }
+                }
+
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
@@ -35,6 +140,8 @@ namespace ER2SpreadTool
             }
         }
 
+        // 以下、既存のメソッド (btnProcess_Click, ProcessExcelFile, ExtractTableInfoFromSpreadsheetGroup, etc.) は変更なし
+        // ... (前の回答で提供されたExcel処理ロジックをここに含めます) ...
         private void btnProcess_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtFilePath.Text))
@@ -56,11 +163,11 @@ namespace ER2SpreadTool
             try
             {
                 lblStatus.Text = "処理中...";
-                txtResults.Clear();
+                // txtResults.Clear(); // ログのクリアタイミングは要件に応じて調整
                 Application.DoEvents();
 
                 var results = ProcessExcelFile(txtFilePath.Text, txtSheetName.Text);
-                
+
                 if (results.Any())
                 {
                     txtResults.AppendText($"\n抽出結果:\n{FormatResultsForDisplay(results)}");
@@ -102,7 +209,7 @@ namespace ER2SpreadTool
                 var worksheetPart = workbookPart.GetPartById(sheet.Id.Value) as WorksheetPart;
                 if (worksheetPart == null)
                 {
-                     txtResults.AppendText($"WorksheetPart が見つかりません (シートID: {sheet.Id.Value})。\n");
+                    txtResults.AppendText($"WorksheetPart が見つかりません (シートID: {sheet.Id.Value})。\n");
                     return results;
                 }
                 txtResults.AppendText($"シート '{sheetName}' (ID: {sheet.Id.Value}) を処理中...\n");
@@ -117,7 +224,7 @@ namespace ER2SpreadTool
                 var worksheetDrawing = drawingsPart.WorksheetDrawing;
                 if (worksheetDrawing == null)
                 {
-                     txtResults.AppendText("WorksheetDrawing が見つかりません。\n");
+                    txtResults.AppendText("WorksheetDrawing が見つかりません。\n");
                     return results;
                 }
                 txtResults.AppendText("WorksheetDrawing を取得しました。\n");
@@ -144,18 +251,19 @@ namespace ER2SpreadTool
                         }
                         else
                         {
-                             txtResults.AppendText("  => Spreadsheet.GroupShapeからテーブル情報抽出失敗。\n");
+                            txtResults.AppendText("  => Spreadsheet.GroupShapeからテーブル情報抽出失敗。\n");
                         }
                     }
                 }
             }
             return results;
         }
-        
+
         private TableInfo ExtractTableInfoFromSpreadsheetGroup(DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape xdrGroupShape)
         {
             txtResults.AppendText("  ExtractTableInfoFromSpreadsheetGroup (xdr:grpSp) 開始\n");
 
+            // Scenario 1: The xdr:grpSp contains a nested a:grpSp (Drawing.GroupShape)
             var nestedDrawingGroup = xdrGroupShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.GroupShape>();
             if (nestedDrawingGroup != null)
             {
@@ -163,6 +271,7 @@ namespace ER2SpreadTool
                 return ExtractTableInfoFromDrawingGroupShape(nestedDrawingGroup);
             }
 
+            // Scenario 2: The xdr:grpSp directly contains two xdr:sp (Spreadsheet.Shape) elements
             var xdrShapesInGroup = xdrGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().ToList();
             txtResults.AppendText($"    xdr:grpSp内のSpreadsheet.Shape (xdr:sp) 数: {xdrShapesInGroup.Count}\n");
 
@@ -178,8 +287,8 @@ namespace ER2SpreadTool
                 var xdrShape = xdrShapesInGroup[i];
                 txtResults.AppendText($"    xdr:sp {i + 1} のテキスト抽出試行...\n");
                 string textContent = string.Empty;
-                
-                var spreadsheetTextBody = xdrShape.TextBody; 
+
+                var spreadsheetTextBody = xdrShape.TextBody; // This is DocumentFormat.OpenXml.Drawing.Spreadsheet.TextBody
                 if (spreadsheetTextBody != null)
                 {
                     txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) を発見。\n");
@@ -207,7 +316,7 @@ namespace ER2SpreadTool
         private TableInfo ExtractTableInfoFromDrawingGroupShape(DocumentFormat.OpenXml.Drawing.GroupShape drawingGroupShape)
         {
             txtResults.AppendText("  ExtractTableInfoFromDrawingGroupShape (a:grpSp) 開始\n");
-            var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); 
+            var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); // These are a:sp
             txtResults.AppendText($"    a:grpSp内のDrawing.Shape (a:sp) 数: {shapesInDrawingGroup.Count}\n");
 
             if (shapesInDrawingGroup.Count < 2) // Needs at least one for table name, one for columns
@@ -219,9 +328,9 @@ namespace ER2SpreadTool
             var textDataFromDrawingShapes = new List<ShapeTextParseResult>();
             for (int i = 0; i < shapesInDrawingGroup.Count; i++)
             {
-                var drawingShape = shapesInDrawingGroup[i]; 
+                var drawingShape = shapesInDrawingGroup[i]; // This is a:sp
                 txtResults.AppendText($"    a:sp {i + 1} のテキスト抽出試行...\n");
-                var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); 
+                var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); // a:sp -> a:txBody
                 string textContent = string.Empty;
                 string[] lines = new string[0];
 
@@ -245,12 +354,13 @@ namespace ER2SpreadTool
             }
             return CreateTableInfoFromTextData(textDataFromDrawingShapes, "a:spベース");
         }
-        
+
         private TableInfo CreateTableInfoFromTextData(List<ShapeTextParseResult> textDataList, string sourceDescription)
         {
             txtResults.AppendText($"    {sourceDescription}: CreateTableInfoFromTextData 開始。ShapeTextParseResult 数: {textDataList.Count}\n");
 
-            if (textDataList.Count < 2) {
+            if (textDataList.Count < 2)
+            {
                 txtResults.AppendText($"    {sourceDescription}: 少なくとも2つのテキスト情報が必要です (テーブル名用1つ、カラム名用1つ以上)。実際は{textDataList.Count}個。\n");
                 return null;
             }
@@ -280,7 +390,7 @@ namespace ER2SpreadTool
                         }
                         else
                         {
-                             txtResults.AppendText($"    {sourceDescription}: カラム候補シェイプに有効な行なし、または空テキスト (元テキスト: '{shapeData.OriginalText.Replace("\n", "\\n")}')\n");
+                            txtResults.AppendText($"    {sourceDescription}: カラム候補シェイプに有効な行なし、または空テキスト (元テキスト: '{shapeData.OriginalText.Replace("\n", "\\n")}')\n");
                         }
                     }
                 }
@@ -289,22 +399,21 @@ namespace ER2SpreadTool
             {
                 txtResults.AppendText($"    {sourceDescription}: テーブル名となるシェイプ (テキスト1行のみ) が1つである必要がありますが、{potentialTableShapes.Count}個見つかりました。\n");
                 txtResults.AppendText($"      調査対象シェイプ数: {textDataList.Count}\n");
-                for(int i = 0; i < textDataList.Count; i++)
+                for (int i = 0; i < textDataList.Count; i++)
                 {
                     var currentShape = textDataList[i];
-                    txtResults.AppendText($"        Shape {i+1} 有効行数: {(currentShape.Lines?.Length ?? 0)} (元テキスト: '{currentShape.OriginalText.Replace("\n", "\\n")}')\n");
+                    txtResults.AppendText($"        Shape {i + 1} 有効行数: {(currentShape.Lines?.Length ?? 0)} (元テキスト: '{currentShape.OriginalText.Replace("\n", "\\n")}')\n");
                 }
                 return null;
             }
 
             // Validate that a table name was indeed found and is not empty.
-            // The potentialTableShapes.Count == 1 check above and s.Lines[0] null/whitespace check in LINQ should ensure tableShapeData.Lines[0] is valid.
             if (tableShapeData == null) // Should ideally not happen if potentialTableShapes.Count == 1
             {
                 txtResults.AppendText($"    {sourceDescription}: テーブル名シェイプの特定に失敗しました (内部エラー)。\n");
                 return null;
             }
-            string tableName = tableShapeData.Lines[0].Trim(); // Already checked for null/whitespace in LINQ, trim for safety
+            string tableName = tableShapeData.Lines[0].Trim();
 
 
             // Validate that column data was found.
@@ -320,13 +429,13 @@ namespace ER2SpreadTool
                                         .Select(l => l.Trim())                     // Trim whitespace from each column name
                                         .Distinct(StringComparer.OrdinalIgnoreCase) // Deduplicate column names (case-insensitive)
                                         .ToList();
-            
+
             if (finalColumns.Count == 0) // After trimming and distinct, it might become empty
             {
                 txtResults.AppendText($"    {sourceDescription}: 有効なカラム名が抽出・処理後、空になりました (テーブル名: '{tableName}')。\n");
                 return null;
             }
-            
+
             txtResults.AppendText($"    {sourceDescription}: テーブル名として確定: '{tableName}'\n");
             txtResults.AppendText($"    {sourceDescription}: カラム名として確定 ({finalColumns.Count}件): [{string.Join(", ", finalColumns)}]\n");
 
@@ -403,28 +512,34 @@ namespace ER2SpreadTool
                 {
                     txtResults.AppendText("      詳細: Spreadsheet.Shape (xdr:sp)\n");
                     var spTextBody = xdrShape.TextBody;
-                    if(spTextBody != null) {
+                    if (spTextBody != null)
+                    {
                         txtResults.AppendText($"        xdr:sp Text: '{ExtractTextFromSpreadsheetTextBody(spTextBody).Replace("\n", "\\n")}'\n");
                     }
                 }
                 else if (child is DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape xdrGroupShape)
                 {
                     txtResults.AppendText("      詳細: Spreadsheet.GroupShape (xdr:grpSp)\n");
-                    foreach(var innerElement in xdrGroupShape.Elements<OpenXmlCompositeElement>()){
+                    foreach (var innerElement in xdrGroupShape.Elements<OpenXmlCompositeElement>())
+                    {
                         txtResults.AppendText($"        xdr:grpSp 内の子要素: {innerElement.GetType().FullName}\n");
-                        if(innerElement is DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape innerXdrShape) {
-                             var innerSpTextBody = innerXdrShape.TextBody;
-                             if(innerSpTextBody != null) {
+                        if (innerElement is DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape innerXdrShape)
+                        {
+                            var innerSpTextBody = innerXdrShape.TextBody;
+                            if (innerSpTextBody != null)
+                            {
                                 txtResults.AppendText($"          xdr:sp (内) Text: '{ExtractTextFromSpreadsheetTextBody(innerSpTextBody).Replace("\n", "\\n")}'\n");
                             }
-                        } else if (innerElement is DocumentFormat.OpenXml.Drawing.GroupShape innerDrawingGroupShape) { // a:grpSp
-                             txtResults.AppendText($"          Drawing.GroupShape (a:grpSp) (内)\n");
+                        }
+                        else if (innerElement is DocumentFormat.OpenXml.Drawing.GroupShape innerDrawingGroupShape)
+                        { // a:grpSp
+                            txtResults.AppendText($"          Drawing.GroupShape (a:grpSp) (内)\n");
                         }
                     }
                 }
             }
         }
-        
+
         private string FormatResultsForDisplay(List<TableInfo> results)
         {
             var output = new List<string>();
@@ -444,6 +559,7 @@ namespace ER2SpreadTool
 
         private void CreateOutputSheet(string filePath, string outputSheetName, List<TableInfo> results)
         {
+            // Using "true" to open for read/write
             using (var document = SpreadsheetDocument.Open(filePath, true))
             {
                 var workbookPart = document.WorkbookPart;
@@ -460,7 +576,7 @@ namespace ER2SpreadTool
                         workbookPart.DeletePart(existingWorksheetPart);
                     }
                     existingSheet.Remove();
-                     workbookPart.Workbook.Save(); 
+                    workbookPart.Workbook.Save(); // Save after removing sheet part and sheet element
                 }
 
                 var newWorksheetPart = workbookPart.AddNewPart<WorksheetPart>();
@@ -474,7 +590,7 @@ namespace ER2SpreadTool
                 {
                     newSheetId = sheets.Elements<Sheet>().Select(s => s.SheetId.Value).Max() + 1;
                 }
-                
+
                 var newSheet = new Sheet()
                 {
                     Id = workbookPart.GetIdOfPart(newWorksheetPart),
@@ -484,7 +600,7 @@ namespace ER2SpreadTool
                 sheets.Append(newSheet);
 
                 var sheetData = newWorksheetPart.Worksheet.GetFirstChild<SheetData>();
-                
+
                 var headerRow = new Row() { RowIndex = 1U };
                 headerRow.Append(CreateCell("A", 1U, "#"));
                 headerRow.Append(CreateCell("B", 1U, "num"));
@@ -508,8 +624,8 @@ namespace ER2SpreadTool
                         currentRowIndex++;
                     }
                 }
-                newWorksheetPart.Worksheet.Save(); 
-                workbookPart.Workbook.Save(); 
+                newWorksheetPart.Worksheet.Save(); // Save the worksheet part
+                workbookPart.Workbook.Save(); // Save the workbook
             }
         }
 
@@ -524,6 +640,7 @@ namespace ER2SpreadTool
         }
     }
 
+    // TableInfo と ShapeTextParseResult は既存のまま
     public class TableInfo
     {
         public string TableName { get; set; }

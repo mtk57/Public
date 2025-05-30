@@ -14,8 +14,6 @@ using System.Text;
 
 namespace ER2SpreadTool
 {
-
-
     public partial class MainForm : Form
     {
         private readonly string settingsFilePath;
@@ -26,6 +24,44 @@ namespace ER2SpreadTool
             settingsFilePath = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "er2spreadtool_settings.json");
             this.Load += MainForm_Load;
             this.FormClosing += MainForm_FormClosing;
+
+            // ドラッグアンドドロップ機能の初期化
+            InitializeDragDrop();
+        }
+
+        private void InitializeDragDrop()
+        {
+            this.txtFilePath.AllowDrop = true;
+            this.txtFilePath.DragEnter += new DragEventHandler(txtFilePath_DragEnter);
+            this.txtFilePath.DragDrop += new DragEventHandler(txtFilePath_DragDrop);
+        }
+
+        private void txtFilePath_DragEnter(object sender, DragEventArgs e)
+        {
+            // ドラッグされているデータがファイルかどうかを確認
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                // ファイルであれば、コピー操作を示すカーソルを表示
+                e.Effect = DragDropEffects.Copy;
+            }
+            else
+            {
+                // ファイルでなければ、何もしない
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        private void txtFilePath_DragDrop(object sender, DragEventArgs e)
+        {
+            // ドロップされたファイルのパスを取得
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files != null && files.Length > 0)
+            {
+                // 最初のファイルのパスをテキストボックスに設定
+                // ここではExcelファイルかどうかはチェックせず、単にパスを設定します。
+                // 必要であれば、ここでファイルの拡張子をチェックすることも可能です。
+                txtFilePath.Text = files[0];
+            }
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -88,20 +124,15 @@ namespace ER2SpreadTool
                     DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(AppSettings));
                     serializer.WriteObject(ms, settings);
                     byte[] jsonBytes = ms.ToArray();
-                    // インデントされたJSONとして書き出すために、一度文字列に変換して手動でインデント風にするか、
-                    // またはDataContractJsonSerializerSettingsでインデントオプションを探す（標準では単純なインデントは難しい）
-                    // ここでは単純な書き出しとします。
                     File.WriteAllBytes(settingsFilePath, jsonBytes);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"設定ファイルの保存中にエラーが発生しました:\n{ex.Message}", "設定保存エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                // 必要であればログに書き出すなどの処理を追加
             }
         }
 
-        // btnBrowse_Click メソッドを少し変更して、読み込んだパスを利用
         private void btnBrowse_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog())
@@ -109,7 +140,6 @@ namespace ER2SpreadTool
                 openFileDialog.Filter = "Excelファイル (*.xlsx)|*.xlsx";
                 openFileDialog.Title = "処理対象のExcelファイルを選択してください";
 
-                // 前回値があればそれを初期値とする
                 if (!string.IsNullOrWhiteSpace(txtFilePath.Text))
                 {
                     if (File.Exists(txtFilePath.Text))
@@ -117,12 +147,11 @@ namespace ER2SpreadTool
                         openFileDialog.InitialDirectory = Path.GetDirectoryName(txtFilePath.Text);
                         openFileDialog.FileName = Path.GetFileName(txtFilePath.Text);
                     }
-                    else if (Directory.Exists(txtFilePath.Text)) // もしパスがディレクトリなら
+                    else if (Directory.Exists(txtFilePath.Text)) 
                     {
                         openFileDialog.InitialDirectory = txtFilePath.Text;
                     }
                 }
-
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
@@ -152,7 +181,6 @@ namespace ER2SpreadTool
             try
             {
                 lblStatus.Text = "処理中...";
-                // txtResults.Clear(); // ログのクリアタイミングは要望に応じて調整
                 Application.DoEvents();
 
                 var results = ProcessExcelFile(txtFilePath.Text, txtSheetName.Text);
@@ -161,7 +189,6 @@ namespace ER2SpreadTool
                 {
                     txtResults.AppendText($"\n抽出結果:\n{FormatResultsForDisplay(results)}");
                     
-                    // TSVファイル出力（入力ファイルを変更しない）
                     string outputFilePath = CreateTsvOutput(txtFilePath.Text, results);
                     
                     lblStatus.Text = $"処理完了 - {results.Count}件のテーブル情報を抽出しました。";
@@ -182,6 +209,11 @@ namespace ER2SpreadTool
             }
         }
 
+        // 以下、ProcessExcelFile, ExtractTableInfoFromSpreadsheetGroup, ExtractTableInfoFromDrawingGroupShape,
+        // CreateTableInfoFromTextData, ExtractTextFromDrawingTextBody, ExtractTextFromSpreadsheetTextBody,
+        // LogAllShapes, LogTwoCellAnchor, FormatResultsForDisplay, CreateTsvOutput メソッドは変更なしのため省略します。
+        // (実際のファイルではこれらのメソッドはそのまま残してください)
+        // ... (省略されたメソッド群) ...
         private List<TableInfo> ProcessExcelFile(string filePath, string sheetName)
         {
             var results = new List<TableInfo>();
@@ -224,7 +256,6 @@ namespace ER2SpreadTool
 
                 foreach (var anchor in worksheetDrawing.Elements<TwoCellAnchor>())
                 {
-                    // Iterate through DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape (xdr:grpSp) elements
                     foreach (var xdrGroupShape in anchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape>())
                     {
                         txtResults.AppendText("Spreadsheet.GroupShape (xdr:grpSp) をTwoCellAnchor内で発見。\n");
@@ -255,7 +286,6 @@ namespace ER2SpreadTool
         {
             txtResults.AppendText("  ExtractTableInfoFromSpreadsheetGroup (xdr:grpSp) 開始\n");
 
-            // Scenario 1: The xdr:grpSp contains a nested a:grpSp (Drawing.GroupShape)
             var nestedDrawingGroup = xdrGroupShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.GroupShape>();
             if (nestedDrawingGroup != null)
             {
@@ -263,11 +293,10 @@ namespace ER2SpreadTool
                 return ExtractTableInfoFromDrawingGroupShape(nestedDrawingGroup);
             }
 
-            // Scenario 2: The xdr:grpSp directly contains two xdr:sp (Spreadsheet.Shape) elements
             var xdrShapesInGroup = xdrGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().ToList();
             txtResults.AppendText($"    xdr:grpSp内のSpreadsheet.Shape (xdr:sp) 数: {xdrShapesInGroup.Count}\n");
 
-            if (xdrShapesInGroup.Count < 2) // Needs at least one for table name, one for columns
+            if (xdrShapesInGroup.Count < 2) 
             {
                 txtResults.AppendText($"    xdr:grpSp内に少なくとも2つのxdr:spが必要です (テーブル名用1、カラム名用1以上)。実際は{xdrShapesInGroup.Count}個。\n");
                 return null;
@@ -280,7 +309,7 @@ namespace ER2SpreadTool
                 txtResults.AppendText($"    xdr:sp {i + 1} のテキスト抽出試行...\n");
                 string textContent = string.Empty;
 
-                var spreadsheetTextBody = xdrShape.TextBody; // This is DocumentFormat.OpenXml.Drawing.Spreadsheet.TextBody
+                var spreadsheetTextBody = xdrShape.TextBody; 
                 if (spreadsheetTextBody != null)
                 {
                     txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) を発見。\n");
@@ -308,10 +337,10 @@ namespace ER2SpreadTool
         private TableInfo ExtractTableInfoFromDrawingGroupShape(DocumentFormat.OpenXml.Drawing.GroupShape drawingGroupShape)
         {
             txtResults.AppendText("  ExtractTableInfoFromDrawingGroupShape (a:grpSp) 開始\n");
-            var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); // These are a:sp
+            var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); 
             txtResults.AppendText($"    a:grpSp内のDrawing.Shape (a:sp) 数: {shapesInDrawingGroup.Count}\n");
 
-            if (shapesInDrawingGroup.Count < 2) // Needs at least one for table name, one for columns
+            if (shapesInDrawingGroup.Count < 2) 
             {
                 txtResults.AppendText($"    a:grpSp内に少なくとも2つのa:spが必要です (テーブル名用1、カラム名用1以上)。実際は{shapesInDrawingGroup.Count}個。\n");
                 return null;
@@ -320,9 +349,9 @@ namespace ER2SpreadTool
             var textDataFromDrawingShapes = new List<ShapeTextParseResult>();
             for (int i = 0; i < shapesInDrawingGroup.Count; i++)
             {
-                var drawingShape = shapesInDrawingGroup[i]; // This is a:sp
+                var drawingShape = shapesInDrawingGroup[i]; 
                 txtResults.AppendText($"    a:sp {i + 1} のテキスト抽出試行...\n");
-                var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); // a:sp -> a:txBody
+                var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); 
                 string textContent = string.Empty;
                 string[] lines = new string[0];
 
@@ -346,7 +375,6 @@ namespace ER2SpreadTool
             }
             return CreateTableInfoFromTextData(textDataFromDrawingShapes, "a:spベース");
         }
-
         private TableInfo CreateTableInfoFromTextData(List<ShapeTextParseResult> textDataList, string sourceDescription)
         {
             txtResults.AppendText($"    {sourceDescription}: CreateTableInfoFromTextData 開始。ShapeTextParseResult 数: {textDataList.Count}\n");
@@ -356,8 +384,7 @@ namespace ER2SpreadTool
                 txtResults.AppendText($"    {sourceDescription}: 少なくとも2つのテキスト情報が必要です (テーブル名用1つ、カラム名用1つ以上)。実際は{textDataList.Count}個。\n");
                 return null;
             }
-
-            // Identify potential table name shapes (those with exactly one line of non-empty text)
+            
             List<ShapeTextParseResult> potentialTableShapes = textDataList
                 .Where(s => s.Lines != null && s.Lines.Length == 1 && !string.IsNullOrWhiteSpace(s.Lines[0]))
                 .ToList();
@@ -368,12 +395,11 @@ namespace ER2SpreadTool
             if (potentialTableShapes.Count == 1)
             {
                 tableShapeData = potentialTableShapes[0];
-                txtResults.AppendText($"    {sourceDescription}: テーブル名候補のシェイプを発見 (元テキスト: '{tableShapeData.OriginalText.Replace("\n", "\\n")}')\n");
-
-                // All other shapes contribute to columns
+                txtResults.AppendText($"    {sourceDescription}: テーブル名候補のシェイプを発견 (元テキスト: '{tableShapeData.OriginalText.Replace("\n", "\\n")}')\n");
+                
                 foreach (var shapeData in textDataList)
                 {
-                    if (shapeData != tableShapeData) // If it's not the table name shape
+                    if (shapeData != tableShapeData) 
                     {
                         if (shapeData.Lines != null && shapeData.Lines.Length > 0)
                         {
@@ -398,31 +424,27 @@ namespace ER2SpreadTool
                 }
                 return null;
             }
-
-            // Validate that a table name was indeed found and is not empty.
-            if (tableShapeData == null) // Should ideally not happen if potentialTableShapes.Count == 1
+            
+            if (tableShapeData == null) 
             {
                 txtResults.AppendText($"    {sourceDescription}: テーブル名シェイプの特定に失敗しました (内部エラー)。\n");
                 return null;
             }
             string tableName = tableShapeData.Lines[0].Trim();
 
-
-            // Validate that column data was found.
             if (columnLinesAggregated.Count == 0)
             {
                 txtResults.AppendText($"    {sourceDescription}: 抽出されたカラムリストが空です (テーブル名: '{tableName}')。\n");
                 return null;
             }
-
-            // Process and deduplicate column names
+            
             List<string> finalColumns = columnLinesAggregated
-                                        .Where(l => !string.IsNullOrWhiteSpace(l)) // Ensure no empty/whitespace lines become columns
-                                        .Select(l => l.Trim())                     // Trim whitespace from each column name
-                                        .Distinct(StringComparer.OrdinalIgnoreCase) // Deduplicate column names (case-insensitive)
+                                        .Where(l => !string.IsNullOrWhiteSpace(l)) 
+                                        .Select(l => l.Trim())                     
+                                        .Distinct(StringComparer.OrdinalIgnoreCase) 
                                         .ToList();
 
-            if (finalColumns.Count == 0) // After trimming and distinct, it might become empty
+            if (finalColumns.Count == 0) 
             {
                 txtResults.AppendText($"    {sourceDescription}: 有効なカラム名が抽出・処理後、空になりました (テーブル名: '{tableName}')。\n");
                 return null;
@@ -434,15 +456,15 @@ namespace ER2SpreadTool
             return new TableInfo { TableName = tableName, Columns = finalColumns };
         }
 
-        private string ExtractTextFromDrawingTextBody(DocumentFormat.OpenXml.Drawing.TextBody drawingTextBody) // For a:txBody
+        private string ExtractTextFromDrawingTextBody(DocumentFormat.OpenXml.Drawing.TextBody drawingTextBody) 
         {
             var textParts = new List<string>();
-            foreach (var paragraph in drawingTextBody.Elements<DocumentFormat.OpenXml.Drawing.Paragraph>()) // a:p
+            foreach (var paragraph in drawingTextBody.Elements<DocumentFormat.OpenXml.Drawing.Paragraph>()) 
             {
                 string paragraphText = "";
-                foreach (var run in paragraph.Elements<DocumentFormat.OpenXml.Drawing.Run>()) // a:r
+                foreach (var run in paragraph.Elements<DocumentFormat.OpenXml.Drawing.Run>()) 
                 {
-                    foreach (var text in run.Elements<DocumentFormat.OpenXml.Drawing.Text>()) // a:t
+                    foreach (var text in run.Elements<DocumentFormat.OpenXml.Drawing.Text>()) 
                     {
                         if (text.Text != null)
                         {
@@ -455,10 +477,9 @@ namespace ER2SpreadTool
             return string.Join("\n", textParts);
         }
 
-        private string ExtractTextFromSpreadsheetTextBody(DocumentFormat.OpenXml.Drawing.Spreadsheet.TextBody spreadsheetTextBody) // For xdr:txBody
+        private string ExtractTextFromSpreadsheetTextBody(DocumentFormat.OpenXml.Drawing.Spreadsheet.TextBody spreadsheetTextBody) 
         {
             var textParts = new List<string>();
-            // xdr:txBody also contains a:p elements
             foreach (var paragraph in spreadsheetTextBody.Elements<DocumentFormat.OpenXml.Drawing.Paragraph>())
             {
                 string paragraphText = "";
@@ -485,7 +506,7 @@ namespace ER2SpreadTool
 
             foreach (var element in childElements)
             {
-                txtResults.AppendText($"要素タイプ: {element.GetType().FullName}\n"); // Use FullName for clarity
+                txtResults.AppendText($"要素タイプ: {element.GetType().FullName}\n"); 
                 if (element is TwoCellAnchor anchor)
                 {
                     LogTwoCellAnchor(anchor);
@@ -524,7 +545,7 @@ namespace ER2SpreadTool
                             }
                         }
                         else if (innerElement is DocumentFormat.OpenXml.Drawing.GroupShape innerDrawingGroupShape)
-                        { // a:grpSp
+                        { 
                             txtResults.AppendText($"          Drawing.GroupShape (a:grpSp) (内)\n");
                         }
                     }
@@ -548,14 +569,10 @@ namespace ER2SpreadTool
             }
             return string.Join("\n", output);
         }
-
-        // TSVファイル出力メソッド（新規追加）
+        
         private string CreateTsvOutput(string inputFilePath, List<TableInfo> results)
         {
-            // 入力ファイルと同じフォルダにTSVファイルを作成
             string inputDirectory = Path.GetDirectoryName(inputFilePath);
-            
-            // 現在日時をYYYYMMDD_hhmmssfff形式でフォーマット
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
             string outputFileName = $"{timestamp}.tsv";
             string outputFilePath = Path.Combine(inputDirectory, outputFileName);
@@ -564,10 +581,7 @@ namespace ER2SpreadTool
             {
                 using (var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8))
                 {
-                    // ヘッダー行を出力
                     writer.WriteLine("#\tnum\tテーブル名\tカラム名");
-
-                    // データ行を出力
                     int overallCounter = 1;
                     foreach (var table in results)
                     {
@@ -578,7 +592,6 @@ namespace ER2SpreadTool
                         }
                     }
                 }
-
                 txtResults.AppendText($"TSVファイルを出力しました: {outputFilePath}\n");
                 return outputFilePath;
             }
@@ -592,7 +605,6 @@ namespace ER2SpreadTool
         }
     }
 
-    // 設定を保持するクラス (DataContract属性を使用)
     [DataContract]
     internal class AppSettings
     {

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -20,7 +16,7 @@ namespace SheetMergeTool
         public MainForm()
         {
             InitializeComponent();
-            lblStatus.Text = "準備完了"; // Initial status [from MainForm.Designer.cs]
+            lblStatus.Text = "準備完了"; // Initial status
         }
 
         private void btnBrowse_Click(object sender, EventArgs e)
@@ -40,26 +36,27 @@ namespace SheetMergeTool
             string folderPath = txtDirPath.Text;
             string startCellRef = txtStartCell.Text.Trim().ToUpper();
             string endCellRef = txtEndCell.Text.Trim().ToUpper();
+            bool includeSubdirectories = chkEnableSubDir.Checked; // Read checkbox state
 
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
             {
                 MessageBox.Show("有効なExcelフォルダパスを指定してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            if (!IsValidCellReference(startCellRef)) // [from MainForm.Designer.cs] for txtStartCell
+            if (!IsValidCellReference(startCellRef))
             {
                 MessageBox.Show("有効な開始セル位置を指定してください (例: A1)。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            if (!IsValidCellReference(endCellRef)) // [from MainForm.Designer.cs] for txtEndCell
+            if (!IsValidCellReference(endCellRef))
             {
                 MessageBox.Show("有効な終了セル位置を指定してください (例: D1)。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             SetControlsEnabled(false);
-            lblStatus.Text = "処理中..."; // [from MainForm.Designer.cs] for lblStatus
-            txtResults.Clear(); // [from MainForm.Designer.cs] for txtResults
+            lblStatus.Text = "処理中...";
+            txtResults.Clear();
             Application.DoEvents(); 
 
             var progressLog = new Progress<string>(message => {
@@ -74,7 +71,7 @@ namespace SheetMergeTool
             try
             {
                 await Task.Run(() => 
-                    MergeExcelFilesLogic(folderPath, startCellRef, endCellRef, progressLog, progressStatus)
+                    MergeExcelFilesLogic(folderPath, startCellRef, endCellRef, includeSubdirectories, progressLog, progressStatus) // Pass includeSubdirectories
                 );
                 ((IProgress<string>)progressStatus).Report("処理完了！");
             }
@@ -96,18 +93,20 @@ namespace SheetMergeTool
             txtDirPath.Enabled = enabled;
             txtStartCell.Enabled = enabled;
             txtEndCell.Enabled = enabled;
+            chkEnableSubDir.Enabled = enabled; // Manage checkbox state
             btnBrowse.Enabled = enabled;
             btnProcess.Enabled = enabled;
         }
 
-        private void MergeExcelFilesLogic(string folderPath, string startCellUserRef, string endCellUserRef, 
+        private void MergeExcelFilesLogic(string folderPath, string startCellUserRef, string endCellUserRef, bool includeSubdirectories,
                                           IProgress<string> logger, IProgress<string> statusUpdater)
         {
             logger.Report("処理を開始します...");
-            logger.Report($"対象フォルダ: {folderPath}"); // [cite: 1]
-            logger.Report($"開始セル: {startCellUserRef}, 終了セル列範囲: {endCellUserRef}"); // [cite: 1]
+            logger.Report($"対象フォルダ: {folderPath}");
+            logger.Report($"サブフォルダを検索: {(includeSubdirectories ? "はい" : "いいえ")}");
+            logger.Report($"開始セル: {startCellUserRef}, 終了セル列範囲: {endCellUserRef}");
 
-            string outputFileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".xlsx"; // [cite: 1] (YYYYMMDD_hhmmssfff.xlsx)
+            string outputFileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".xlsx";
             string outputFilePath = Path.Combine(folderPath, outputFileName);
 
             GetCellRowColumn(startCellUserRef, out uint startRowIndex, out string startColumnName);
@@ -133,15 +132,15 @@ namespace SheetMergeTool
                 worksheetPart.Worksheet = new Worksheet(sheetData);
 
                 Sheets sheets = outputDoc.WorkbookPart.Workbook.AppendChild<Sheets>(new Sheets());
-                Sheet sheet = new Sheet() { Id = outputDoc.WorkbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Output" }; // [cite: 1] (シート名 [Output])
+                Sheet sheet = new Sheet() { Id = outputDoc.WorkbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Output" };
                 sheets.Append(sheet);
 
                 uint outputCurrentRow = 1;
 
                 Row headerRow = new Row() { RowIndex = outputCurrentRow };
-                headerRow.Append(CreateTextCell(GetColumnNameFromIndex(0), outputCurrentRow, "ファイルパス")); // [cite: 1]
-                headerRow.Append(CreateTextCell(GetColumnNameFromIndex(1), outputCurrentRow, "ファイル名"));   // [cite: 1]
-                headerRow.Append(CreateTextCell(GetColumnNameFromIndex(2), outputCurrentRow, "シート名"));     // [cite: 1]
+                headerRow.Append(CreateTextCell(GetColumnNameFromIndex(0), outputCurrentRow, "ファイルパス"));
+                headerRow.Append(CreateTextCell(GetColumnNameFromIndex(1), outputCurrentRow, "ファイル名"));
+                headerRow.Append(CreateTextCell(GetColumnNameFromIndex(2), outputCurrentRow, "シート名"));
 
                 int dataColOutputIdx = 0;
                 for (int col = startColumnNum; col <= endColumnNum; col++)
@@ -152,12 +151,32 @@ namespace SheetMergeTool
                 sheetData.Append(headerRow);
                 outputCurrentRow++;
 
-                string[] fileExtensions = { "*.xlsx", "*.xlsm" }; // [cite: 1] (対象とする。)
+                string[] fileExtensions = { "*.xlsx", "*.xlsm" };
                 List<string> filesToProcess = new List<string>();
+                SearchOption searchOption = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly; // Use searchOption
+
                 foreach (string ext in fileExtensions)
                 {
-                    filesToProcess.AddRange(Directory.GetFiles(folderPath, ext));
+                    try
+                    {
+                        filesToProcess.AddRange(Directory.GetFiles(folderPath, ext, searchOption));
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        logger.Report($"警告: フォルダ '{folderPath}' またはそのサブフォルダへのアクセスが拒否されました。詳細: {ex.Message}");
+                    }
+                    catch (DirectoryNotFoundException ex)
+                    {
+                         logger.Report($"警告: フォルダ '{folderPath}' が見つかりません。詳細: {ex.Message}");
+                         statusUpdater.Report("エラー: 対象フォルダなし");
+                         return; // Stop processing if the base directory is not found
+                    }
                 }
+                
+                // Remove duplicates that might occur if folderPath itself matches a sub-folder name in some complex scenarios
+                // or if GetFiles returns overlapping results based on how OS handles it (though rare for distinct extensions).
+                filesToProcess = filesToProcess.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
 
                 if (!filesToProcess.Any())
                 {
@@ -174,7 +193,7 @@ namespace SheetMergeTool
                     }
 
                     string fileNameOnly = Path.GetFileName(filePath);
-                    logger.Report($"処理中のファイル: {fileNameOnly}");
+                    logger.Report($"処理中のファイル: {filePath}"); // Log full path for clarity
                     statusUpdater.Report($"処理中: {fileNameOnly}");
                     
                     try
@@ -203,7 +222,7 @@ namespace SheetMergeTool
                                     string firstCellInRowRef = startColumnName + currentSourceRow;
                                     string firstCellValue = GetCellValue(sourceWorkbookPart, sourceWorksheetPart, firstCellInRowRef);
 
-                                    if (string.IsNullOrEmpty(firstCellValue)) // [cite: 1] (空行を検知するまでの行をOutputシートにコピーする。)
+                                    if (string.IsNullOrEmpty(firstCellValue))
                                     {
                                         logger.Report($"    シート '{sheetName}' の行 {currentSourceRow} ({startColumnName}{currentSourceRow}) で空のセルを検出。このシートの処理を終了します。");
                                         break; 
@@ -232,12 +251,11 @@ namespace SheetMergeTool
                     }
                     catch (Exception ex)
                     {
-                         logger.Report($"ファイル処理エラー {fileNameOnly}: {ex.Message}。このファイルをスキップします。");
+                         logger.Report($"ファイル処理エラー {fileNameOnly} ({filePath}): {ex.Message}。このファイルをスキップします。");
                     }
                 }
                 workbookPart.Workbook.Save();
                 logger.Report($"処理完了。出力ファイル: {outputFilePath}");
-                // Final status update is handled in btnProcess_Click's main try-catch
             }
         }
 

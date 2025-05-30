@@ -8,22 +8,137 @@ using System.Windows.Forms;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+// ★ 以下のusingディレクティブを追加
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 
 namespace SheetMergeTool
 {
     public partial class MainForm : Form
     {
+        // ★ 設定ファイルのパスを保持するフィールド
+        private readonly string settingsFilePath;
+
         public MainForm()
         {
             InitializeComponent();
+
+            // ★ 設定ファイルのパスを初期化 (アプリケーションと同じディレクトリ)
+            settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sheetmergetool_settings.json");
+
+            // ★ イベントハンドラの登録
+            this.Load += MainForm_Load;
+            this.FormClosing += MainForm_FormClosing;
+
             lblStatus.Text = "準備完了"; // Initial status
         }
+
+        // ★ MainForm_Load イベントハンドラ
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            LoadSettings();
+        }
+
+        // ★ MainForm_FormClosing イベントハンドラ
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveSettings();
+        }
+
+        // ★ 設定読み込み処理
+        private void LoadSettings()
+        {
+            if (!File.Exists(settingsFilePath))
+            {
+                if (!txtResults.IsDisposed)
+                {
+                    txtResults.AppendText("設定ファイルが見つかりませんでした。初回起動または設定ファイルが削除されています。\n");
+                }
+                return;
+            }
+
+            try
+            {
+                using (FileStream fs = new FileStream(settingsFilePath, FileMode.Open, FileAccess.Read))
+                {
+                    if (fs.Length == 0) // 空のファイルの場合
+                    {
+                        if (!txtResults.IsDisposed)
+                        {
+                            txtResults.AppendText("設定ファイルは空です。\n");
+                        }
+                        return;
+                    }
+                    DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(SheetMergeToolSettings));
+                    SheetMergeToolSettings settings = (SheetMergeToolSettings)serializer.ReadObject(fs);
+
+                    if (settings != null)
+                    {
+                        txtDirPath.Text = settings.LastFolderPath;
+                        txtStartCell.Text = settings.LastStartCell;
+                        txtEndCell.Text = settings.LastEndCell;
+                        chkEnableSubDir.Checked = settings.LastIncludeSubdirectories;
+                        if (!txtResults.IsDisposed)
+                        {
+                            txtResults.AppendText("前回終了時の設定を読み込みました。\n");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定ファイルの読み込み中にエラーが発生しました:\n{ex.Message}", "設定読み込みエラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (!txtResults.IsDisposed)
+                {
+                    txtResults.AppendText($"設定ファイルの読み込みエラー: {ex.Message}\n");
+                }
+            }
+        }
+
+        // ★ 設定保存処理
+        private void SaveSettings()
+        {
+            SheetMergeToolSettings settings = new SheetMergeToolSettings
+            {
+                LastFolderPath = txtDirPath.Text,
+                LastStartCell = txtStartCell.Text,
+                LastEndCell = txtEndCell.Text,
+                LastIncludeSubdirectories = chkEnableSubDir.Checked
+            };
+
+            try
+            {
+                // DataContractJsonSerializerはデフォルトではインデントしない
+                // インデントが必要な場合はSystem.Text.Json ( .NET Core 3.0以降 or NuGet) を検討するか、手動で文字列整形が必要
+                // ここではシンプルにシリアライズします
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(SheetMergeToolSettings));
+                    serializer.WriteObject(ms, settings);
+                    File.WriteAllBytes(settingsFilePath, ms.ToArray());
+                }
+            }
+            catch (Exception ex)
+            {
+                // フォームが閉じられる最中なので、MessageBoxでの通知はユーザー体験として適切か考慮
+                // ログファイルへの記録などが望ましい場合もある
+                MessageBox.Show($"設定ファイルの保存中にエラーが発生しました:\n{ex.Message}", "設定保存エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // 必要であればtxtResultsにも書き出すが、フォームが閉じられるため見えない可能性が高い
+            }
+        }
+
 
         private void btnBrowse_Click(object sender, EventArgs e)
         {
             using (var dialog = new FolderBrowserDialog())
             {
                 dialog.Description = "Excelファイルが含まれるフォルダを選択してください";
+                // ★ 前回選択したフォルダパスを初期表示
+                if (!string.IsNullOrWhiteSpace(txtDirPath.Text) && Directory.Exists(txtDirPath.Text))
+                {
+                    dialog.SelectedPath = txtDirPath.Text;
+                }
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     txtDirPath.Text = dialog.SelectedPath;
@@ -173,8 +288,6 @@ namespace SheetMergeTool
                     }
                 }
                 
-                // Remove duplicates that might occur if folderPath itself matches a sub-folder name in some complex scenarios
-                // or if GetFiles returns overlapping results based on how OS handles it (though rare for distinct extensions).
                 filesToProcess = filesToProcess.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
 
@@ -193,7 +306,7 @@ namespace SheetMergeTool
                     }
 
                     string fileNameOnly = Path.GetFileName(filePath);
-                    logger.Report($"処理中のファイル: {filePath}"); // Log full path for clarity
+                    logger.Report($"処理中のファイル: {filePath}"); 
                     statusUpdater.Report($"処理中: {fileNameOnly}");
                     
                     try
@@ -291,6 +404,10 @@ namespace SheetMergeTool
                 }
                 else if (sstPart == null && theCell.DataType.Value == CellValues.SharedString)
                 {
+                    // This case might indicate a malformed document or an issue if SharedStringTable is expected but not found.
+                    // However, returning the raw value (which is an index) might be confusing.
+                    // For robustness, perhaps log a warning or return a specific error string.
+                    // For now, returning the value as is, matching previous logic implicitly.
                     return value; 
                 }
                 return value; 
@@ -342,5 +459,22 @@ namespace SheetMergeTool
             if (string.IsNullOrWhiteSpace(cellRef)) return false;
             return Regex.IsMatch(cellRef.ToUpper(), @"^[A-Z]+[1-9][0-9]*$");
         }
+    }
+
+    // ★ 設定を保持するクラス (DataContract属性を使用)
+    [DataContract]
+    internal class SheetMergeToolSettings
+    {
+        [DataMember]
+        public string LastFolderPath { get; set; }
+
+        [DataMember]
+        public string LastStartCell { get; set; }
+
+        [DataMember]
+        public string LastEndCell { get; set; }
+
+        [DataMember]
+        public bool LastIncludeSubdirectories { get; set; }
     }
 }

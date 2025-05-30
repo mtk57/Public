@@ -365,7 +365,7 @@ namespace SheetMergeTool
                             foreach (Sheet sourceSheet in sourceWorkbookPart.Workbook.Sheets.Elements<Sheet>())
                             {
                                 if (sourceSheet?.Name == null || sourceSheet.Id?.Value == null) continue;
-                                string sheetName = sourceSheet.Name.Value; // Ensure .Value is used for OpenXmlElementContext properties
+                                string sheetName = sourceSheet.Name.Value; 
                                 logger.Report($"  処理中のシート: {sheetName}");
 
                                 WorksheetPart sourceWorksheetPart = (WorksheetPart)sourceWorkbookPart.GetPartById(sourceSheet.Id.Value);
@@ -374,14 +374,31 @@ namespace SheetMergeTool
 
                                 while (true)
                                 {
-                                    string firstCellInRowRef = startColumnName + currentSourceRow;
-                                    string firstCellValue = GetCellValue(sourceWorkbookPart, sourceWorksheetPart, firstCellInRowRef);
+                                    // ▼▼▼ 変更点 ▼▼▼
+                                    bool isRowCompletelyEmpty = true;
+                                    List<string> currentRowCellValues = new List<string>();
 
-                                    if (string.IsNullOrEmpty(firstCellValue))
+                                    // 指定された列範囲のセル値をチェック
+                                    for (int colIdx = startColumnNum; colIdx <= endColumnNum; colIdx++)
                                     {
-                                        logger.Report($"    シート '{sheetName}' の行 {currentSourceRow} ({startColumnName}{currentSourceRow}) で空のセルを検出。このシートの処理を終了します。");
+                                        string currentSourceColName = GetColumnNameFromIndex(colIdx);
+                                        string cellRef = currentSourceColName + currentSourceRow;
+                                        string cellValueStr = GetCellValue(sourceWorkbookPart, sourceWorksheetPart, cellRef);
+                                        
+                                        currentRowCellValues.Add(cellValueStr ?? string.Empty); // 値をリストに追加（nullの場合は空文字）
+
+                                        if (!string.IsNullOrEmpty(cellValueStr))
+                                        {
+                                            isRowCompletelyEmpty = false; // 1つでも値があれば、行は空ではない
+                                        }
+                                    }
+
+                                    if (isRowCompletelyEmpty)
+                                    {
+                                        logger.Report($"    シート '{sheetName}' の行 {currentSourceRow} (列 {startColumnName} から {endColumnName}) の全セルが空のため、このシートの処理を終了します。");
                                         break; 
                                     }
+                                    // ▲▲▲ 変更点 ▲▲▲
 
                                     Row dataRow = new Row() { RowIndex = outputCurrentRow };
                                     dataRow.Append(CreateTextCell(GetColumnNameFromIndex(0), outputCurrentRow, filePath));
@@ -389,14 +406,14 @@ namespace SheetMergeTool
                                     dataRow.Append(CreateTextCell(GetColumnNameFromIndex(2), outputCurrentRow, sheetName));
 
                                     int outputDataColLetterIdx = 3; 
-                                    for (int colIdx = startColumnNum; colIdx <= endColumnNum; colIdx++)
+                                    // ▼▼▼ 変更点 ▼▼▼
+                                    // 収集したセル値を使って出力行を生成
+                                    foreach (string cellValue in currentRowCellValues)
                                     {
-                                        string currentSourceColName = GetColumnNameFromIndex(colIdx);
-                                        string cellRef = currentSourceColName + currentSourceRow;
-                                        string cellValueStr = GetCellValue(sourceWorkbookPart, sourceWorksheetPart, cellRef);
-                                        dataRow.Append(CreateTextCell(GetColumnNameFromIndex(outputDataColLetterIdx++), outputCurrentRow, cellValueStr ?? string.Empty));
+                                        dataRow.Append(CreateTextCell(GetColumnNameFromIndex(outputDataColLetterIdx++), outputCurrentRow, cellValue));
                                     }
-
+                                    // ▲▲▲ 変更点 ▲▲▲
+                                    
                                     sheetData.Append(dataRow);
                                     outputCurrentRow++;
                                     currentSourceRow++;
@@ -404,7 +421,7 @@ namespace SheetMergeTool
                             }
                         }
                     }
-                    catch (OpenXmlPackageException oxpe) // More specific exception for OpenXML issues
+                    catch (OpenXmlPackageException oxpe) 
                     {
                          logger.Report($"ファイル処理エラー (OpenXML) {fileNameOnly} ({filePath}): {oxpe.Message}。このファイルをスキップします。破損しているか、パスワードで保護されている可能性があります。");
                     }
@@ -423,7 +440,7 @@ namespace SheetMergeTool
             return new Cell(new CellValue(text))
             {
                 CellReference = columnLetter + rowIndex,
-                DataType = new EnumValue<CellValues>(CellValues.String) // Corrected: Use EnumValue<CellValues>
+                DataType = new EnumValue<CellValues>(CellValues.String) 
             };
         }
 
@@ -440,21 +457,15 @@ namespace SheetMergeTool
             if (theCell.DataType != null && theCell.DataType.Value == CellValues.SharedString)
             {
                 SharedStringTablePart sstPart = workbookPart?.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
-                if (sstPart?.SharedStringTable != null && int.TryParse(value, out int sstId)) // Check sstPart.SharedStringTable
+                if (sstPart?.SharedStringTable != null && int.TryParse(value, out int sstId)) 
                 {
-                    // Ensure sstId is within the bounds of the SharedStringTable's children
                     if (sstId >= 0 && sstId < sstPart.SharedStringTable.ChildElements.Count)
                     {
                          return sstPart.SharedStringTable.ChildElements[sstId].InnerText;
                     }
-                    // Log or handle invalid sstId appropriately
-                    return $"#SST_ID_OOR({sstId})"; // Out Of Range
+                    return $"#SST_ID_OOR({sstId})"; 
                 }
-                // If sstPart or SharedStringTable is null, or if value is not a valid int,
-                // or if DataType is SharedString but something is wrong.
-                // Returning the raw index might be misleading, or it might be the best guess.
-                // This path indicates a potential issue with the SST lookup.
-                return value; // Fallback, though potentially an index if sstPart was missing
+                return value; 
             }
             return value;
         }
@@ -463,7 +474,7 @@ namespace SheetMergeTool
         {
             if (string.IsNullOrEmpty(columnName)) throw new ArgumentNullException(nameof(columnName));
             int index = 0;
-            columnName = columnName.ToUpperInvariant(); // Use ToUpperInvariant for consistency
+            columnName = columnName.ToUpperInvariant(); 
             for (int i = 0; i < columnName.Length; i++)
             {
                 if (columnName[i] < 'A' || columnName[i] > 'Z') throw new ArgumentException("Invalid character in column name.", nameof(columnName));
@@ -490,27 +501,22 @@ namespace SheetMergeTool
         public static void GetCellRowColumn(string cellReference, out uint rowIndex, out string columnName)
         {
             if (string.IsNullOrEmpty(cellReference)) throw new ArgumentNullException(nameof(cellReference));
-            cellReference = cellReference.ToUpperInvariant(); // Use ToUpperInvariant
+            cellReference = cellReference.ToUpperInvariant(); 
 
-            // Regex ensures column is letters and row is numbers, and row > 0 implicitly by [1-9][0-9]*
             Match match = Regex.Match(cellReference, @"^([A-Z]+)([1-9][0-9]*)$"); 
             if (!match.Success) throw new ArgumentException("Invalid cell reference format.", nameof(cellReference));
 
             columnName = match.Groups[1].Value;
-            // uint.Parse should not fail here due to regex, but TryParse is safer if regex was less strict
             rowIndex = uint.Parse(match.Groups[2].Value);
-            // Redundant check as regex now ensures row is not 0: if (rowIndex == 0) throw new ArgumentException("Row index cannot be 0.", nameof(cellReference));
         }
         
         public static bool IsValidCellReference(string cellRef)
         {
             if (string.IsNullOrWhiteSpace(cellRef)) return false;
-            // Regex to match one or more uppercase letters followed by one or more digits, where the first digit is not zero.
             return Regex.IsMatch(cellRef.ToUpperInvariant(), @"^[A-Z]+[1-9][0-9]*$");
         }
     }
 
-    // ★ 設定を保持するクラス (DataContract属性を使用)
     [DataContract]
     internal class SheetMergeToolSettings
     {

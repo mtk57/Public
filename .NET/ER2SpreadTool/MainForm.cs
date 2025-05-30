@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,23 +7,14 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Spreadsheet;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-// š ˆÈ‰º‚ÌusingƒfƒBƒŒƒNƒeƒBƒu‚ğ’Ç‰Á
+// â˜… ä»¥ä¸‹ã®usingãƒ‡ã‚£ãƒ¬ã‚¯ãƒ†ã‚£ãƒ–ã‚’è¿½åŠ 
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
 namespace ER2SpreadTool
 {
-    // İ’è‚ğ•Û‚·‚éƒNƒ‰ƒX (DataContract‘®«‚ğg—p)
-    [DataContract]
-    public class AppSettings
-    {
-        [DataMember]
-        public string LastFilePath { get; set; }
 
-        [DataMember]
-        public string LastSheetName { get; set; }
-    }
 
     public partial class MainForm : Form
     {
@@ -51,7 +42,7 @@ namespace ER2SpreadTool
         {
             if (!File.Exists(settingsFilePath))
             {
-                txtResults.AppendText("İ’èƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½B‰‰ñ‹N“®‚Ü‚½‚Íİ’èƒtƒ@ƒCƒ‹‚ªíœ‚³‚ê‚Ä‚¢‚Ü‚·B\n");
+                txtResults.AppendText("è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚åˆå›èµ·å‹•ã¾ãŸã¯è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ãŒå‰Šé™¤ã•ã‚Œã¦ã„ã¾ã™ã€‚\n");
                 return;
             }
 
@@ -59,9 +50,9 @@ namespace ER2SpreadTool
             {
                 using (FileStream fs = new FileStream(settingsFilePath, FileMode.Open, FileAccess.Read))
                 {
-                    if (fs.Length == 0) // ‹ó‚Ìƒtƒ@ƒCƒ‹‚Ìê‡
+                    if (fs.Length == 0) // ç©ºã®ãƒ•ã‚¡ã‚¤ãƒ«ã®å ´åˆ
                     {
-                        txtResults.AppendText("İ’èƒtƒ@ƒCƒ‹‚Í‹ó‚Å‚·B\n");
+                        txtResults.AppendText("è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã¯ç©ºã§ã™ã€‚\n");
                         return;
                     }
                     DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(AppSettings));
@@ -71,14 +62,14 @@ namespace ER2SpreadTool
                     {
                         txtFilePath.Text = settings.LastFilePath;
                         txtSheetName.Text = settings.LastSheetName;
-                        txtResults.AppendText("‘O‰ñI—¹‚Ìİ’è‚ğ“Ç‚İ‚İ‚Ü‚µ‚½B\n");
+                        txtResults.AppendText("å‰å›çµ‚äº†æ™‚ã®è¨­å®šã‚’èª­ã¿è¾¼ã¿ã¾ã—ãŸã€‚\n");
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"İ’èƒtƒ@ƒCƒ‹‚Ì“Ç‚İ‚İ’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½:\n{ex.Message}", "İ’è“Ç‚İ‚İƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                txtResults.AppendText($"İ’èƒtƒ@ƒCƒ‹‚Ì“Ç‚İ‚İƒGƒ‰[: {ex.Message}\n");
+                MessageBox.Show($"è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã®èª­ã¿è¾¼ã¿ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ:\n{ex.Message}", "è¨­å®šèª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtResults.AppendText($"è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã®èª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼: {ex.Message}\n");
             }
         }
 
@@ -97,28 +88,28 @@ namespace ER2SpreadTool
                     DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(AppSettings));
                     serializer.WriteObject(ms, settings);
                     byte[] jsonBytes = ms.ToArray();
-                    // ƒCƒ“ƒfƒ“ƒg‚³‚ê‚½JSON‚Æ‚µ‚Ä‘‚«o‚·‚½‚ß‚ÉAˆê“x•¶š—ñ‚É•ÏŠ·‚µ‚Äè“®‚ÅƒCƒ“ƒfƒ“ƒg•—‚É‚·‚é‚©A
-                    // ‚Ü‚½‚ÍDataContractJsonSerializerSettings‚ÅƒCƒ“ƒfƒ“ƒgƒIƒvƒVƒ‡ƒ“‚ğ’T‚·i•W€‚Å‚Í’Pƒ‚ÈƒCƒ“ƒfƒ“ƒg‚Í“ï‚µ‚¢j
-                    // ‚±‚±‚Å‚Í’Pƒ‚È‘‚«o‚µ‚Æ‚µ‚Ü‚·B
+                    // ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆã•ã‚ŒãŸJSONã¨ã—ã¦æ›¸ãå‡ºã™ãŸã‚ã«ã€ä¸€åº¦æ–‡å­—åˆ—ã«å¤‰æ›ã—ã¦æ‰‹å‹•ã§ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆé¢¨ã«ã™ã‚‹ã‹ã€
+                    // ã¾ãŸã¯DataContractJsonSerializerSettingsã§ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚’æ¢ã™ï¼ˆæ¨™æº–ã§ã¯å˜ç´”ãªã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆã¯é›£ã—ã„ï¼‰
+                    // ã“ã“ã§ã¯å˜ç´”ãªæ›¸ãå‡ºã—ã¨ã—ã¾ã™ã€‚
                     File.WriteAllBytes(settingsFilePath, jsonBytes);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"İ’èƒtƒ@ƒCƒ‹‚Ì•Û‘¶’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½:\n{ex.Message}", "İ’è•Û‘¶ƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                // •K—v‚Å‚ ‚ê‚ÎƒƒO‚É‘‚«o‚·‚È‚Ç‚Ìˆ—‚ğ’Ç‰Á
+                MessageBox.Show($"è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã®ä¿å­˜ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ:\n{ex.Message}", "è¨­å®šä¿å­˜ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // å¿…è¦ã§ã‚ã‚Œã°ãƒ­ã‚°ã«æ›¸ãå‡ºã™ãªã©ã®å‡¦ç†ã‚’è¿½åŠ 
             }
         }
 
-        // btnBrowse_Click ƒƒ\ƒbƒh‚ğ­‚µ•ÏX‚µ‚ÄA“Ç‚İ‚ñ‚¾ƒpƒX‚ğ—˜—p
+        // btnBrowse_Click ãƒ¡ã‚½ãƒƒãƒ‰ã‚’å°‘ã—å¤‰æ›´ã—ã¦ã€èª­ã¿è¾¼ã‚“ã ãƒ‘ã‚¹ã‚’åˆ©ç”¨
         private void btnBrowse_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.Filter = "Excelƒtƒ@ƒCƒ‹ (*.xlsx)|*.xlsx";
-                openFileDialog.Title = "ˆ—‘ÎÛ‚ÌExcelƒtƒ@ƒCƒ‹‚ğ‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢";
+                openFileDialog.Filter = "Excelãƒ•ã‚¡ã‚¤ãƒ« (*.xlsx)|*.xlsx";
+                openFileDialog.Title = "å‡¦ç†å¯¾è±¡ã®Excelãƒ•ã‚¡ã‚¤ãƒ«ã‚’é¸æŠã—ã¦ãã ã•ã„";
 
-                // ‘O‰ñ’l‚ª‚ ‚ê‚Î‚»‚ê‚ğ‰Šú’l‚Æ‚·‚é
+                // å‰å›å€¤ãŒã‚ã‚Œã°ãã‚Œã‚’åˆæœŸå€¤ã¨ã™ã‚‹
                 if (!string.IsNullOrWhiteSpace(txtFilePath.Text))
                 {
                     if (File.Exists(txtFilePath.Text))
@@ -126,7 +117,7 @@ namespace ER2SpreadTool
                         openFileDialog.InitialDirectory = Path.GetDirectoryName(txtFilePath.Text);
                         openFileDialog.FileName = Path.GetFileName(txtFilePath.Text);
                     }
-                    else if (Directory.Exists(txtFilePath.Text)) // ‚à‚µƒpƒX‚ªƒfƒBƒŒƒNƒgƒŠ‚È‚ç
+                    else if (Directory.Exists(txtFilePath.Text)) // ã‚‚ã—ãƒ‘ã‚¹ãŒãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãªã‚‰
                     {
                         openFileDialog.InitialDirectory = txtFilePath.Text;
                     }
@@ -144,50 +135,50 @@ namespace ER2SpreadTool
         {
             if (string.IsNullOrWhiteSpace(txtFilePath.Text))
             {
-                MessageBox.Show("Excelƒtƒ@ƒCƒ‹ƒpƒX‚ğw’è‚µ‚Ä‚­‚¾‚³‚¢B", "ƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Excelãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’æŒ‡å®šã—ã¦ãã ã•ã„ã€‚", "ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (string.IsNullOrWhiteSpace(txtSheetName.Text))
             {
-                MessageBox.Show("ƒV[ƒg–¼‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢B", "ƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("ã‚·ãƒ¼ãƒˆåã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚", "ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (!File.Exists(txtFilePath.Text))
             {
-                MessageBox.Show("w’è‚³‚ê‚½ƒtƒ@ƒCƒ‹‚ª‘¶İ‚µ‚Ü‚¹‚ñB", "ƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("æŒ‡å®šã•ã‚ŒãŸãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚", "ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             try
             {
-                lblStatus.Text = "ˆ—’†...";
-                // txtResults.Clear(); // ƒƒO‚ÌƒNƒŠƒAƒ^ƒCƒ~ƒ“ƒO‚Í—v–]‚É‰‚¶‚Ä’²®
+                lblStatus.Text = "å‡¦ç†ä¸­...";
+                // txtResults.Clear(); // ãƒ­ã‚°ã®ã‚¯ãƒªã‚¢ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã¯è¦æœ›ã«å¿œã˜ã¦èª¿æ•´
                 Application.DoEvents();
 
                 var results = ProcessExcelFile(txtFilePath.Text, txtSheetName.Text);
 
                 if (results.Any())
                 {
-                    txtResults.AppendText($"\n’ŠoŒ‹‰Ê:\n{FormatResultsForDisplay(results)}");
+                    txtResults.AppendText($"\næŠ½å‡ºçµæœ:\n{FormatResultsForDisplay(results)}");
                     
-                    // TSVƒtƒ@ƒCƒ‹o—Íi“ü—Íƒtƒ@ƒCƒ‹‚ğ•ÏX‚µ‚È‚¢j
+                    // TSVãƒ•ã‚¡ã‚¤ãƒ«å‡ºåŠ›ï¼ˆå…¥åŠ›ãƒ•ã‚¡ã‚¤ãƒ«ã‚’å¤‰æ›´ã—ãªã„ï¼‰
                     string outputFilePath = CreateTsvOutput(txtFilePath.Text, results);
                     
-                    lblStatus.Text = $"ˆ—Š®—¹ - {results.Count}Œ‚Ìƒe[ƒuƒ‹î•ñ‚ğ’Šo‚µ‚Ü‚µ‚½B";
-                    MessageBox.Show($"ˆ—‚ªŠ®—¹‚µ‚Ü‚µ‚½B\nTSVƒtƒ@ƒCƒ‹‚ğo—Í‚µ‚Ü‚µ‚½:\n{outputFilePath}", "Š®—¹", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    lblStatus.Text = $"å‡¦ç†å®Œäº† - {results.Count}ä»¶ã®ãƒ†ãƒ¼ãƒ–ãƒ«æƒ…å ±ã‚’æŠ½å‡ºã—ã¾ã—ãŸã€‚";
+                    MessageBox.Show($"å‡¦ç†ãŒå®Œäº†ã—ã¾ã—ãŸã€‚\nTSVãƒ•ã‚¡ã‚¤ãƒ«ã‚’å‡ºåŠ›ã—ã¾ã—ãŸ:\n{outputFilePath}", "å®Œäº†", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    txtResults.AppendText("\nˆ—‘ÎÛ‚Ì}Œ`‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½B\nƒfƒoƒbƒOî•ñ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B");
-                    lblStatus.Text = "ˆ—‘ÎÛ‚Ì}Œ`‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½B";
-                    MessageBox.Show("ˆ—‘ÎÛ‚Ì}Œ`‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½BƒƒO‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B", "î•ñ", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    txtResults.AppendText("\nå‡¦ç†å¯¾è±¡ã®å›³å½¢ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚\nãƒ‡ãƒãƒƒã‚°æƒ…å ±ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚");
+                    lblStatus.Text = "å‡¦ç†å¯¾è±¡ã®å›³å½¢ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚";
+                    MessageBox.Show("å‡¦ç†å¯¾è±¡ã®å›³å½¢ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚ãƒ­ã‚°ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚", "æƒ…å ±", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "ˆ—ƒGƒ‰[";
-                txtResults.AppendText($"\nƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½:\n{ex.ToString()}\n");
-                MessageBox.Show($"ˆ—’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½:\n{ex.Message}", "ƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "å‡¦ç†ã‚¨ãƒ©ãƒ¼";
+                txtResults.AppendText($"\nã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ:\n{ex.ToString()}\n");
+                MessageBox.Show($"å‡¦ç†ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ:\n{ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -199,36 +190,36 @@ namespace ER2SpreadTool
                 var workbookPart = document.WorkbookPart;
                 if (workbookPart == null)
                 {
-                    txtResults.AppendText("WorkbookPart ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB\n");
+                    txtResults.AppendText("WorkbookPart ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚\n");
                     return results;
                 }
 
                 var sheet = workbookPart.Workbook.Descendants<Sheet>()
                     .FirstOrDefault(s => s.Name != null && s.Name.Value.Equals(sheetName, StringComparison.OrdinalIgnoreCase));
-                if (sheet == null) throw new ArgumentException($"ƒV[ƒg '{sheetName}' ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                if (sheet == null) throw new ArgumentException($"ã‚·ãƒ¼ãƒˆ '{sheetName}' ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
                 var worksheetPart = workbookPart.GetPartById(sheet.Id.Value) as WorksheetPart;
                 if (worksheetPart == null)
                 {
-                    txtResults.AppendText($"WorksheetPart ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ (ƒV[ƒgID: {sheet.Id.Value})B\n");
+                    txtResults.AppendText($"WorksheetPart ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ (ã‚·ãƒ¼ãƒˆID: {sheet.Id.Value})ã€‚\n");
                     return results;
                 }
-                txtResults.AppendText($"ƒV[ƒg '{sheetName}' (ID: {sheet.Id.Value}) ‚ğˆ—’†...\n");
+                txtResults.AppendText($"ã‚·ãƒ¼ãƒˆ '{sheetName}' (ID: {sheet.Id.Value}) ã‚’å‡¦ç†ä¸­...\n");
 
                 var drawingsPart = worksheetPart.DrawingsPart;
                 if (drawingsPart == null)
                 {
-                    txtResults.AppendText("DrawingsPart ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB}Œ`‚ª‘¶İ‚µ‚È‚¢‰Â”\«‚ª‚ ‚è‚Ü‚·B\n");
+                    txtResults.AppendText("DrawingsPart ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚å›³å½¢ãŒå­˜åœ¨ã—ãªã„å¯èƒ½æ€§ãŒã‚ã‚Šã¾ã™ã€‚\n");
                     return results;
                 }
 
                 var worksheetDrawing = drawingsPart.WorksheetDrawing;
                 if (worksheetDrawing == null)
                 {
-                    txtResults.AppendText("WorksheetDrawing ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB\n");
+                    txtResults.AppendText("WorksheetDrawing ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚\n");
                     return results;
                 }
-                txtResults.AppendText("WorksheetDrawing ‚ğæ“¾‚µ‚Ü‚µ‚½B\n");
+                txtResults.AppendText("WorksheetDrawing ã‚’å–å¾—ã—ã¾ã—ãŸã€‚\n");
                 LogAllShapes(worksheetDrawing);
 
                 foreach (var anchor in worksheetDrawing.Elements<TwoCellAnchor>())
@@ -236,23 +227,23 @@ namespace ER2SpreadTool
                     // Iterate through DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape (xdr:grpSp) elements
                     foreach (var xdrGroupShape in anchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape>())
                     {
-                        txtResults.AppendText("Spreadsheet.GroupShape (xdr:grpSp) ‚ğTwoCellAnchor“à‚Å”­Œ©B\n");
+                        txtResults.AppendText("Spreadsheet.GroupShape (xdr:grpSp) ã‚’TwoCellAnchorå†…ã§ç™ºè¦‹ã€‚\n");
                         var tableInfo = ExtractTableInfoFromSpreadsheetGroup(xdrGroupShape);
                         if (tableInfo != null)
                         {
                             if (!results.Any(r => r.TableName.Equals(tableInfo.TableName, StringComparison.OrdinalIgnoreCase)))
                             {
                                 results.Add(tableInfo);
-                                txtResults.AppendText($"  => ƒOƒ‹[ƒv‚©‚çƒe[ƒuƒ‹’Šo¬Œ÷: {tableInfo.TableName} (—ñ”: {tableInfo.Columns.Count})\n");
+                                txtResults.AppendText($"  => ã‚°ãƒ«ãƒ¼ãƒ—ã‹ã‚‰ãƒ†ãƒ¼ãƒ–ãƒ«æŠ½å‡ºæˆåŠŸ: {tableInfo.TableName} (åˆ—æ•°: {tableInfo.Columns.Count})\n");
                             }
                             else
                             {
-                                txtResults.AppendText($"  => d•¡ƒe[ƒuƒ‹–¼‚Ì‚½‚ßƒXƒLƒbƒv: {tableInfo.TableName}\n");
+                                txtResults.AppendText($"  => é‡è¤‡ãƒ†ãƒ¼ãƒ–ãƒ«åã®ãŸã‚ã‚¹ã‚­ãƒƒãƒ—: {tableInfo.TableName}\n");
                             }
                         }
                         else
                         {
-                            txtResults.AppendText("  => Spreadsheet.GroupShape‚©‚çƒe[ƒuƒ‹î•ñ’Šo¸”sB\n");
+                            txtResults.AppendText("  => Spreadsheet.GroupShapeã‹ã‚‰ãƒ†ãƒ¼ãƒ–ãƒ«æƒ…å ±æŠ½å‡ºå¤±æ•—ã€‚\n");
                         }
                     }
                 }
@@ -262,23 +253,23 @@ namespace ER2SpreadTool
 
         private TableInfo ExtractTableInfoFromSpreadsheetGroup(DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape xdrGroupShape)
         {
-            txtResults.AppendText("  ExtractTableInfoFromSpreadsheetGroup (xdr:grpSp) ŠJn\n");
+            txtResults.AppendText("  ExtractTableInfoFromSpreadsheetGroup (xdr:grpSp) é–‹å§‹\n");
 
             // Scenario 1: The xdr:grpSp contains a nested a:grpSp (Drawing.GroupShape)
             var nestedDrawingGroup = xdrGroupShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.GroupShape>();
             if (nestedDrawingGroup != null)
             {
-                txtResults.AppendText("    ƒlƒXƒg‚³‚ê‚½ Drawing.GroupShape (a:grpSp) ‚ğ”­Œ©B‚±‚ê‚ğˆ—‚µ‚Ü‚·B\n");
+                txtResults.AppendText("    ãƒã‚¹ãƒˆã•ã‚ŒãŸ Drawing.GroupShape (a:grpSp) ã‚’ç™ºè¦‹ã€‚ã“ã‚Œã‚’å‡¦ç†ã—ã¾ã™ã€‚\n");
                 return ExtractTableInfoFromDrawingGroupShape(nestedDrawingGroup);
             }
 
             // Scenario 2: The xdr:grpSp directly contains two xdr:sp (Spreadsheet.Shape) elements
             var xdrShapesInGroup = xdrGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().ToList();
-            txtResults.AppendText($"    xdr:grpSp“à‚ÌSpreadsheet.Shape (xdr:sp) ”: {xdrShapesInGroup.Count}\n");
+            txtResults.AppendText($"    xdr:grpSpå†…ã®Spreadsheet.Shape (xdr:sp) æ•°: {xdrShapesInGroup.Count}\n");
 
             if (xdrShapesInGroup.Count < 2) // Needs at least one for table name, one for columns
             {
-                txtResults.AppendText($"    xdr:grpSp“à‚É­‚È‚­‚Æ‚à2‚Â‚Ìxdr:sp‚ª•K—v‚Å‚· (ƒe[ƒuƒ‹–¼—p1AƒJƒ‰ƒ€–¼—p1ˆÈã)BÀÛ‚Í{xdrShapesInGroup.Count}ŒÂB\n");
+                txtResults.AppendText($"    xdr:grpSpå†…ã«å°‘ãªãã¨ã‚‚2ã¤ã®xdr:spãŒå¿…è¦ã§ã™ (ãƒ†ãƒ¼ãƒ–ãƒ«åç”¨1ã€ã‚«ãƒ©ãƒ åç”¨1ä»¥ä¸Š)ã€‚å®Ÿéš›ã¯{xdrShapesInGroup.Count}å€‹ã€‚\n");
                 return null;
             }
 
@@ -286,18 +277,18 @@ namespace ER2SpreadTool
             for (int i = 0; i < xdrShapesInGroup.Count; i++)
             {
                 var xdrShape = xdrShapesInGroup[i];
-                txtResults.AppendText($"    xdr:sp {i + 1} ‚ÌƒeƒLƒXƒg’Šos...\n");
+                txtResults.AppendText($"    xdr:sp {i + 1} ã®ãƒ†ã‚­ã‚¹ãƒˆæŠ½å‡ºè©¦è¡Œ...\n");
                 string textContent = string.Empty;
 
                 var spreadsheetTextBody = xdrShape.TextBody; // This is DocumentFormat.OpenXml.Drawing.Spreadsheet.TextBody
                 if (spreadsheetTextBody != null)
                 {
-                    txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) ‚ğ”­Œ©B\n");
+                    txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) ã‚’ç™ºè¦‹ã€‚\n");
                     textContent = ExtractTextFromSpreadsheetTextBody(spreadsheetTextBody);
                 }
                 else
                 {
-                    txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB\n");
+                    txtResults.AppendText("      Spreadsheet.TextBody (xdr:txBody) ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚\n");
                 }
 
                 string[] lines = new string[0];
@@ -307,22 +298,22 @@ namespace ER2SpreadTool
                                        .Select(l => l.Trim())
                                        .Where(l => !string.IsNullOrEmpty(l))
                                        .ToArray();
-                    txtResults.AppendText($"      ’ŠoƒeƒLƒXƒg: '{textContent.Replace("\n", "\\n")}' (—LŒøs”: {lines.Length})\n");
+                    txtResults.AppendText($"      æŠ½å‡ºãƒ†ã‚­ã‚¹ãƒˆ: '{textContent.Replace("\n", "\\n")}' (æœ‰åŠ¹è¡Œæ•°: {lines.Length})\n");
                 }
                 textDataFromXdrShapes.Add(new ShapeTextParseResult { OriginalText = textContent, Lines = lines });
             }
-            return CreateTableInfoFromTextData(textDataFromXdrShapes, "xdr:spƒx[ƒX");
+            return CreateTableInfoFromTextData(textDataFromXdrShapes, "xdr:spãƒ™ãƒ¼ã‚¹");
         }
 
         private TableInfo ExtractTableInfoFromDrawingGroupShape(DocumentFormat.OpenXml.Drawing.GroupShape drawingGroupShape)
         {
-            txtResults.AppendText("  ExtractTableInfoFromDrawingGroupShape (a:grpSp) ŠJn\n");
+            txtResults.AppendText("  ExtractTableInfoFromDrawingGroupShape (a:grpSp) é–‹å§‹\n");
             var shapesInDrawingGroup = drawingGroupShape.Elements<DocumentFormat.OpenXml.Drawing.Shape>().ToList(); // These are a:sp
-            txtResults.AppendText($"    a:grpSp“à‚ÌDrawing.Shape (a:sp) ”: {shapesInDrawingGroup.Count}\n");
+            txtResults.AppendText($"    a:grpSpå†…ã®Drawing.Shape (a:sp) æ•°: {shapesInDrawingGroup.Count}\n");
 
             if (shapesInDrawingGroup.Count < 2) // Needs at least one for table name, one for columns
             {
-                txtResults.AppendText($"    a:grpSp“à‚É­‚È‚­‚Æ‚à2‚Â‚Ìa:sp‚ª•K—v‚Å‚· (ƒe[ƒuƒ‹–¼—p1AƒJƒ‰ƒ€–¼—p1ˆÈã)BÀÛ‚Í{shapesInDrawingGroup.Count}ŒÂB\n");
+                txtResults.AppendText($"    a:grpSpå†…ã«å°‘ãªãã¨ã‚‚2ã¤ã®a:spãŒå¿…è¦ã§ã™ (ãƒ†ãƒ¼ãƒ–ãƒ«åç”¨1ã€ã‚«ãƒ©ãƒ åç”¨1ä»¥ä¸Š)ã€‚å®Ÿéš›ã¯{shapesInDrawingGroup.Count}å€‹ã€‚\n");
                 return null;
             }
 
@@ -330,7 +321,7 @@ namespace ER2SpreadTool
             for (int i = 0; i < shapesInDrawingGroup.Count; i++)
             {
                 var drawingShape = shapesInDrawingGroup[i]; // This is a:sp
-                txtResults.AppendText($"    a:sp {i + 1} ‚ÌƒeƒLƒXƒg’Šos...\n");
+                txtResults.AppendText($"    a:sp {i + 1} ã®ãƒ†ã‚­ã‚¹ãƒˆæŠ½å‡ºè©¦è¡Œ...\n");
                 var drawingTextBody = drawingShape.GetFirstChild<DocumentFormat.OpenXml.Drawing.TextBody>(); // a:sp -> a:txBody
                 string textContent = string.Empty;
                 string[] lines = new string[0];
@@ -344,25 +335,25 @@ namespace ER2SpreadTool
                                            .Select(l => l.Trim())
                                            .Where(l => !string.IsNullOrEmpty(l))
                                            .ToArray();
-                        txtResults.AppendText($"      ’ŠoƒeƒLƒXƒg: '{textContent.Replace("\n", "\\n")}' (—LŒøs”: {lines.Length})\n");
+                        txtResults.AppendText($"      æŠ½å‡ºãƒ†ã‚­ã‚¹ãƒˆ: '{textContent.Replace("\n", "\\n")}' (æœ‰åŠ¹è¡Œæ•°: {lines.Length})\n");
                     }
                 }
                 else
                 {
-                    txtResults.AppendText($"      a:sp {i + 1} ‚É Drawing.TextBody (a:txBody) ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB\n");
+                    txtResults.AppendText($"      a:sp {i + 1} ã« Drawing.TextBody (a:txBody) ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚\n");
                 }
                 textDataFromDrawingShapes.Add(new ShapeTextParseResult { OriginalText = textContent, Lines = lines });
             }
-            return CreateTableInfoFromTextData(textDataFromDrawingShapes, "a:spƒx[ƒX");
+            return CreateTableInfoFromTextData(textDataFromDrawingShapes, "a:spãƒ™ãƒ¼ã‚¹");
         }
 
         private TableInfo CreateTableInfoFromTextData(List<ShapeTextParseResult> textDataList, string sourceDescription)
         {
-            txtResults.AppendText($"    {sourceDescription}: CreateTableInfoFromTextData ŠJnBShapeTextParseResult ”: {textDataList.Count}\n");
+            txtResults.AppendText($"    {sourceDescription}: CreateTableInfoFromTextData é–‹å§‹ã€‚ShapeTextParseResult æ•°: {textDataList.Count}\n");
 
             if (textDataList.Count < 2)
             {
-                txtResults.AppendText($"    {sourceDescription}: ­‚È‚­‚Æ‚à2‚Â‚ÌƒeƒLƒXƒgî•ñ‚ª•K—v‚Å‚· (ƒe[ƒuƒ‹–¼—p1‚ÂAƒJƒ‰ƒ€–¼—p1‚ÂˆÈã)BÀÛ‚Í{textDataList.Count}ŒÂB\n");
+                txtResults.AppendText($"    {sourceDescription}: å°‘ãªãã¨ã‚‚2ã¤ã®ãƒ†ã‚­ã‚¹ãƒˆæƒ…å ±ãŒå¿…è¦ã§ã™ (ãƒ†ãƒ¼ãƒ–ãƒ«åç”¨1ã¤ã€ã‚«ãƒ©ãƒ åç”¨1ã¤ä»¥ä¸Š)ã€‚å®Ÿéš›ã¯{textDataList.Count}å€‹ã€‚\n");
                 return null;
             }
 
@@ -377,7 +368,7 @@ namespace ER2SpreadTool
             if (potentialTableShapes.Count == 1)
             {
                 tableShapeData = potentialTableShapes[0];
-                txtResults.AppendText($"    {sourceDescription}: ƒe[ƒuƒ‹–¼Œó•â‚ÌƒVƒFƒCƒv‚ğ”­Œ© (Œ³ƒeƒLƒXƒg: '{tableShapeData.OriginalText.Replace("\n", "\\n")}')\n");
+                txtResults.AppendText($"    {sourceDescription}: ãƒ†ãƒ¼ãƒ–ãƒ«åå€™è£œã®ã‚·ã‚§ã‚¤ãƒ—ã‚’ç™ºè¦‹ (å…ƒãƒ†ã‚­ã‚¹ãƒˆ: '{tableShapeData.OriginalText.Replace("\n", "\\n")}')\n");
 
                 // All other shapes contribute to columns
                 foreach (var shapeData in textDataList)
@@ -387,23 +378,23 @@ namespace ER2SpreadTool
                         if (shapeData.Lines != null && shapeData.Lines.Length > 0)
                         {
                             columnLinesAggregated.AddRange(shapeData.Lines);
-                            txtResults.AppendText($"    {sourceDescription}: ƒJƒ‰ƒ€Œó•â‚ÌƒVƒFƒCƒv‚©‚çs‚ğ’Ç‰Á (Œ³ƒeƒLƒXƒg: '{shapeData.OriginalText.Replace("\n", "\\n")}', ’Ç‰Ás”: {shapeData.Lines.Length})\n");
+                            txtResults.AppendText($"    {sourceDescription}: ã‚«ãƒ©ãƒ å€™è£œã®ã‚·ã‚§ã‚¤ãƒ—ã‹ã‚‰è¡Œã‚’è¿½åŠ  (å…ƒãƒ†ã‚­ã‚¹ãƒˆ: '{shapeData.OriginalText.Replace("\n", "\\n")}', è¿½åŠ è¡Œæ•°: {shapeData.Lines.Length})\n");
                         }
                         else
                         {
-                            txtResults.AppendText($"    {sourceDescription}: ƒJƒ‰ƒ€Œó•âƒVƒFƒCƒv‚É—LŒø‚Ès‚È‚µA‚Ü‚½‚Í‹óƒeƒLƒXƒg (Œ³ƒeƒLƒXƒg: '{shapeData.OriginalText.Replace("\n", "\\n")}')\n");
+                            txtResults.AppendText($"    {sourceDescription}: ã‚«ãƒ©ãƒ å€™è£œã‚·ã‚§ã‚¤ãƒ—ã«æœ‰åŠ¹ãªè¡Œãªã—ã€ã¾ãŸã¯ç©ºãƒ†ã‚­ã‚¹ãƒˆ (å…ƒãƒ†ã‚­ã‚¹ãƒˆ: '{shapeData.OriginalText.Replace("\n", "\\n")}')\n");
                         }
                     }
                 }
             }
             else
             {
-                txtResults.AppendText($"    {sourceDescription}: ƒe[ƒuƒ‹–¼‚Æ‚È‚éƒVƒFƒCƒv (ƒeƒLƒXƒg1s‚Ì‚İ) ‚ª1‚Â‚Å‚ ‚é•K—v‚ª‚ ‚è‚Ü‚·‚ªA{potentialTableShapes.Count}ŒÂŒ©‚Â‚©‚è‚Ü‚µ‚½B\n");
-                txtResults.AppendText($"      ’²¸‘ÎÛƒVƒFƒCƒv”: {textDataList.Count}\n");
+                txtResults.AppendText($"    {sourceDescription}: ãƒ†ãƒ¼ãƒ–ãƒ«åã¨ãªã‚‹ã‚·ã‚§ã‚¤ãƒ— (ãƒ†ã‚­ã‚¹ãƒˆ1è¡Œã®ã¿) ãŒ1ã¤ã§ã‚ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ãŒã€{potentialTableShapes.Count}å€‹è¦‹ã¤ã‹ã‚Šã¾ã—ãŸã€‚\n");
+                txtResults.AppendText($"      èª¿æŸ»å¯¾è±¡ã‚·ã‚§ã‚¤ãƒ—æ•°: {textDataList.Count}\n");
                 for (int i = 0; i < textDataList.Count; i++)
                 {
                     var currentShape = textDataList[i];
-                    txtResults.AppendText($"        Shape {i + 1} —LŒøs”: {(currentShape.Lines?.Length ?? 0)} (Œ³ƒeƒLƒXƒg: '{currentShape.OriginalText.Replace("\n", "\\n")}')\n");
+                    txtResults.AppendText($"        Shape {i + 1} æœ‰åŠ¹è¡Œæ•°: {(currentShape.Lines?.Length ?? 0)} (å…ƒãƒ†ã‚­ã‚¹ãƒˆ: '{currentShape.OriginalText.Replace("\n", "\\n")}')\n");
                 }
                 return null;
             }
@@ -411,7 +402,7 @@ namespace ER2SpreadTool
             // Validate that a table name was indeed found and is not empty.
             if (tableShapeData == null) // Should ideally not happen if potentialTableShapes.Count == 1
             {
-                txtResults.AppendText($"    {sourceDescription}: ƒe[ƒuƒ‹–¼ƒVƒFƒCƒv‚Ì“Á’è‚É¸”s‚µ‚Ü‚µ‚½ (“à•”ƒGƒ‰[)B\n");
+                txtResults.AppendText($"    {sourceDescription}: ãƒ†ãƒ¼ãƒ–ãƒ«åã‚·ã‚§ã‚¤ãƒ—ã®ç‰¹å®šã«å¤±æ•—ã—ã¾ã—ãŸ (å†…éƒ¨ã‚¨ãƒ©ãƒ¼)ã€‚\n");
                 return null;
             }
             string tableName = tableShapeData.Lines[0].Trim();
@@ -420,7 +411,7 @@ namespace ER2SpreadTool
             // Validate that column data was found.
             if (columnLinesAggregated.Count == 0)
             {
-                txtResults.AppendText($"    {sourceDescription}: ’Šo‚³‚ê‚½ƒJƒ‰ƒ€ƒŠƒXƒg‚ª‹ó‚Å‚· (ƒe[ƒuƒ‹–¼: '{tableName}')B\n");
+                txtResults.AppendText($"    {sourceDescription}: æŠ½å‡ºã•ã‚ŒãŸã‚«ãƒ©ãƒ ãƒªã‚¹ãƒˆãŒç©ºã§ã™ (ãƒ†ãƒ¼ãƒ–ãƒ«å: '{tableName}')ã€‚\n");
                 return null;
             }
 
@@ -433,12 +424,12 @@ namespace ER2SpreadTool
 
             if (finalColumns.Count == 0) // After trimming and distinct, it might become empty
             {
-                txtResults.AppendText($"    {sourceDescription}: —LŒø‚ÈƒJƒ‰ƒ€–¼‚ª’ŠoEˆ—ŒãA‹ó‚É‚È‚è‚Ü‚µ‚½ (ƒe[ƒuƒ‹–¼: '{tableName}')B\n");
+                txtResults.AppendText($"    {sourceDescription}: æœ‰åŠ¹ãªã‚«ãƒ©ãƒ åãŒæŠ½å‡ºãƒ»å‡¦ç†å¾Œã€ç©ºã«ãªã‚Šã¾ã—ãŸ (ãƒ†ãƒ¼ãƒ–ãƒ«å: '{tableName}')ã€‚\n");
                 return null;
             }
 
-            txtResults.AppendText($"    {sourceDescription}: ƒe[ƒuƒ‹–¼‚Æ‚µ‚ÄŠm’è: '{tableName}'\n");
-            txtResults.AppendText($"    {sourceDescription}: ƒJƒ‰ƒ€–¼‚Æ‚µ‚ÄŠm’è ({finalColumns.Count}Œ): [{string.Join(", ", finalColumns)}]\n");
+            txtResults.AppendText($"    {sourceDescription}: ãƒ†ãƒ¼ãƒ–ãƒ«åã¨ã—ã¦ç¢ºå®š: '{tableName}'\n");
+            txtResults.AppendText($"    {sourceDescription}: ã‚«ãƒ©ãƒ åã¨ã—ã¦ç¢ºå®š ({finalColumns.Count}ä»¶): [{string.Join(", ", finalColumns)}]\n");
 
             return new TableInfo { TableName = tableName, Columns = finalColumns };
         }
@@ -488,30 +479,30 @@ namespace ER2SpreadTool
 
         private void LogAllShapes(WorksheetDrawing worksheetDrawing)
         {
-            txtResults.AppendText("=== }Œ`\‘¢‚Ì’²¸ ===\n");
+            txtResults.AppendText("=== å›³å½¢æ§‹é€ ã®èª¿æŸ» ===\n");
             var childElements = worksheetDrawing.ChildElements.ToList();
-            txtResults.AppendText($"WorksheetDrawing ‚Ì’¼‰º‚Ìq—v‘f”: {childElements.Count}\n");
+            txtResults.AppendText($"WorksheetDrawing ã®ç›´ä¸‹ã®å­è¦ç´ æ•°: {childElements.Count}\n");
 
             foreach (var element in childElements)
             {
-                txtResults.AppendText($"—v‘fƒ^ƒCƒv: {element.GetType().FullName}\n"); // Use FullName for clarity
+                txtResults.AppendText($"è¦ç´ ã‚¿ã‚¤ãƒ—: {element.GetType().FullName}\n"); // Use FullName for clarity
                 if (element is TwoCellAnchor anchor)
                 {
                     LogTwoCellAnchor(anchor);
                 }
             }
-            txtResults.AppendText("=== ’²¸Š®—¹ ===\n\n");
+            txtResults.AppendText("=== èª¿æŸ»å®Œäº† ===\n\n");
         }
 
         private void LogTwoCellAnchor(TwoCellAnchor anchor)
         {
-            txtResults.AppendText("  TwoCellAnchor “à—e:\n");
+            txtResults.AppendText("  TwoCellAnchor å†…å®¹:\n");
             foreach (var child in anchor.ChildElements)
             {
-                txtResults.AppendText($"    q—v‘fƒ^ƒCƒv: {child.GetType().FullName}\n");
+                txtResults.AppendText($"    å­è¦ç´ ã‚¿ã‚¤ãƒ—: {child.GetType().FullName}\n");
                 if (child is DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape xdrShape)
                 {
-                    txtResults.AppendText("      Ú×: Spreadsheet.Shape (xdr:sp)\n");
+                    txtResults.AppendText("      è©³ç´°: Spreadsheet.Shape (xdr:sp)\n");
                     var spTextBody = xdrShape.TextBody;
                     if (spTextBody != null)
                     {
@@ -520,21 +511,21 @@ namespace ER2SpreadTool
                 }
                 else if (child is DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape xdrGroupShape)
                 {
-                    txtResults.AppendText("      Ú×: Spreadsheet.GroupShape (xdr:grpSp)\n");
+                    txtResults.AppendText("      è©³ç´°: Spreadsheet.GroupShape (xdr:grpSp)\n");
                     foreach (var innerElement in xdrGroupShape.Elements<OpenXmlCompositeElement>())
                     {
-                        txtResults.AppendText($"        xdr:grpSp “à‚Ìq—v‘f: {innerElement.GetType().FullName}\n");
+                        txtResults.AppendText($"        xdr:grpSp å†…ã®å­è¦ç´ : {innerElement.GetType().FullName}\n");
                         if (innerElement is DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape innerXdrShape)
                         {
                             var innerSpTextBody = innerXdrShape.TextBody;
                             if (innerSpTextBody != null)
                             {
-                                txtResults.AppendText($"          xdr:sp (“à) Text: '{ExtractTextFromSpreadsheetTextBody(innerSpTextBody).Replace("\n", "\\n")}'\n");
+                                txtResults.AppendText($"          xdr:sp (å†…) Text: '{ExtractTextFromSpreadsheetTextBody(innerSpTextBody).Replace("\n", "\\n")}'\n");
                             }
                         }
                         else if (innerElement is DocumentFormat.OpenXml.Drawing.GroupShape innerDrawingGroupShape)
                         { // a:grpSp
-                            txtResults.AppendText($"          Drawing.GroupShape (a:grpSp) (“à)\n");
+                            txtResults.AppendText($"          Drawing.GroupShape (a:grpSp) (å†…)\n");
                         }
                     }
                 }
@@ -544,11 +535,11 @@ namespace ER2SpreadTool
         private string FormatResultsForDisplay(List<TableInfo> results)
         {
             var output = new List<string>();
-            output.Add("--- ’Šoƒe[ƒuƒ‹ˆê—— ---");
+            output.Add("--- æŠ½å‡ºãƒ†ãƒ¼ãƒ–ãƒ«ä¸€è¦§ ---");
             foreach (var table in results)
             {
-                output.Add($"ƒe[ƒuƒ‹–¼: {table.TableName}");
-                output.Add("  ƒJƒ‰ƒ€–¼:");
+                output.Add($"ãƒ†ãƒ¼ãƒ–ãƒ«å: {table.TableName}");
+                output.Add("  ã‚«ãƒ©ãƒ å:");
                 foreach (var column in table.Columns)
                 {
                     output.Add($"    - {column}");
@@ -558,13 +549,13 @@ namespace ER2SpreadTool
             return string.Join("\n", output);
         }
 
-        // TSVƒtƒ@ƒCƒ‹o—Íƒƒ\ƒbƒhiV‹K’Ç‰Áj
+        // TSVãƒ•ã‚¡ã‚¤ãƒ«å‡ºåŠ›ãƒ¡ã‚½ãƒƒãƒ‰ï¼ˆæ–°è¦è¿½åŠ ï¼‰
         private string CreateTsvOutput(string inputFilePath, List<TableInfo> results)
         {
-            // “ü—Íƒtƒ@ƒCƒ‹‚Æ“¯‚¶ƒtƒHƒ‹ƒ_‚ÉTSVƒtƒ@ƒCƒ‹‚ğì¬
+            // å…¥åŠ›ãƒ•ã‚¡ã‚¤ãƒ«ã¨åŒã˜ãƒ•ã‚©ãƒ«ãƒ€ã«TSVãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆ
             string inputDirectory = Path.GetDirectoryName(inputFilePath);
             
-            // Œ»İ“ú‚ğYYYYMMDD_hhmmssfffŒ`®‚ÅƒtƒH[ƒ}ƒbƒg
+            // ç¾åœ¨æ—¥æ™‚ã‚’YYYYMMDD_hhmmssfffå½¢å¼ã§ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
             string outputFileName = $"{timestamp}.tsv";
             string outputFilePath = Path.Combine(inputDirectory, outputFileName);
@@ -573,10 +564,10 @@ namespace ER2SpreadTool
             {
                 using (var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8))
                 {
-                    // ƒwƒbƒ_[s‚ğo—Í
-                    writer.WriteLine("#\tnum\tƒe[ƒuƒ‹–¼\tƒJƒ‰ƒ€–¼");
+                    // ãƒ˜ãƒƒãƒ€ãƒ¼è¡Œã‚’å‡ºåŠ›
+                    writer.WriteLine("#\tnum\tãƒ†ãƒ¼ãƒ–ãƒ«å\tã‚«ãƒ©ãƒ å");
 
-                    // ƒf[ƒ^s‚ğo—Í
+                    // ãƒ‡ãƒ¼ã‚¿è¡Œã‚’å‡ºåŠ›
                     int overallCounter = 1;
                     foreach (var table in results)
                     {
@@ -588,21 +579,31 @@ namespace ER2SpreadTool
                     }
                 }
 
-                txtResults.AppendText($"TSVƒtƒ@ƒCƒ‹‚ğo—Í‚µ‚Ü‚µ‚½: {outputFilePath}\n");
+                txtResults.AppendText($"TSVãƒ•ã‚¡ã‚¤ãƒ«ã‚’å‡ºåŠ›ã—ã¾ã—ãŸ: {outputFilePath}\n");
                 return outputFilePath;
             }
             catch (Exception ex)
             {
-                string errorMessage = $"TSVƒtƒ@ƒCƒ‹‚Ìo—Í’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½: {ex.Message}";
+                string errorMessage = $"TSVãƒ•ã‚¡ã‚¤ãƒ«ã®å‡ºåŠ›ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}";
                 txtResults.AppendText($"{errorMessage}\n");
-                MessageBox.Show(errorMessage, "o—ÍƒGƒ‰[", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(errorMessage, "å‡ºåŠ›ã‚¨ãƒ©ãƒ¼", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw;
             }
         }
     }
 
-    // TableInfo ‚Æ ShapeTextParseResult ‚ÍŠù‘¶‚Ì‚Ü‚Ü
-    public class TableInfo
+    // è¨­å®šã‚’ä¿æŒã™ã‚‹ã‚¯ãƒ©ã‚¹ (DataContractå±æ€§ã‚’ä½¿ç”¨)
+    [DataContract]
+    internal class AppSettings
+    {
+        [DataMember]
+        public string LastFilePath { get; set; }
+
+        [DataMember]
+        public string LastSheetName { get; set; }
+    }
+
+    internal class TableInfo
     {
         public string TableName { get; set; }
         public List<string> Columns { get; set; } = new List<string>();

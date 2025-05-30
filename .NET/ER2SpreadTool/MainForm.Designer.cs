@@ -6,30 +6,30 @@ namespace ER2SpreadTool
     partial class MainForm
     {
         /// <summary>
-        ///  Required designer variable.
+        /// Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
         /// <summary>
-        ///  Clean up any resources being used.
+        /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
+        protected override void Dispose ( bool disposing )
         {
-            if (disposing && (components != null))
+            if ( disposing && ( components != null ) )
             {
                 components.Dispose();
             }
-            base.Dispose(disposing);
+            base.Dispose( disposing );
         }
 
         #region Windows Form Designer generated code
 
         /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent()
+        private void InitializeComponent ()
         {
             label1 = new Label();
             txtFilePath = new TextBox();
@@ -41,7 +41,8 @@ namespace ER2SpreadTool
             txtResults = new TextBox();
             lblStatus = new Label();
             SuspendLayout();
-            // 
+
+                        // 
             // label1
             // 
             label1.AutoSize = true;
@@ -121,9 +122,7 @@ namespace ER2SpreadTool
             lblStatus.Size = new Size(55, 15);
             lblStatus.TabIndex = 8;
             lblStatus.Text = "準備完了";
-            // 
-            // MainForm
-            // 
+
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(656, 371);
@@ -136,13 +135,12 @@ namespace ER2SpreadTool
             Controls.Add(btnBrowse);
             Controls.Add(txtFilePath);
             Controls.Add(label1);
+
             Name = "MainForm";
             Text = "ER図スプレッドツール";
             ResumeLayout(false);
             PerformLayout();
         }
-
-        #endregion
 
         private Label label1;
         private TextBox txtFilePath;
@@ -153,5 +151,7 @@ namespace ER2SpreadTool
         private Label label3;
         private TextBox txtResults;
         private Label lblStatus;
+
+        #endregion
     }
 }

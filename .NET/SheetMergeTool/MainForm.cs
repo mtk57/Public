@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-// ★ 以下のusingディレクティブを追加
+// ★ 以下のusingディレクティブを追加 (設定ファイル対応)
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -27,20 +27,25 @@ namespace SheetMergeTool
             // ★ 設定ファイルのパスを初期化 (アプリケーションと同じディレクトリ)
             settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sheetmergetool_settings.json");
 
-            // ★ イベントハンドラの登録
+            // ★ イベントハンドラの登録 (設定ファイルのロード/セーブ)
             this.Load += MainForm_Load;
             this.FormClosing += MainForm_FormClosing;
 
             lblStatus.Text = "準備完了"; // Initial status
+
+            // ★ ドラッグアンドドロップ機能の有効化とイベントハンドラの設定 (フォルダパス用)
+            this.txtDirPath.AllowDrop = true;
+            this.txtDirPath.DragEnter += new DragEventHandler(txtDirPath_DragEnter);
+            this.txtDirPath.DragDrop += new DragEventHandler(txtDirPath_DragDrop);
         }
 
-        // ★ MainForm_Load イベントハンドラ
+        // ★ MainForm_Load イベントハンドラ (設定読み込み)
         private void MainForm_Load(object sender, EventArgs e)
         {
             LoadSettings();
         }
 
-        // ★ MainForm_FormClosing イベントハンドラ
+        // ★ MainForm_FormClosing イベントハンドラ (設定保存)
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveSettings();
@@ -51,7 +56,7 @@ namespace SheetMergeTool
         {
             if (!File.Exists(settingsFilePath))
             {
-                if (!txtResults.IsDisposed)
+                if (!txtResults.IsDisposed) // Check if txtResults still exists
                 {
                     txtResults.AppendText("設定ファイルが見つかりませんでした。初回起動または設定ファイルが削除されています。\n");
                 }
@@ -109,9 +114,6 @@ namespace SheetMergeTool
 
             try
             {
-                // DataContractJsonSerializerはデフォルトではインデントしない
-                // インデントが必要な場合はSystem.Text.Json ( .NET Core 3.0以降 or NuGet) を検討するか、手動で文字列整形が必要
-                // ここではシンプルにシリアライズします
                 using (MemoryStream ms = new MemoryStream())
                 {
                     DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(SheetMergeToolSettings));
@@ -121,10 +123,47 @@ namespace SheetMergeTool
             }
             catch (Exception ex)
             {
-                // フォームが閉じられる最中なので、MessageBoxでの通知はユーザー体験として適切か考慮
-                // ログファイルへの記録などが望ましい場合もある
                 MessageBox.Show($"設定ファイルの保存中にエラーが発生しました:\n{ex.Message}", "設定保存エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                // 必要であればtxtResultsにも書き出すが、フォームが閉じられるため見えない可能性が高い
+            }
+        }
+
+        // ★ txtDirPath の DragEnter イベントハンドラ (フォルダパス用)
+        private void txtDirPath_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files != null && files.Length > 0 && Directory.Exists(files[0]))
+                {
+                    e.Effect = DragDropEffects.Copy;
+                }
+                else
+                {
+                    e.Effect = DragDropEffects.None;
+                }
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        // ★ txtDirPath の DragDrop イベントハンドラ (フォルダパス用)
+        private void txtDirPath_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            if (files != null && files.Length > 0)
+            {
+                string selectedPath = files[0];
+                if (Directory.Exists(selectedPath))
+                {
+                    this.txtDirPath.Text = selectedPath;
+                }
+                else
+                {
+                    MessageBox.Show("ドロップされたアイテムは有効なフォルダではありません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -134,7 +173,7 @@ namespace SheetMergeTool
             using (var dialog = new FolderBrowserDialog())
             {
                 dialog.Description = "Excelファイルが含まれるフォルダを選択してください";
-                // ★ 前回選択したフォルダパスを初期表示
+                // 前回選択したフォルダパスを初期表示 (設定ファイルから読み込まれた値を利用)
                 if (!string.IsNullOrWhiteSpace(txtDirPath.Text) && Directory.Exists(txtDirPath.Text))
                 {
                     dialog.SelectedPath = txtDirPath.Text;
@@ -151,7 +190,7 @@ namespace SheetMergeTool
             string folderPath = txtDirPath.Text;
             string startCellRef = txtStartCell.Text.Trim().ToUpper();
             string endCellRef = txtEndCell.Text.Trim().ToUpper();
-            bool includeSubdirectories = chkEnableSubDir.Checked; // Read checkbox state
+            bool includeSubdirectories = chkEnableSubDir.Checked;
 
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
             {
@@ -171,7 +210,10 @@ namespace SheetMergeTool
 
             SetControlsEnabled(false);
             lblStatus.Text = "処理中...";
-            txtResults.Clear();
+            if (!txtResults.IsDisposed)
+            {
+                 txtResults.Clear(); // 既存のログをクリア
+            }
             Application.DoEvents(); 
 
             var progressLog = new Progress<string>(message => {
@@ -186,7 +228,7 @@ namespace SheetMergeTool
             try
             {
                 await Task.Run(() => 
-                    MergeExcelFilesLogic(folderPath, startCellRef, endCellRef, includeSubdirectories, progressLog, progressStatus) // Pass includeSubdirectories
+                    MergeExcelFilesLogic(folderPath, startCellRef, endCellRef, includeSubdirectories, progressLog, progressStatus)
                 );
                 ((IProgress<string>)progressStatus).Report("処理完了！");
             }
@@ -208,7 +250,7 @@ namespace SheetMergeTool
             txtDirPath.Enabled = enabled;
             txtStartCell.Enabled = enabled;
             txtEndCell.Enabled = enabled;
-            chkEnableSubDir.Enabled = enabled; // Manage checkbox state
+            chkEnableSubDir.Enabled = enabled;
             btnBrowse.Enabled = enabled;
             btnProcess.Enabled = enabled;
         }
@@ -268,7 +310,7 @@ namespace SheetMergeTool
 
                 string[] fileExtensions = { "*.xlsx", "*.xlsm" };
                 List<string> filesToProcess = new List<string>();
-                SearchOption searchOption = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly; // Use searchOption
+                SearchOption searchOption = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
                 foreach (string ext in fileExtensions)
                 {
@@ -284,7 +326,7 @@ namespace SheetMergeTool
                     {
                          logger.Report($"警告: フォルダ '{folderPath}' が見つかりません。詳細: {ex.Message}");
                          statusUpdater.Report("エラー: 対象フォルダなし");
-                         return; // Stop processing if the base directory is not found
+                         return; 
                     }
                 }
                 
@@ -323,7 +365,7 @@ namespace SheetMergeTool
                             foreach (Sheet sourceSheet in sourceWorkbookPart.Workbook.Sheets.Elements<Sheet>())
                             {
                                 if (sourceSheet?.Name == null || sourceSheet.Id?.Value == null) continue;
-                                string sheetName = sourceSheet.Name;
+                                string sheetName = sourceSheet.Name.Value; // Ensure .Value is used for OpenXmlElementContext properties
                                 logger.Report($"  処理中のシート: {sheetName}");
 
                                 WorksheetPart sourceWorksheetPart = (WorksheetPart)sourceWorkbookPart.GetPartById(sourceSheet.Id.Value);
@@ -362,6 +404,10 @@ namespace SheetMergeTool
                             }
                         }
                     }
+                    catch (OpenXmlPackageException oxpe) // More specific exception for OpenXML issues
+                    {
+                         logger.Report($"ファイル処理エラー (OpenXML) {fileNameOnly} ({filePath}): {oxpe.Message}。このファイルをスキップします。破損しているか、パスワードで保護されている可能性があります。");
+                    }
                     catch (Exception ex)
                     {
                          logger.Report($"ファイル処理エラー {fileNameOnly} ({filePath}): {ex.Message}。このファイルをスキップします。");
@@ -377,7 +423,7 @@ namespace SheetMergeTool
             return new Cell(new CellValue(text))
             {
                 CellReference = columnLetter + rowIndex,
-                DataType = CellValues.String 
+                DataType = new EnumValue<CellValues>(CellValues.String) // Corrected: Use EnumValue<CellValues>
             };
         }
 
@@ -394,23 +440,21 @@ namespace SheetMergeTool
             if (theCell.DataType != null && theCell.DataType.Value == CellValues.SharedString)
             {
                 SharedStringTablePart sstPart = workbookPart?.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
-                if (sstPart != null && int.TryParse(value, out int sstId))
+                if (sstPart?.SharedStringTable != null && int.TryParse(value, out int sstId)) // Check sstPart.SharedStringTable
                 {
+                    // Ensure sstId is within the bounds of the SharedStringTable's children
                     if (sstId >= 0 && sstId < sstPart.SharedStringTable.ChildElements.Count)
                     {
                          return sstPart.SharedStringTable.ChildElements[sstId].InnerText;
                     }
-                    return $"#SST_ID_ERR({sstId})"; 
+                    // Log or handle invalid sstId appropriately
+                    return $"#SST_ID_OOR({sstId})"; // Out Of Range
                 }
-                else if (sstPart == null && theCell.DataType.Value == CellValues.SharedString)
-                {
-                    // This case might indicate a malformed document or an issue if SharedStringTable is expected but not found.
-                    // However, returning the raw value (which is an index) might be confusing.
-                    // For robustness, perhaps log a warning or return a specific error string.
-                    // For now, returning the value as is, matching previous logic implicitly.
-                    return value; 
-                }
-                return value; 
+                // If sstPart or SharedStringTable is null, or if value is not a valid int,
+                // or if DataType is SharedString but something is wrong.
+                // Returning the raw index might be misleading, or it might be the best guess.
+                // This path indicates a potential issue with the SST lookup.
+                return value; // Fallback, though potentially an index if sstPart was missing
             }
             return value;
         }
@@ -419,9 +463,10 @@ namespace SheetMergeTool
         {
             if (string.IsNullOrEmpty(columnName)) throw new ArgumentNullException(nameof(columnName));
             int index = 0;
-            columnName = columnName.ToUpper();
+            columnName = columnName.ToUpperInvariant(); // Use ToUpperInvariant for consistency
             for (int i = 0; i < columnName.Length; i++)
             {
+                if (columnName[i] < 'A' || columnName[i] > 'Z') throw new ArgumentException("Invalid character in column name.", nameof(columnName));
                 index *= 26;
                 index += (columnName[i] - 'A' + 1);
             }
@@ -430,6 +475,7 @@ namespace SheetMergeTool
 
         public static string GetColumnNameFromIndex(int columnIndex)
         {
+            if (columnIndex < 0) throw new ArgumentOutOfRangeException(nameof(columnIndex), "Column index must be non-negative.");
             int dividend = columnIndex + 1; 
             string columnName = String.Empty;
             while (dividend > 0)
@@ -444,20 +490,23 @@ namespace SheetMergeTool
         public static void GetCellRowColumn(string cellReference, out uint rowIndex, out string columnName)
         {
             if (string.IsNullOrEmpty(cellReference)) throw new ArgumentNullException(nameof(cellReference));
-            cellReference = cellReference.ToUpper();
+            cellReference = cellReference.ToUpperInvariant(); // Use ToUpperInvariant
 
-            Match match = Regex.Match(cellReference, @"([A-Z]+)(\d+)");
+            // Regex ensures column is letters and row is numbers, and row > 0 implicitly by [1-9][0-9]*
+            Match match = Regex.Match(cellReference, @"^([A-Z]+)([1-9][0-9]*)$"); 
             if (!match.Success) throw new ArgumentException("Invalid cell reference format.", nameof(cellReference));
 
             columnName = match.Groups[1].Value;
+            // uint.Parse should not fail here due to regex, but TryParse is safer if regex was less strict
             rowIndex = uint.Parse(match.Groups[2].Value);
-            if (rowIndex == 0) throw new ArgumentException("Row index cannot be 0.", nameof(cellReference));
+            // Redundant check as regex now ensures row is not 0: if (rowIndex == 0) throw new ArgumentException("Row index cannot be 0.", nameof(cellReference));
         }
         
         public static bool IsValidCellReference(string cellRef)
         {
             if (string.IsNullOrWhiteSpace(cellRef)) return false;
-            return Regex.IsMatch(cellRef.ToUpper(), @"^[A-Z]+[1-9][0-9]*$");
+            // Regex to match one or more uppercase letters followed by one or more digits, where the first digit is not zero.
+            return Regex.IsMatch(cellRef.ToUpperInvariant(), @"^[A-Z]+[1-9][0-9]*$");
         }
     }
 

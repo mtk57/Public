@@ -444,30 +444,89 @@ namespace SheetMergeTool
             };
         }
 
+        private static string GetTextFromOpenXmlCompositeElement(OpenXmlCompositeElement compositeElement)
+        {
+            if (compositeElement == null) return string.Empty;
+
+            StringBuilder sb = new StringBuilder();
+            foreach (OpenXmlElement childElement in compositeElement.ChildElements)
+            {
+                if (childElement is Text textElement) // Handles <t>Text</t>
+                {
+                    sb.Append(textElement.Text);
+                }
+                else if (childElement is Run runElement) // Handles <r><t>Text</t>...</r>
+                {
+                    // A Run element contains Text elements for its content.
+                    foreach (Text runText in runElement.Elements<Text>())
+                    {
+                        sb.Append(runText.Text);
+                    }
+                }
+                // Other element types like PhoneticRun (rPh), PhoneticProperties (phoneticPr)
+                // are implicitly skipped because they are not 'Text' or 'Run'.
+            }
+            return sb.ToString();
+        }
+
         private static string GetCellValue(WorkbookPart workbookPart, WorksheetPart worksheetPart, string cellAddress)
         {
             Cell theCell = worksheetPart.Worksheet.Descendants<Cell>().FirstOrDefault(c => c.CellReference?.Value == cellAddress);
 
-            if (theCell == null || theCell.CellValue == null)
+            if (theCell == null)
             {
-                return null; 
+                return null; // Cell not found
             }
 
-            string value = theCell.CellValue.InnerText;
-            if (theCell.DataType != null && theCell.DataType.Value == CellValues.SharedString)
+            if (theCell.DataType != null)
             {
-                SharedStringTablePart sstPart = workbookPart?.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
-                if (sstPart?.SharedStringTable != null && int.TryParse(value, out int sstId)) 
+                var cellDataType = theCell.DataType.Value; // EnumValue<CellValues> から CellValues を取得
+
+                if (cellDataType == CellValues.SharedString)
                 {
-                    if (sstId >= 0 && sstId < sstPart.SharedStringTable.ChildElements.Count)
+                    if (theCell.CellValue == null) return null;
+                    string sstIdxStr = theCell.CellValue.InnerText;
+                    SharedStringTablePart sstPart = workbookPart?.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
+                    if (sstPart?.SharedStringTable != null && int.TryParse(sstIdxStr, out int sstId))
                     {
-                         return sstPart.SharedStringTable.ChildElements[sstId].InnerText;
+                        if (sstId >= 0 && sstId < sstPart.SharedStringTable.ChildElements.Count)
+                        {
+                            var ssi = sstPart.SharedStringTable.ChildElements[sstId] as SharedStringItem;
+                            if (ssi != null)
+                            {
+                                return GetTextFromOpenXmlCompositeElement(ssi);
+                            }
+                            return $"#SST_INVALID_TYPE_AT_ID({sstId})";
+                        }
+                        return $"#SST_ID_OOR({sstId})";
                     }
-                    return $"#SST_ID_OOR({sstId})"; 
+                    return sstIdxStr;
                 }
-                return value; 
+                else if (cellDataType == CellValues.InlineString)
+                {
+                    if (theCell.InlineString != null)
+                    {
+                        return GetTextFromOpenXmlCompositeElement(theCell.InlineString);
+                    }
+                    return string.Empty;
+                }
+                else if (cellDataType == CellValues.String ||
+                         cellDataType == CellValues.Number ||
+                         cellDataType == CellValues.Boolean ||
+                         cellDataType == CellValues.Date ||
+                         cellDataType == CellValues.Error)
+                {
+                    return theCell.CellValue?.InnerText;
+                }
+                else // default case for unknown data types
+                {
+                    return theCell.CellValue?.InnerText; // Best guess
+                }
             }
-            return value;
+            else // DataType is null, typically means a number or a date stored as a number
+            {
+                return theCell.CellValue?.InnerText;
+            }
         }
         
         public static int GetColumnIndexFromName(string columnName)

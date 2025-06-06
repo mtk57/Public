@@ -27,7 +27,7 @@ Private Sub btnClose_Click()
     Unload Me
 End Sub
 
-' テキストボックスでキーが押されたときの処理
+' テキストボックスでキーが押されたときの処理（エラー対策版）
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     
     ' Enterキーが押された場合のみ実行
@@ -50,12 +50,20 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         currentShapeIndex = 0
         
         Dim shp As Shape
+        Dim hasTextFrameProperty As Boolean
+        
         ' アクティブなシートのすべての図形をループ
         For Each shp In ActiveSheet.Shapes
-            ' 図形にテキストフレームがあり、テキストが含まれているかチェック
-            If shp.Type = msoGroup Then ' グループ化された図形は一旦スキップ
-                ' 必要であればグループ内の図形も再帰的に検索する処理を追加
-            ElseIf shp.HasTextFrame Then
+            
+            '--- ▼ここからが修正部分▼ ---
+            hasTextFrameProperty = False
+            On Error Resume Next ' 一時的にエラーを無視する
+            hasTextFrameProperty = shp.HasTextFrame ' このプロパティが存在するか試す
+            On Error GoTo 0      ' エラー無視をすぐに解除する
+            '--- ▲ここまでが修正部分▲ ---
+
+            ' HasTextFrameプロパティがあり、かつテキストが含まれている場合のみ処理
+            If hasTextFrameProperty Then
                 If shp.TextFrame2.HasText Then
                     ' テキスト内に検索キーワードが含まれているかチェック（大文字・小文字を区別しない）
                     If InStr(1, shp.TextFrame.Characters.Text, searchTerm, vbTextCompare) > 0 Then
@@ -63,6 +71,7 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
                     End If
                 End If
             End If
+            
         Next shp
     End If
     
@@ -87,6 +96,7 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
     End If
     
 End Sub
+
 
 ' フォームが閉じられるときの処理
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)

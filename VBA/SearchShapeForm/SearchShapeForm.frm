@@ -39,7 +39,7 @@ Private Function GetShapeText(ByVal targetShape As Shape) As String
 End Function
 
 
-' テキストボックスでキーが押されたときの処理
+' テキストボックスでキーが押されたときの処理（Gotoエラー対策版）
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     
     ' Enterキーが押された場合のみ実行
@@ -90,8 +90,30 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         ' 対象の図形を選択して、そこまでスクロール
         Dim targetShape As Shape
         Set targetShape = foundShapes(currentShapeIndex)
+        
+        '--- ▼ここからが修正部分▼ ---
+        ' シートをアクティブにする
         targetShape.Parent.Activate
+        
+        On Error Resume Next ' Gotoエラーを検知するため一時的にエラーを無視
+        
+        ' まず、Gotoメソッドでジャンプを試みる
         Application.Goto Reference:=targetShape, Scroll:=True
+        
+        ' Gotoメソッドが失敗した場合 (Err.Numberが0でない場合)
+        If Err.Number <> 0 Then
+            Err.Clear ' エラー情報をクリア
+            
+            ' 代替案：図形を選択し、その左上のセルまでウィンドウをスクロールする
+            targetShape.Select
+            With ActiveWindow
+                .ScrollRow = targetShape.TopLeftCell.Row
+                .ScrollColumn = targetShape.TopLeftCell.Column
+            End With
+        End If
+        
+        On Error GoTo 0 ' エラー処理を通常に戻す
+        '--- ▲ここまでが修正部分▲ ---
         
     Else
         ' 見つからなかった場合

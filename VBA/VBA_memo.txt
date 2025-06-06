@@ -101,12 +101,12 @@ LenB(s)                                 // 6
 ■VB6にあって、VB.NETにないもの。
 
 ・固定長文字列
-	Ex.Dim s As String * 4
+    Ex.Dim s As String * 4
 
 ・Option Base
 
 ・末尾に記号($, %)が付く関数
-	Ex.Left$()  →文字列を返すLeft関数のこと。$がないとVariantを返す。
+    Ex.Left$()  →文字列を返すLeft関数のこと。$がないとVariantを返す。
 
 ・デフォルト・プロパティ
     Ex. TextBox1 = "hoge"   →TextBox1.Textが省略出来る
@@ -128,179 +128,179 @@ LenB(s)                                 // 6
 ---------------------------------------
 ■予約語
 
-VB6											VB.NET
+VB6                                         VB.NET
 ------------------------------------------------------------
-Abs											ない
-AddressOf									ある
-And											ある
-Any											ない
-Array										ない
-As											ある
-Attribute									ない
-Boolean										ある
-ByRef										ある
-Byte										ある
-ByVal										ある
-Call										ある
-Case										ある
-Cbool										ある
-Cbyte										ある
-Ccur										ない
-Cdate										ある
-CDbl										ある
-Cdec										ある
-Cdecl										ある
-Cint										ある
-Circle										ない
-CLng										ある
-CLngLng										ない
-CLngPtr										ない
-Close										ない
-Const										ある
-CSng										ある
-CStr										ある
-Currency									ない
-CVar										ない
-CVErr										ない
-Date										ある
-Debug										ない
-Decimal										ある
-Declare										ある
-DefBool										ない
-DefByte										ない
-DefCur										ない
-DefDate										ない
-DefDbl										ない
-DefDec										ない
-DefInt										ない
-DefLng										ない
-DefLngLng									ない
-DefLngPtr									ない
-DefObj										ない
-DefSng										ない
-DefStr										ない
-DefVar										ない
-Dim											ある
-Do											ある
-DoEvents									ない
-Double										ある
-Each										
-Else										ある
-ElseIf										ある
-empty										
-End											ある
-EndIf										ある
-Enum										
-Eqv											
-Erase										
-Event										
-Exit										ある
-false										ある
-Fix											
-For											ある
-Friend										
-Function									ある
-Get											
-Global										
-GoSub										なし
-GoTo										ある
-If											ある
-Imp											
-Implements									
-In											
-Input										
-InputB										
-Int											
-Integer										
-Is											
-Lbound										ある
-Len											
-LenB										
-Let											
-Like										
-LINEINPUT									
-Lock										
-Long										
-LongLong									
-LongPtr										
-Loop										ある
-Lset										
-Me											
-Mod											
-New											
-Next										
-Not											
-nothing										
-null										Nothing
-On											
-Open										
-Option										ある
-Optional									ある
-Or											ある
-ParamArray									ある
-Preserve									ある
-Print										
-Private										ある
-PSet										
-Public										ある
-Put											
-RaiseEvent									
-ReDim										ある
-Rem											ある
-Resume										
-Return										ある
-Rset										
-Scale										
-Seek										
-Select										
-Set											
-Sgn											
-Shared										
-Single										
-Spc											
-Static										ある
-Stop										
-String										ある
-Sub											ある
-Tab											
-Then										ある
-To											ある
-true										ある
-Type										なし
-TypeOf										
-Ubound										ある
-Unlock										
-Until										
-Variant										なし
-VB_Base										なし
-VB_Control									なし
-VB_Creatable								なし
-VB_Customizable								なし
-VB_Description								なし
-VB_Exposed									なし
-VB_Ext_KEY									なし
-VB_GlobalNameSpace							なし
-VB_HelpID									なし
-VB_Invoke_Func								なし
-VB_Invoke_Property							なし
-VB_Invoke_PropertyPut						なし
-VB_Invoke_PropertyPutRefVB_MemberFlags		なし
-VB_Name										なし
-VB_PredeclaredId							なし
-VB_ProcData									なし
-VB_TemplateDerived							なし
-VB_UserMemId								なし
-VB_VarDescription							なし
-VB_VarHelpID								なし
-VB_VarMemberFlags							なし
-VB_VarProcData								なし
-VB_VarUserMemId								なし
-Wend										
-While										
-With										
-WithEvents									
-Write										
-Xor											
+Abs                                         ない
+AddressOf                                   ある
+And                                         ある
+Any                                         ない
+Array                                       ない
+As                                          ある
+Attribute                                   ない
+Boolean                                     ある
+ByRef                                       ある
+Byte                                        ある
+ByVal                                       ある
+Call                                        ある
+Case                                        ある
+Cbool                                       ある
+Cbyte                                       ある
+Ccur                                        ない
+Cdate                                       ある
+CDbl                                        ある
+Cdec                                        ある
+Cdecl                                       ある
+Cint                                        ある
+Circle                                      ない
+CLng                                        ある
+CLngLng                                     ない
+CLngPtr                                     ない
+Close                                       ない
+Const                                       ある
+CSng                                        ある
+CStr                                        ある
+Currency                                    ない
+CVar                                        ない
+CVErr                                       ない
+Date                                        ある
+Debug                                       ない
+Decimal                                     ある
+Declare                                     ある
+DefBool                                     ない
+DefByte                                     ない
+DefCur                                      ない
+DefDate                                     ない
+DefDbl                                      ない
+DefDec                                      ない
+DefInt                                      ない
+DefLng                                      ない
+DefLngLng                                   ない
+DefLngPtr                                   ない
+DefObj                                      ない
+DefSng                                      ない
+DefStr                                      ない
+DefVar                                      ない
+Dim                                         ある
+Do                                          ある
+DoEvents                                    ない
+Double                                      ある
+Each                                        
+Else                                        ある
+ElseIf                                      ある
+empty                                       
+End                                         ある
+EndIf                                       ある
+Enum                                        
+Eqv                                         
+Erase                                       
+Event                                       
+Exit                                        ある
+false                                       ある
+Fix                                         
+For                                         ある
+Friend                                      
+Function                                    ある
+Get                                         
+Global                                      
+GoSub                                       なし
+GoTo                                        ある
+If                                          ある
+Imp                                         
+Implements                                  
+In                                          
+Input                                       
+InputB                                      
+Int                                         
+Integer                                     
+Is                                          
+Lbound                                      ある
+Len                                         
+LenB                                        
+Let                                         
+Like                                        
+LINEINPUT                                   
+Lock                                        
+Long                                        
+LongLong                                    
+LongPtr                                     
+Loop                                        ある
+Lset                                        
+Me                                          
+Mod                                         
+New                                         
+Next                                        
+Not                                         
+nothing                                     
+null                                        Nothing
+On                                          
+Open                                        
+Option                                      ある
+Optional                                    ある
+Or                                          ある
+ParamArray                                  ある
+Preserve                                    ある
+Print                                       
+Private                                     ある
+PSet                                        
+Public                                      ある
+Put                                         
+RaiseEvent                                  
+ReDim                                       ある
+Rem                                         ある
+Resume                                      
+Return                                      ある
+Rset                                        
+Scale                                       
+Seek                                        
+Select                                      
+Set                                         
+Sgn                                         
+Shared                                      
+Single                                      
+Spc                                         
+Static                                      ある
+Stop                                        
+String                                      ある
+Sub                                         ある
+Tab                                         
+Then                                        ある
+To                                          ある
+true                                        ある
+Type                                        なし
+TypeOf                                      
+Ubound                                      ある
+Unlock                                      
+Until                                       
+Variant                                     なし
+VB_Base                                     なし
+VB_Control                                  なし
+VB_Creatable                                なし
+VB_Customizable                             なし
+VB_Description                              なし
+VB_Exposed                                  なし
+VB_Ext_KEY                                  なし
+VB_GlobalNameSpace                          なし
+VB_HelpID                                   なし
+VB_Invoke_Func                              なし
+VB_Invoke_Property                          なし
+VB_Invoke_PropertyPut                       なし
+VB_Invoke_PropertyPutRefVB_MemberFlags      なし
+VB_Name                                     なし
+VB_PredeclaredId                            なし
+VB_ProcData                                 なし
+VB_TemplateDerived                          なし
+VB_UserMemId                                なし
+VB_VarDescription                           なし
+VB_VarHelpID                                なし
+VB_VarMemberFlags                           なし
+VB_VarProcData                              なし
+VB_VarUserMemId                             なし
+Wend                                        
+While                                       
+With                                        
+WithEvents                                  
+Write                                       
+Xor                                         
 
 ---------------------------------------
 ■DefObj A-Z
@@ -316,31 +316,31 @@ https://learn.microsoft.com/ja-jp/previous-versions/visualstudio/visual-studio-2
 ---------------------------------------
 ■VB.NETのキーワード
 My
-	プロジェクト全体の設定や構成、または特定のファイルやリソースにアクセスするためのショートカットとして使用されます。
-	"My"キーワードを使用することで、プロジェクトの設定やリソースに簡単にアクセスできます。
-	たとえば、My.Settingsを使用すると、ユーザー設定を簡単に保存および読み取ることができます。
-	また、My.Computer.FileSystemオブジェクトを使用すると、ファイルシステムに関するさまざまなタスクを実行できます。
+    プロジェクト全体の設定や構成、または特定のファイルやリソースにアクセスするためのショートカットとして使用されます。
+    "My"キーワードを使用することで、プロジェクトの設定やリソースに簡単にアクセスできます。
+    たとえば、My.Settingsを使用すると、ユーザー設定を簡単に保存および読み取ることができます。
+    また、My.Computer.FileSystemオブジェクトを使用すると、ファイルシステムに関するさまざまなタスクを実行できます。
 
 MyBase
-	C#のbaseと同じ。
+    C#のbaseと同じ。
 
 Me
-	C#のthisと同じ。
+    C#のthisと同じ。
 
 MyClass
-	C#に該当機能なし。よく分らん。。
+    C#に該当機能なし。よく分らん。。
 
 Shared
-	C#のstaticと同じ。
+    C#のstaticと同じ。
 
 Shadows
-	よく分らん。。メソッドの再定義？(であればC#のメソッドにつけるnewと同じかも)
+    よく分らん。。メソッドの再定義？(であればC#のメソッドにつけるnewと同じかも)
 
 MustOverride
-	C#のabstractと同じ。
+    C#のabstractと同じ。
 
 Static
-	C#に該当機能なし。VBではローカル変数を静的に出来る。
+    C#に該当機能なし。VBではローカル変数を静的に出来る。
 
 ---------------------------------------
 ■VB6 BATからコンパイル
@@ -463,3 +463,49 @@ Sub SecureFTPScript()
     ' テンポラリファイルを削除
     Kill tempFilePath
 End Sub
+
+
+-------------
+■VBA アドインの作成・追加手順memo
+
+1. VBAコード
+まず、ExcelのVBAエディタに以下のコードを設定します。
+
+ステップA: ユーザーフォームの作成
+    最初に、検索用のダイアログボックス（ユーザーフォーム）を作成します。
+
+    Alt + F11キーを押してVBAエディタを開きます。
+
+    メニューから [挿入] > [ユーザーフォーム] を選択します。
+
+    プロパティウィンドウ（表示されていない場合はF4キー）で、以下の設定をします。
+
+    (Name) を SearchShapeForm に変更
+    Caption を 図形内テキスト検索 に変更
+    ツールボックスから、作成したフォームの上に以下のコントロールを配置します。
+
+    テキストボックス (TextBox)
+    (Name) を txtSearch に変更
+    コマンドボタン (CommandButton)
+    (Name) を btnClose に変更
+    Caption を 終了 に変更
+    フォームの何もない部分をダブルクリックしてコードウィンドウを開き、以下のコードをすべて貼り付けます。
+    （コードは省略）
+
+
+ステップB: ThisWorkbookのコード
+    アドインが読み込まれたときに自動でフォームを開くためのコードです。
+
+    VBAエディタの左側「プロジェクト」ウィンドウから ThisWorkbook をダブルクリックします。
+    開いたコードウィンドウに、以下のコードを貼り付けます。
+    （コードは省略）
+
+2. アドイン(*.xlam)として保存
+    コードの設定が完了したら、ファイルをアドイン形式で保存します。
+
+    VBAエディタを閉じ、通常のExcel画面に戻ります。
+    [ファイル] > [名前を付けて保存] を選択します。
+    [ファイルの種類] のドロップダウンリストから [Excel アドイン (*.xlam)] を選択します。
+    ファイル名（例: 図形検索アドイン.xlam）を入力し、保存します。
+    通常、ファイルの種類で .xlam を選ぶと、自動的にExcelのアドイン用フォルダが開きます。そのまま保存して問題ありません。
+

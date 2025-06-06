@@ -1,10 +1,10 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} SearchShapeForm 
    Caption         =   "図形内テキスト検索"
-   ClientHeight    =   3015
+   ClientHeight    =   4110
    ClientLeft      =   120
    ClientTop       =   465
-   ClientWidth     =   4560
+   ClientWidth     =   5460
    OleObjectBlob   =   "SearchShapeForm.frx":0000
    StartUpPosition =   1  'オーナー フォームの中央
 End
@@ -13,8 +13,6 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-' --- SearchShapeForm のコード（グループ化対応版） ---
-
 ' 検索キーワードが変更されたかを判断するための変数
 Private lastSearchTerm As String
 ' 見つかった図形を格納するコレクション
@@ -39,7 +37,6 @@ Private Function GetShapeText(ByVal targetShape As Shape) As String
 End Function
 
 
-'--- ▼ここからが新規追加部分▼ ---
 ' 図形を再帰的に検索するためのプロシージャ
 Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTerm As String, ByRef results As Collection)
     On Error Resume Next ' GroupItemsなどでエラーが出ることがあるため
@@ -64,7 +61,6 @@ Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTe
     
     On Error GoTo 0
 End Sub
-'--- ▲ここまでが新規追加部分▲ ---
 
 
 ' テキストボックスでキーが押されたときの処理（最終版）
@@ -76,6 +72,17 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
     ' Enterキーの入力を無効化（「ポン」という音を防ぐ）
     KeyCode = 0
     
+    '--- ▼ここからが修正部分▼ ---
+    ' btnSearch_Clickプロシージャを呼び出す
+    Call btnSearch_Click
+    '--- ▲ここまでが修正部分▲ ---
+    
+End Sub
+
+'--- ▼ここからが新規追加部分▼ ---
+' 「次を検索」ボタンが押されたときの処理（元のKeyDownイベントから処理を移動）
+Private Sub btnSearch_Click()
+
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
     
@@ -102,14 +109,12 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         Dim targetShape As Shape
         Set targetShape = foundShapes(currentShapeIndex)
         
-        '--- ▼ここからが修正部分▼ ---
         ' 図形がどのシート上にあるかを直接調べて、そのシートをアクティブにする
         On Error Resume Next ' 特殊なオブジェクトでTopLeftCellが取得できない場合に備える
         targetShape.TopLeftCell.Worksheet.Activate
         On Error GoTo 0
-        '--- ▲ここまでが修正部分▲ ---
         
-        ' --- スクロール処理（ここは変更なし） ---
+        ' --- スクロール処理 ---
         On Error Resume Next
         Application.Goto Reference:=targetShape, Scroll:=True
         If Err.Number <> 0 Then
@@ -125,8 +130,91 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
     Else
         Beep
     End If
-    
+
 End Sub
+
+
+' 「置換」ボタンが押されたときの処理
+Private Sub btnReplace_Click()
+    Dim searchTerm As String, replaceTerm As String
+    searchTerm = Me.txtSearch.Text
+    replaceTerm = Me.txtReplace.Text
+
+    ' 検索キーワードが空、または検索結果がない場合は何もしない
+    If Len(searchTerm) = 0 Or foundShapes Is Nothing Or foundShapes.Count = 0 Then
+        Beep
+        Exit Sub
+    End If
+
+    ' 現在選択されている図形を取得
+    Dim targetShape As Shape
+    Set targetShape = foundShapes(currentShapeIndex)
+
+    ' テキストを置換
+    Dim originalText As String, newText As String
+    originalText = GetShapeText(targetShape)
+    ' InStrで大文字/小文字を区別せずに検索し、見つかった部分をReplaceで置換
+    If InStr(1, originalText, searchTerm, vbTextCompare) > 0 Then
+        newText = Replace(originalText, searchTerm, replaceTerm, 1, -1, vbTextCompare)
+        targetShape.TextFrame.Characters.Text = newText
+    End If
+    
+    ' 次の図形を検索して表示
+    Call btnSearch_Click
+
+End Sub
+
+
+' 「すべて置換」ボタンが押されたときの処理
+Private Sub btnReplaceAll_Click()
+    Dim searchTerm As String, replaceTerm As String
+    searchTerm = Me.txtSearch.Text
+    replaceTerm = Me.txtReplace.Text
+
+    ' 検索キーワードが空の場合は何もしない
+    If Len(searchTerm) = 0 Then Exit Sub
+
+    ' --- 検索がまだ実行されていない場合は、まず検索を実行 ---
+    If foundShapes Is Nothing Or lastSearchTerm <> searchTerm Then
+        lastSearchTerm = searchTerm
+        Set foundShapes = New Collection
+        currentShapeIndex = 0
+        SearchShapesRecursive ActiveSheet.Shapes, searchTerm, foundShapes
+    End If
+
+    ' --- 置換処理 ---
+    If foundShapes.Count > 0 Then
+        Dim shp As Shape
+        Dim replacedCount As Long
+        replacedCount = 0
+
+        On Error Resume Next
+        For Each shp In foundShapes
+            Dim originalText As String, newText As String
+            originalText = GetShapeText(shp)
+            
+            ' 置換対象のテキストが含まれている場合のみ処理
+            If InStr(1, originalText, searchTerm, vbTextCompare) > 0 Then
+                newText = Replace(originalText, searchTerm, replaceTerm, 1, -1, vbTextCompare)
+                shp.TextFrame.Characters.Text = newText
+                replacedCount = replacedCount + 1
+            End If
+        Next shp
+        On Error GoTo 0
+
+        MsgBox replacedCount & "個の項目を置換しました。", vbInformation
+        
+        ' 置換が終わったので検索結果をクリア
+        Set foundShapes = Nothing
+        lastSearchTerm = ""
+        currentShapeIndex = 0
+
+    Else
+        MsgBox "置換対象の図形が見つかりませんでした。", vbExclamation
+    End If
+
+End Sub
+'--- ▲ここまでが新規追加部分▲ ---
 
 
 ' 「終了」ボタンが押されたときの処理

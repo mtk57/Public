@@ -67,7 +67,7 @@ End Sub
 '--- ▲ここまでが新規追加部分▲ ---
 
 
-' テキストボックスでキーが押されたときの処理
+' テキストボックスでキーが押されたときの処理（最終版）
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     
     ' Enterキーが押された場合のみ実行
@@ -89,9 +89,7 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         Set foundShapes = New Collection
         currentShapeIndex = 0
         
-        '--- ▼検索ロジックを再帰呼び出しに変更▼ ---
         SearchShapesRecursive ActiveSheet.Shapes, searchTerm, foundShapes
-        '--- ▲検索ロジックを再帰呼び出しに変更▲ ---
     End If
     
     ' --- 検索結果の表示 ---
@@ -104,8 +102,14 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         Dim targetShape As Shape
         Set targetShape = foundShapes(currentShapeIndex)
         
-        targetShape.Parent.Activate
+        '--- ▼ここからが修正部分▼ ---
+        ' 図形がどのシート上にあるかを直接調べて、そのシートをアクティブにする
+        On Error Resume Next ' 特殊なオブジェクトでTopLeftCellが取得できない場合に備える
+        targetShape.TopLeftCell.Worksheet.Activate
+        On Error GoTo 0
+        '--- ▲ここまでが修正部分▲ ---
         
+        ' --- スクロール処理（ここは変更なし） ---
         On Error Resume Next
         Application.Goto Reference:=targetShape, Scroll:=True
         If Err.Number <> 0 Then

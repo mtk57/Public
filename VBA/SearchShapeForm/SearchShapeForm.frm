@@ -13,7 +13,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-' --- SearchShapeForm のコード ---
+' --- SearchShapeForm のコード（改善版） ---
 
 ' 検索キーワードが変更されたかを判断するための変数
 Private lastSearchTerm As String
@@ -22,12 +22,24 @@ Private foundShapes As Collection
 ' 次に表示する図形のインデックス
 Private currentShapeIndex As Long
 
-' 「終了」ボタンが押されたときの処理
-Private Sub btnClose_Click()
-    Unload Me
-End Sub
 
-' テキストボックスでキーが押されたときの処理（エラー対策版）
+' 図形からテキストを安全に取得するための専用関数
+Private Function GetShapeText(ByVal targetShape As Shape) As String
+    On Error Resume Next ' この関数内で発生したエラーはすべて無視する
+    GetShapeText = "" ' 初期値を設定
+    
+    ' テキストフレームがあり、かつ、テキストが含まれている場合にその内容を返す
+    If targetShape.HasTextFrame Then
+        If targetShape.TextFrame2.HasText Then
+            GetShapeText = targetShape.TextFrame.Characters.Text
+        End If
+    End If
+    
+    On Error GoTo 0 ' エラー処理を元に戻す
+End Function
+
+
+' テキストボックスでキーが押されたときの処理
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     
     ' Enterキーが押された場合のみ実行
@@ -50,28 +62,19 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         currentShapeIndex = 0
         
         Dim shp As Shape
-        Dim hasTextFrameProperty As Boolean
+        Dim shapeText As String
         
         ' アクティブなシートのすべての図形をループ
         For Each shp In ActiveSheet.Shapes
+            ' 専用関数を使って、安全に図形のテキストを取得
+            shapeText = GetShapeText(shp)
             
-            '--- ▼ここからが修正部分▼ ---
-            hasTextFrameProperty = False
-            On Error Resume Next ' 一時的にエラーを無視する
-            hasTextFrameProperty = shp.HasTextFrame ' このプロパティが存在するか試す
-            On Error GoTo 0      ' エラー無視をすぐに解除する
-            '--- ▲ここまでが修正部分▲ ---
-
-            ' HasTextFrameプロパティがあり、かつテキストが含まれている場合のみ処理
-            If hasTextFrameProperty Then
-                If shp.TextFrame2.HasText Then
-                    ' テキスト内に検索キーワードが含まれているかチェック（大文字・小文字を区別しない）
-                    If InStr(1, shp.TextFrame.Characters.Text, searchTerm, vbTextCompare) > 0 Then
-                        foundShapes.Add shp
-                    End If
+            ' 取得したテキスト内に検索キーワードが含まれているかチェック
+            If Len(shapeText) > 0 Then
+                If InStr(1, shapeText, searchTerm, vbTextCompare) > 0 Then
+                    foundShapes.Add shp
                 End If
             End If
-            
         Next shp
     End If
     
@@ -97,6 +100,11 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
     
 End Sub
 
+
+' 「終了」ボタンが押されたときの処理
+Private Sub btnClose_Click()
+    Unload Me
+End Sub
 
 ' フォームが閉じられるときの処理
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)

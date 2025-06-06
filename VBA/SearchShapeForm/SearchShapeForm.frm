@@ -13,7 +13,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-' --- SearchShapeForm のコード（改善版） ---
+' --- SearchShapeForm のコード（グループ化対応版） ---
 
 ' 検索キーワードが変更されたかを判断するための変数
 Private lastSearchTerm As String
@@ -39,7 +39,35 @@ Private Function GetShapeText(ByVal targetShape As Shape) As String
 End Function
 
 
-' テキストボックスでキーが押されたときの処理（Gotoエラー対策版）
+'--- ▼ここからが新規追加部分▼ ---
+' 図形を再帰的に検索するためのプロシージャ
+Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTerm As String, ByRef results As Collection)
+    On Error Resume Next ' GroupItemsなどでエラーが出ることがあるため
+
+    Dim shp As Shape
+    Dim shapeText As String
+
+    For Each shp In shapesToSearch
+        ' 図形がグループの場合、その中のアイテムに対して再度このプロシージャを呼び出す（再帰処理）
+        If shp.Type = msoGroup Then
+            SearchShapesRecursive shp.GroupItems, searchTerm, results
+        Else
+            ' グループでない場合、通常通りテキストを検索
+            shapeText = GetShapeText(shp)
+            If Len(shapeText) > 0 Then
+                If InStr(1, shapeText, searchTerm, vbTextCompare) > 0 Then
+                    results.Add shp
+                End If
+            End If
+        End If
+    Next shp
+    
+    On Error GoTo 0
+End Sub
+'--- ▲ここまでが新規追加部分▲ ---
+
+
+' テキストボックスでキーが押されたときの処理
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     
     ' Enterキーが押された場合のみ実行
@@ -61,62 +89,36 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
         Set foundShapes = New Collection
         currentShapeIndex = 0
         
-        Dim shp As Shape
-        Dim shapeText As String
-        
-        ' アクティブなシートのすべての図形をループ
-        For Each shp In ActiveSheet.Shapes
-            ' 専用関数を使って、安全に図形のテキストを取得
-            shapeText = GetShapeText(shp)
-            
-            ' 取得したテキスト内に検索キーワードが含まれているかチェック
-            If Len(shapeText) > 0 Then
-                If InStr(1, shapeText, searchTerm, vbTextCompare) > 0 Then
-                    foundShapes.Add shp
-                End If
-            End If
-        Next shp
+        '--- ▼検索ロジックを再帰呼び出しに変更▼ ---
+        SearchShapesRecursive ActiveSheet.Shapes, searchTerm, foundShapes
+        '--- ▲検索ロジックを再帰呼び出しに変更▲ ---
     End If
     
     ' --- 検索結果の表示 ---
     If foundShapes.Count > 0 Then
-        ' 次の図形へインデックスを進める
         currentShapeIndex = currentShapeIndex + 1
-        ' インデックスが図形の数を超えたら1に戻る（ループする）
         If currentShapeIndex > foundShapes.Count Then
             currentShapeIndex = 1
         End If
         
-        ' 対象の図形を選択して、そこまでスクロール
         Dim targetShape As Shape
         Set targetShape = foundShapes(currentShapeIndex)
         
-        '--- ▼ここからが修正部分▼ ---
-        ' シートをアクティブにする
         targetShape.Parent.Activate
         
-        On Error Resume Next ' Gotoエラーを検知するため一時的にエラーを無視
-        
-        ' まず、Gotoメソッドでジャンプを試みる
+        On Error Resume Next
         Application.Goto Reference:=targetShape, Scroll:=True
-        
-        ' Gotoメソッドが失敗した場合 (Err.Numberが0でない場合)
         If Err.Number <> 0 Then
-            Err.Clear ' エラー情報をクリア
-            
-            ' 代替案：図形を選択し、その左上のセルまでウィンドウをスクロールする
+            Err.Clear
             targetShape.Select
             With ActiveWindow
                 .ScrollRow = targetShape.TopLeftCell.Row
                 .ScrollColumn = targetShape.TopLeftCell.Column
             End With
         End If
-        
-        On Error GoTo 0 ' エラー処理を通常に戻す
-        '--- ▲ここまでが修正部分▲ ---
+        On Error GoTo 0
         
     Else
-        ' 見つからなかった場合
         Beep
     End If
     
@@ -130,6 +132,5 @@ End Sub
 
 ' フォームが閉じられるときの処理
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
-    ' 変数を解放
     Set foundShapes = Nothing
 End Sub

@@ -60,7 +60,7 @@ Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTe
 End Sub
 
 
-' 検索を実行する共通プロシージャ
+' 検索を実行する共通プロシージャ (変更なし)
 Private Sub ExecuteSearch()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
@@ -91,7 +91,7 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
 End Sub
 
 
-' 「次を検索」ボタンが押されたときの処理
+' 「次を検索」ボタンが押されたときの処理 (変更なし)
 Private Sub btnSearch_Click()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
@@ -99,7 +99,7 @@ Private Sub btnSearch_Click()
     If Len(searchTerm) = 0 Then Exit Sub
     
     ' --- 検索処理 ---
-    ' 検索キーワードが変わったか、初めての検索の場合に共通検索処理を呼び出す
+    ' 検索キーワードが変わったか、初めての検索(foundShapesが空)の場合に共通検索処理を呼び出す
     If lastSearchTerm <> searchTerm Or foundShapes Is Nothing Then
         Call ExecuteSearch
     End If
@@ -112,7 +112,7 @@ Private Sub btnSearch_Click()
         End If
         
         Dim targetShape As Shape
-        Set targetShape = foundShapes(currentShapeIndex) ' ← ここにあった不要な文字列を削除しました
+        Set targetShape = foundShapes(currentShapeIndex)
         
         ' 図形がどのシート上にあるかを直接調べて、そのシートをアクティブにする
         On Error Resume Next
@@ -121,7 +121,7 @@ Private Sub btnSearch_Click()
         
         ' --- スクロール処理 ---
         On Error Resume Next
-        Application.Goto Reference:=targetShape, Scroll:=True
+        Application.GoTo Reference:=targetShape, Scroll:=True
         If Err.Number <> 0 Then
             Err.Clear
             targetShape.Select
@@ -163,7 +163,7 @@ Private Sub btnReplace_Click()
 End Sub
 
 
-' 「すべて置換」ボタンが押されたときの処理
+' 「すべて置換」ボタンが押されたときの処理 (変更なし)
 Private Sub btnReplaceAll_Click()
     Dim searchTerm As String, replaceTerm As String
     searchTerm = Me.txtSearch.Text
@@ -205,6 +205,18 @@ Private Sub btnReplaceAll_Click()
         MsgBox "置換対象の図形が見つかりませんでした。", vbExclamation
     End If
 End Sub
+
+
+'--- ▼ここからが新規追加部分▼ ---
+' 検索範囲のオプションが変更されたら、検索結果をリセットする
+Private Sub optAllSheets_Click()
+    Set foundShapes = Nothing
+End Sub
+
+Private Sub optCurrentSheet_Click()
+    Set foundShapes = Nothing
+End Sub
+'--- ▲ここまでが新規追加部分▲ ---
 
 
 ' 「終了」ボタンが押されたときの処理 (変更なし)

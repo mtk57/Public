@@ -45,5 +45,12 @@ namespace SimpleExcelGrep.Models
 
         [DataMember]
         public double IgnoreFileSizeMB { get; set; } = 0; // 無視するファイルサイズ (MB単位)
+
+        // ===== 機能追加 =====
+        [DataMember]
+        public bool CellModeEnabled { get; set; } = false; // セル検索モードが有効か
+
+        [DataMember]
+        public string CellAddress { get; set; } = ""; // 検索対象のセルアドレス
     }
 }

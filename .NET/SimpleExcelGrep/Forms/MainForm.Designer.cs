@@ -341,7 +341,6 @@
             this.txtCellAddress.Name = "txtCellAddress";
             this.txtCellAddress.Size = new System.Drawing.Size(180, 19);
             this.txtCellAddress.TabIndex = 63;
-            this.txtCellAddress.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.toolTip1.SetToolTip(this.txtCellAddress, "A1形式で指定。半角カンマで複数指定可。");
             // 
             // label2
@@ -362,6 +361,7 @@
             this.chkCellMode.TabIndex = 66;
             this.chkCellMode.Text = "ON/OFF";
             this.chkCellMode.UseVisualStyleBackColor = true;
+            this.chkCellMode.CheckedChanged += new System.EventHandler(this.ChkCellMode_CheckedChanged);
             // 
             // MainForm
             // 

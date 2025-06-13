@@ -31,7 +31,7 @@ namespace SimpleExcelGrep.Services
         }
 
         /// <summary>
-        /// 指定されたフォルダ内のExcelファイルを検索
+        /// (GREP検索モード) 指定されたフォルダ内のExcelファイルを検索
         /// </summary>
         public async Task<List<SearchResult>> SearchExcelFilesAsync(
             string folderPath,
@@ -43,13 +43,13 @@ namespace SimpleExcelGrep.Services
             bool searchShapes,
             bool firstHitOnly,
             int maxParallelism,
-            double ignoreFileSizeMB, // 追加
+            double ignoreFileSizeMB,
             ConcurrentQueue<SearchResult> resultQueue,
             Action<string> statusUpdateCallback,
             CancellationToken cancellationToken)
         {
             _logger.LogMessage($"SearchExcelFilesAsync 開始: フォルダ={folderPath}");
-            _logger.LogMessage($"検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
+            _logger.LogMessage($"GREP検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
 
             List<SearchResult> results = new List<SearchResult>();
 
@@ -102,28 +102,21 @@ namespace SimpleExcelGrep.Services
                             catch (Exception ex)
                             {
                                 _logger.LogMessage($"ファイルサイズ取得エラー: {filePath}, {ex.Message}");
-                                // エラーの場合は処理を続行（スキップしない）
                             }
                         }
-
 
                         try
                         {
                             _logger.LogMessage($"ファイル処理開始: {filePath}");
-                            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+                            List<SearchResult> fileResults = SearchInXlsxFile(
+                                filePath, keyword, useRegex, regex, resultQueue,
+                                firstHitOnly, searchShapes, cancellationToken);
 
-                            if (extension == ".xlsx" || extension == ".xlsm")
+                            _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
+
+                            lock (results)
                             {
-                                List<SearchResult> fileResults = SearchInXlsxFile(
-                                    filePath, keyword, useRegex, regex, resultQueue,
-                                    firstHitOnly, searchShapes, cancellationToken);
-
-                                _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
-
-                                lock (results)
-                                {
-                                    results.AddRange(fileResults);
-                                }
+                                results.AddRange(fileResults);
                             }
 
                             Interlocked.Increment(ref processedFiles);
@@ -159,7 +152,182 @@ namespace SimpleExcelGrep.Services
         }
 
         /// <summary>
-        /// 単一のXLSX/XLSMファイルを検索
+        /// (セル検索モード) 指定されたセルアドレスの値を検索
+        /// </summary>
+        public async Task<List<SearchResult>> SearchCellsByAddressAsync(
+            string folderPath,
+            string[] cellAddresses,
+            List<string> ignoreKeywords,
+            int maxParallelism,
+            double ignoreFileSizeMB,
+            ConcurrentQueue<SearchResult> resultQueue,
+            Action<string> statusUpdateCallback,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogMessage($"SearchCellsByAddressAsync 開始: フォルダ={folderPath}");
+            _logger.LogMessage($"セル検索開始: アドレス='{string.Join(", ", cellAddresses)}', 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
+
+            List<SearchResult> results = new List<SearchResult>();
+            
+            try
+            {
+                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", SearchOption.AllDirectories)
+                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", SearchOption.AllDirectories))
+                                          .ToArray();
+                _logger.LogMessage($"{excelFiles.Length} 個のExcelファイルが見つかりました");
+
+                int totalFiles = excelFiles.Length;
+                int processedFiles = 0;
+
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = maxParallelism,
+                    CancellationToken = cancellationToken
+                };
+
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(excelFiles, parallelOptions, (filePath) =>
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        // 無視キーワードチェック
+                        if (ignoreKeywords.Any(k => filePath.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            _logger.LogMessage($"無視キーワードが含まれるためスキップ: {filePath}");
+                            Interlocked.Increment(ref processedFiles);
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル");
+                            return;
+                        }
+
+                        // ファイルサイズチェック
+                        if (ignoreFileSizeMB > 0)
+                        {
+                            try
+                            {
+                                FileInfo fileInfo = new FileInfo(filePath);
+                                double fileSizeMB = (double)fileInfo.Length / (1024 * 1024);
+                                if (fileSizeMB > ignoreFileSizeMB)
+                                {
+                                    _logger.LogMessage($"ファイルサイズ超過のためスキップ ({fileSizeMB:F2}MB > {ignoreFileSizeMB}MB): {filePath}");
+                                    Interlocked.Increment(ref processedFiles);
+                                    statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル");
+                                    return;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogMessage($"ファイルサイズ取得エラー: {filePath}, {ex.Message}");
+                            }
+                        }
+
+                        try
+                        {
+                            _logger.LogMessage($"セル値取得開始: {filePath}");
+                            List<SearchResult> fileResults = SearchCellsInXlsxFile(
+                                filePath, cellAddresses, resultQueue, cancellationToken);
+                            
+                            _logger.LogMessage($"セル値取得完了: {filePath}, {fileResults.Count}件");
+
+                            lock (results)
+                            {
+                                results.AddRange(fileResults);
+                            }
+
+                            Interlocked.Increment(ref processedFiles);
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル");
+                        }
+                        catch (OperationCanceledException)
+                        {
+                             _logger.LogMessage($"ファイル処理がキャンセルされました: {filePath}");
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                             _logger.LogMessage($"ファイル処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
+                            Interlocked.Increment(ref processedFiles);
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル");
+                        }
+                    });
+                }, cancellationToken);
+
+            }
+            catch (OperationCanceledException)
+            {
+                 _logger.LogMessage("SearchCellsByAddressAsync内のタスクがキャンセルされました。");
+                throw;
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// (セル検索モード) 単一のXLSX/XLSMファイルから指定されたセルの値を取得
+        /// </summary>
+        private List<SearchResult> SearchCellsInXlsxFile(
+            string filePath,
+            string[] cellAddresses,
+            ConcurrentQueue<SearchResult> pendingResults,
+            CancellationToken cancellationToken)
+        {
+            List<SearchResult> localResults = new List<SearchResult>();
+
+            try
+            {
+                using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+                {
+                    WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
+                    if (workbookPart == null) return localResults;
+
+                    SharedStringTablePart sharedStringTablePart = workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
+                    SharedStringTable sharedStringTable = sharedStringTablePart?.SharedStringTable;
+
+                    foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        string sheetName = GetSheetName(workbookPart, worksheetPart) ?? "不明なシート";
+
+                        foreach (string address in cellAddresses)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            Cell cell = worksheetPart.Worksheet.Descendants<Cell>()
+                                .FirstOrDefault(c => c.CellReference?.Value == address);
+
+                            string cellValue = (cell != null) ? GetCellValue(cell, sharedStringTable) : "(セルなし)";
+
+                            SearchResult result = new SearchResult
+                            {
+                                FilePath = filePath,
+                                SheetName = sheetName,
+                                CellPosition = address,
+                                CellValue = cellValue
+                            };
+
+                            pendingResults.Enqueue(result);
+                            localResults.Add(result);
+
+                            _logger.LogMessage($"セル値取得: {filePath} - {sheetName} - {address} - '{TruncateString(result.CellValue)}'");
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogMessage($"ファイル処理がキャンセルされました: {filePath}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogMessage($"Excel処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
+            }
+
+            return localResults;
+        }
+
+
+        /// <summary>
+        /// (GREP検索モード) 単一のXLSX/XLSMファイルを検索
         /// </summary>
         private List<SearchResult> SearchInXlsxFile(
             string filePath,
@@ -224,6 +392,8 @@ namespace SimpleExcelGrep.Services
             return localResults;
         }
 
+        // 以下、既存のプライベートメソッド (SearchInCells, SearchInShapes, GetSheetName, GetCellValue, GetCellReference, TruncateString) は変更なし
+        // ... (省略) ...
         /// <summary>
         /// ワークシート内のセルを検索
         /// </summary>

@@ -71,6 +71,10 @@ namespace SimpleExcelGrep.Forms
             chkFirstHitOnly.CheckedChanged += (s, e) => { if (!_isLoading) SaveCurrentSettings(); };
             chkSearchShapes.CheckedChanged += (s, e) => { if (!_isLoading) SaveCurrentSettings(); };
             txtIgnoreFileSizeMB.TextChanged += (s, e) => { if (!_isLoading) SaveCurrentSettings(); }; // 無視ファイルサイズのイベント
+
+            // ===== 機能追加 =====
+            chkCellMode.CheckedChanged += ChkCellMode_CheckedChanged;
+            txtCellAddress.TextChanged += (s, e) => { if (!_isLoading) SaveCurrentSettings(); };
         }
 
         /// <summary>
@@ -148,6 +152,12 @@ namespace SimpleExcelGrep.Forms
                 chkFirstHitOnly.Checked = settings.FirstHitOnly;
                 chkSearchShapes.Checked = settings.SearchShapes;
                 txtIgnoreFileSizeMB.Text = settings.IgnoreFileSizeMB.ToString(CultureInfo.InvariantCulture);
+                
+                // ===== 機能追加 =====
+                chkCellMode.Checked = settings.CellModeEnabled;
+                txtCellAddress.Text = settings.CellAddress;
+                // UIの状態を初期化
+                txtCellAddress.Enabled = chkCellMode.Checked;
             }
             finally
             {
@@ -168,7 +178,6 @@ namespace SimpleExcelGrep.Forms
                 ignoreFileSize = size;
             }
 
-
             Settings settings = new Settings
             {
                 FolderPath = cmbFolderPath.Text,
@@ -182,7 +191,11 @@ namespace SimpleExcelGrep.Forms
                 MaxParallelism = (int)nudParallelism.Value,
                 FirstHitOnly = chkFirstHitOnly.Checked,
                 SearchShapes = chkSearchShapes.Checked,
-                IgnoreFileSizeMB = ignoreFileSize
+                IgnoreFileSizeMB = ignoreFileSize,
+
+                // ===== 機能追加 =====
+                CellModeEnabled = chkCellMode.Checked,
+                CellAddress = txtCellAddress.Text
             };
 
             if (!_settingsService.SaveSettings(settings))
@@ -211,7 +224,6 @@ namespace SimpleExcelGrep.Forms
                 {
                     _logService.LogMessage($"選択されたフォルダ: {dialog.SelectedPath}");
                     _settingsService.AddToComboBoxHistory(cmbFolderPath, dialog.SelectedPath);
-                    // cmbFolderPath.Text は AddToComboBoxHistory で設定されるので、SaveCurrentSettings を呼び出すだけで良い
                     SaveCurrentSettings();
                 }
                 else
@@ -237,199 +249,183 @@ namespace SimpleExcelGrep.Forms
         }
 
         /// <summary>
-        /// 検索開始ボタンクリック時の処理
+        /// 検索開始ボタンクリック時の処理 (モード分岐)
         /// </summary>
         private async void BtnStartSearch_Click(object sender, EventArgs e)
         {
-            _logService.LogMessage("検索開始ボタンがクリックされました");
+            // ① フォルダパスの共通検証
+            if (!ValidateFolderPath()) return;
 
-            // 入力検証
-            if (!ValidateSearchInputs()) return;
-
-            // 検索キーワードと無視キーワードを履歴に追加
+            // 履歴の保存と設定の保存
+            _settingsService.AddToComboBoxHistory(cmbFolderPath, cmbFolderPath.Text);
             _settingsService.AddToComboBoxHistory(cmbKeyword, cmbKeyword.Text);
             _settingsService.AddToComboBoxHistory(cmbIgnoreKeywords, cmbIgnoreKeywords.Text);
             SaveCurrentSettings();
 
-            // UIを検索中の状態に変更
+            // ② セル検索モードかGREP検索モードかを判定
+            if (chkCellMode.Checked && !string.IsNullOrWhiteSpace(txtCellAddress.Text))
+            {
+                // セル検索モード
+                await RunCellSearchModeAsync();
+            }
+            else
+            {
+                // GREP検索モード
+                await RunGrepSearchModeAsync();
+            }
+        }
+
+        /// <summary>
+        /// GREP検索モードを実行
+        /// </summary>
+        private async Task RunGrepSearchModeAsync()
+        {
+            _logService.LogMessage("GREP検索モードを開始します");
+
+            // GREP検索用の入力検証
+            if (!ValidateGrepInputs()) return;
+
             SetSearchingState(true);
-
-            // キャンセルトークンを作成
             _cancellationTokenSource = new CancellationTokenSource();
-
-            // 検索結果リストをクリア
             _searchResults.Clear();
-            // 結果グリッドをクリア
             grdResults.Rows.Clear();
-
 
             try
             {
-                // 無視キーワードのリストを作成
-                List<string> ignoreKeywords = cmbIgnoreKeywords.Text
-                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(k => k.Trim())
-                    .Where(k => !string.IsNullOrEmpty(k))
-                    .ToList();
-
-                _logService.LogMessage($"無視キーワードリスト: {string.Join(", ", ignoreKeywords)}");
-
-                // 正規表現オブジェクト
+                List<string> ignoreKeywords = cmbIgnoreKeywords.Text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(k => k.Trim()).Where(k => !string.IsNullOrEmpty(k)).ToList();
                 Regex regex = null;
                 if (chkRegex.Checked)
                 {
-                    try
-                    {
-                        _logService.LogMessage($"正規表現を使用: {cmbKeyword.Text}");
-                        regex = new Regex(cmbKeyword.Text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                    }
+                    try { regex = new Regex(cmbKeyword.Text, RegexOptions.Compiled | RegexOptions.IgnoreCase); }
                     catch (Exception ex)
                     {
-                        _logService.LogMessage($"正規表現エラー: {ex.Message}");
                         MessageBox.Show($"正規表現が無効です: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        SetSearchingState(false);
-                        return;
+                        SetSearchingState(false); return;
                     }
                 }
 
-                // 検索処理を実行
                 bool isRealTimeDisplay = chkRealTimeDisplay.Checked;
-                bool firstHitOnly = chkFirstHitOnly.Checked;
-                bool searchShapes = chkSearchShapes.Checked;
-                int maxParallelism = (int)nudParallelism.Value;
-                double ignoreFileSize = 0;
-                if (double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out double size))
-                {
-                    ignoreFileSize = size;
-                }
-
-
-                _logService.LogMessage($"リアルタイム表示: {isRealTimeDisplay}, 最初のヒットのみ: {firstHitOnly}, 図形内検索: {searchShapes}, 並列数: {maxParallelism}, 無視ファイルサイズ: {ignoreFileSize}MB");
-
-                // 検索結果をキューで受け取るための準備
                 var pendingResults = new ConcurrentQueue<SearchResult>();
-
-                // タイマーを作成して開始（クラスフィールドを使用）
                 _uiTimer = new System.Windows.Forms.Timer { Interval = 100 };
-                var uiUpdateEvent = new AutoResetEvent(false);
-
-                // UI更新のためのタイマー処理を設定
-                StartResultUpdateTimer(_uiTimer, pendingResults, isRealTimeDisplay, uiUpdateEvent);
-                _logService.LogMessage($"StartResultUpdateTimer呼び出し後: タイマーの状態={_uiTimer.Enabled}");
+                StartResultUpdateTimer(_uiTimer, pendingResults, isRealTimeDisplay);
 
                 try
                 {
-                    // 検索を実行
+                    double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out double ignoreFileSize);
+
                     _searchResults = await _excelSearchService.SearchExcelFilesAsync(
-                        cmbFolderPath.Text,
-                        cmbKeyword.Text,
-                        chkRegex.Checked,
-                        regex,
-                        ignoreKeywords,
-                        isRealTimeDisplay,
-                        searchShapes,
-                        firstHitOnly,
-                        maxParallelism,
-                        ignoreFileSize, // 無視ファイルサイズを渡す
-                        pendingResults,
-                        UpdateStatus,
+                        cmbFolderPath.Text, cmbKeyword.Text, chkRegex.Checked, regex,
+                        ignoreKeywords, isRealTimeDisplay, chkSearchShapes.Checked, chkFirstHitOnly.Checked,
+                        (int)nudParallelism.Value, ignoreFileSize, pendingResults, UpdateStatus,
                         _cancellationTokenSource.Token);
-
-                    // リアルタイム表示でも非リアルタイム表示でも、最終結果を確実に表示する
-                    _logService.LogMessage($"最終結果をまとめて表示: {_searchResults.Count}件");
+                    
                     DisplaySearchResults(_searchResults);
-
-                    // 一度実行されていることを確認するために追加の処理実行
-                    _logService.LogMessage($"pendingResultsキューの残り: {pendingResults.Count}件");
-                    List<SearchResult> remainingResults = new List<SearchResult>();
-                    while (pendingResults.TryDequeue(out SearchResult result))
-                    {
-                        remainingResults.Add(result);
-                    }
-                    if (remainingResults.Count > 0)
-                    {
-                        _logService.LogMessage($"キューから{remainingResults.Count}件の未処理結果を追加");
-                        foreach (var result in remainingResults)
-                        {
-                            if (!_searchResults.Contains(result))
-                            {
-                                _searchResults.Add(result);
-                            }
-                        }
-                        // 結果を再表示
-                        DisplaySearchResults(_searchResults);
-                    }
-
                     UpdateStatus($"検索完了: {_searchResults.Count} 件見つかりました");
-
-                    // TSVファイルに書き出し
-                    if (_searchResults.Any())
-                    {
-                        WriteResultsToTsv(_searchResults);
-                    }
+                    if (_searchResults.Any()) WriteResultsToTsv(_searchResults);
                 }
                 catch (OperationCanceledException)
                 {
                     UpdateStatus($"検索は中止されました: {_searchResults.Count} 件見つかりました");
-
-                    // キャンセル時は現在までの結果を表示
-                    if (!isRealTimeDisplay)
-                    {
-                        DisplaySearchResults(_searchResults);
-                    }
-                     // TSVファイルに書き出し (キャンセル時も現在の結果を保存)
-                    if (_searchResults.Any())
-                    {
-                        WriteResultsToTsv(_searchResults);
-                    }
+                    if (!isRealTimeDisplay) DisplaySearchResults(_searchResults);
+                    if (_searchResults.Any()) WriteResultsToTsv(_searchResults);
                 }
                 catch (Exception ex)
                 {
-                    _logService.LogMessage($"検索中にエラーが発生しました: {ex.Message}");
                     MessageBox.Show($"検索中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     UpdateStatus("エラーが発生しました");
-
-                    // エラー時は現在までの結果を表示
-                    if (!isRealTimeDisplay)
-                    {
-                        DisplaySearchResults(_searchResults);
-                    }
+                    if (!isRealTimeDisplay) DisplaySearchResults(_searchResults);
                 }
                 finally
                 {
-                    // タイマーを停止して破棄
-                    if (_uiTimer != null)
-                    {
-                        _uiTimer.Stop();
-                        _uiTimer.Dispose();
-                        _uiTimer = null;
-                        _logService.LogMessage("UIタイマーを停止しました。");
-                    }
+                    if (_uiTimer != null) { _uiTimer.Stop(); _uiTimer.Dispose(); _uiTimer = null; }
                 }
             }
             finally
             {
-                // UIを通常の状態に戻す
                 SetSearchingState(false);
             }
         }
 
+        /// <summary>
+        /// セル検索モードを実行
+        /// </summary>
+        private async Task RunCellSearchModeAsync()
+        {
+            _logService.LogMessage("セル検索モードを開始します");
 
+            // ⑤ セルアドレスの検証
+            string[] cellAddresses = txtCellAddress.Text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                                      .Select(a => a.Trim().ToUpper())
+                                                      .ToArray();
+            if (cellAddresses.Length == 0 || !cellAddresses.All(IsValidCellAddress))
+            {
+                _logService.LogMessage($"セルアドレスの形式が不正です: {txtCellAddress.Text}");
+                MessageBox.Show("セルアドレスの形式が正しくありません。\nA1形式で、カンマ区切りで入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            SetSearchingState(true);
+            _cancellationTokenSource = new CancellationTokenSource();
+            _searchResults.Clear();
+            grdResults.Rows.Clear();
+
+            try
+            {
+                List<string> ignoreKeywords = cmbIgnoreKeywords.Text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(k => k.Trim()).Where(k => !string.IsNullOrEmpty(k)).ToList();
+                double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out double ignoreFileSize);
+
+                bool isRealTimeDisplay = chkRealTimeDisplay.Checked;
+                var pendingResults = new ConcurrentQueue<SearchResult>();
+                _uiTimer = new System.Windows.Forms.Timer { Interval = 100 };
+                StartResultUpdateTimer(_uiTimer, pendingResults, isRealTimeDisplay);
+                
+                try
+                {
+                     _searchResults = await _excelSearchService.SearchCellsByAddressAsync(
+                        cmbFolderPath.Text, cellAddresses, ignoreKeywords,
+                        (int)nudParallelism.Value, ignoreFileSize, pendingResults, UpdateStatus,
+                        _cancellationTokenSource.Token);
+
+                    DisplaySearchResults(_searchResults);
+                    UpdateStatus($"検索完了: {_searchResults.Count} 件見つかりました");
+                    if (_searchResults.Any()) WriteResultsToTsv(_searchResults);
+                }
+                catch (OperationCanceledException)
+                {
+                    UpdateStatus($"検索は中止されました: {_searchResults.Count} 件見つかりました");
+                    if (!isRealTimeDisplay) DisplaySearchResults(_searchResults);
+                    if (_searchResults.Any()) WriteResultsToTsv(_searchResults);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"検索中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    UpdateStatus("エラーが発生しました");
+                    if (!isRealTimeDisplay) DisplaySearchResults(_searchResults);
+                }
+                finally
+                {
+                    if (_uiTimer != null) { _uiTimer.Stop(); _uiTimer.Dispose(); _uiTimer = null; }
+                }
+            }
+            finally
+            {
+                SetSearchingState(false);
+            }
+        }
+        
         /// <summary>
         /// 結果更新用タイマーを開始
         /// </summary>
-        private void StartResultUpdateTimer(System.Windows.Forms.Timer timer, ConcurrentQueue<SearchResult> pendingResults, bool isRealTimeDisplay, AutoResetEvent uiUpdateEvent)
+        private void StartResultUpdateTimer(System.Windows.Forms.Timer timer, ConcurrentQueue<SearchResult> pendingResults, bool isRealTimeDisplay)
         {
             timer.Tick += (s, e) =>
             {
-                int batchSize = 0;
                 const int MaxUpdatesPerTick = 100;
                 List<SearchResult> tempResults = new List<SearchResult>();
 
+                int batchSize = 0;
                 while (batchSize < MaxUpdatesPerTick && pendingResults.TryDequeue(out SearchResult result))
                 {
-                    // _searchResults への追加は最後に行うか、DisplaySearchResultsで行う
-                    // ここではリアルタイム表示用のキューから取得したものを一時リストに保持
                     tempResults.Add(result);
                     batchSize++;
                 }
@@ -439,8 +435,8 @@ namespace SimpleExcelGrep.Forms
                     _logService.LogMessage($"UIタイマーTick: {tempResults.Count}件の結果を追加");
                     foreach (var result in tempResults)
                     {
-                        _searchResults.Add(result); // 検索結果のメインリストにも追加
-                        AddSearchResultToGrid(result); // グリッドに1件ずつ追加
+                        _searchResults.Add(result);
+                        AddSearchResultToGrid(result);
                     }
                 }
             };
@@ -531,23 +527,19 @@ namespace SimpleExcelGrep.Forms
                 return;
             }
 
-            // Shiftキーが押されているかチェック
             bool isShiftPressed = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
             _logService.LogMessage($"Shiftキー押下状態: {isShiftPressed}");
 
             if (isShiftPressed)
             {
-                // Shift+ダブルクリック：フォルダを開く
                 OpenContainingFolder(filePath);
             }
             else
             {
-                // 通常のダブルクリック：Excelファイルを開く
                 string sheetName = grdResults.SelectedRows[0].Cells["colSheetName"].Value?.ToString();
                 string cellPosition = grdResults.SelectedRows[0].Cells["colCellPosition"].Value?.ToString();
                 _logService.LogMessage($"Excel操作を開始します: ファイル={filePath}, シート={sheetName}, セル={cellPosition}");
 
-                // 図形内の場合はセル位置指定なしで開く
                 if (cellPosition == "図形内" || cellPosition == "図形内 (GF)")
                 {
                     OpenExcel(filePath, sheetName, null);
@@ -558,7 +550,7 @@ namespace SimpleExcelGrep.Forms
                 }
             }
         }
-
+        
         /// <summary>
         /// ファイルの含まれるフォルダを開く
         /// </summary>
@@ -613,7 +605,6 @@ namespace SimpleExcelGrep.Forms
         {
             if (e.Control && e.KeyCode == Keys.A)
             {
-                // CTRL+A で全行選択
                 _logService.LogMessage("Ctrl+A キーが押されました: 全行選択");
                 grdResults.SelectAll();
                 e.Handled = true;
@@ -621,7 +612,6 @@ namespace SimpleExcelGrep.Forms
             }
             else if (e.Control && e.KeyCode == Keys.C)
             {
-                // CTRL+C でコピー
                 _logService.LogMessage("Ctrl+C キーが押されました: 選択行をコピー");
                 CopySelectedRowsToClipboard();
                 e.Handled = true;
@@ -635,16 +625,11 @@ namespace SimpleExcelGrep.Forms
         private void CopySelectedRowsToClipboard()
         {
             _logService.LogMessage("選択行をクリップボードにコピー開始");
-
-            if (ExcelUtils.CopySelectedRowsToClipboard(grdResults, message =>
+            if (!ExcelUtils.CopySelectedRowsToClipboard(grdResults, message =>
             {
                 _logService.LogMessage(message);
                 UpdateStatus(message);
             }))
-            {
-                // 成功時の処理は既にコールバック内で行われている
-            }
-            else
             {
                 if (grdResults.SelectedRows.Count == 0)
                 {
@@ -663,15 +648,11 @@ namespace SimpleExcelGrep.Forms
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             _logService.LogMessage("アプリケーションを終了します");
-
             if (_isSearching && _cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
                 _logService.LogMessage("実行中の検索をキャンセルします");
                 _cancellationTokenSource.Cancel();
-                // キャンセル処理が完了するのを少し待つか、非同期処理の完了を待つ設計にする
-                // ここでは単純にキャンセル要求のみ
             }
-
             SaveCurrentSettings();
         }
 
@@ -682,19 +663,25 @@ namespace SimpleExcelGrep.Forms
         {
             _isSearching = isSearching;
 
-            // UI要素の有効/無効を切り替え
+            // 共通UI
             cmbFolderPath.Enabled = !isSearching;
+            btnSelectFolder.Enabled = !isSearching;
+            btnStartSearch.Enabled = !isSearching;
+            btnLoadTsv.Enabled = !isSearching;
+            btnCancelSearch.Enabled = isSearching;
+            
+            // GREP検索用UI
             cmbKeyword.Enabled = !isSearching;
             cmbIgnoreKeywords.Enabled = !isSearching;
             txtIgnoreFileSizeMB.Enabled = !isSearching;
             chkRegex.Enabled = !isSearching;
             chkSearchShapes.Enabled = !isSearching;
-            btnSelectFolder.Enabled = !isSearching;
-            btnStartSearch.Enabled = !isSearching;
-            btnLoadTsv.Enabled = !isSearching; // TSV読み込みボタンも制御
-            btnCancelSearch.Enabled = isSearching;
-            nudParallelism.Enabled = !isSearching;
             chkFirstHitOnly.Enabled = !isSearching;
+            nudParallelism.Enabled = !isSearching;
+
+            // セル検索モード用UI
+            chkCellMode.Enabled = !isSearching;
+            txtCellAddress.Enabled = !isSearching && chkCellMode.Checked; // 検索中でなく、かつチェックボックスがONの時だけ有効
 
             if (isSearching)
             {
@@ -706,49 +693,71 @@ namespace SimpleExcelGrep.Forms
                 _logService.LogMessage("検索状態を終了しました");
             }
         }
-
+        
         /// <summary>
-        /// 検索条件の入力検証
+        /// フォルダパスの検証 (共通)
         /// </summary>
-        private bool ValidateSearchInputs()
+        private bool ValidateFolderPath()
         {
             if (string.IsNullOrWhiteSpace(cmbFolderPath.Text))
             {
-                _logService.LogMessage("フォルダパスが入力されていません");
                 MessageBox.Show("フォルダパスを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
-
             if (!Directory.Exists(cmbFolderPath.Text))
             {
-                _logService.LogMessage($"指定されたフォルダが存在しません: {cmbFolderPath.Text}");
                 MessageBox.Show("指定されたフォルダが存在しません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
+            return true;
+        }
 
+        /// <summary>
+        /// GREP検索の入力検証
+        /// </summary>
+        private bool ValidateGrepInputs()
+        {
             if (string.IsNullOrWhiteSpace(cmbKeyword.Text))
             {
-                _logService.LogMessage("検索キーワードが入力されていません");
                 MessageBox.Show("検索キーワードを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
-
             if (!string.IsNullOrWhiteSpace(txtIgnoreFileSizeMB.Text))
             {
                 if (!double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out double fileSize) || fileSize < 0)
                 {
-                    _logService.LogMessage($"無視ファイルサイズの入力が無効です: {txtIgnoreFileSizeMB.Text}");
                     MessageBox.Show("無視ファイルサイズには0以上の数値を入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return false;
                 }
             }
-            else // 空の場合は0として扱う
+            else
             {
                 txtIgnoreFileSizeMB.Text = "0";
             }
-
-
             return true;
+        }
+
+        /// <summary>
+        /// セルアドレスの形式を検証 (A1形式)
+        /// </summary>
+        private bool IsValidCellAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address)) return false;
+            // 簡易的なA1形式の正規表現 (例: A1, BZ10, ABC1048576)
+            return Regex.IsMatch(address, @"^[A-Z]{1,3}[1-9][0-9]{0,6}$", RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>
+        /// セルモードチェックボックス変更時の処理
+        /// </summary>
+        private void ChkCellMode_CheckedChanged(object sender, EventArgs e)
+        {
+            // ① チェックボックスの状態に応じてテキストボックスの有効/無効を切り替える
+            txtCellAddress.Enabled = chkCellMode.Checked;
+            if (!_isLoading)
+            {
+                SaveCurrentSettings();
+            }
         }
 
         /// <summary>
@@ -760,25 +769,15 @@ namespace SimpleExcelGrep.Forms
             {
                 if (this.InvokeRequired)
                 {
-                    _logService.LogMessage($"DisplaySearchResults: UIスレッドへの呼び出しが必要です。結果件数={results.Count}");
                     this.Invoke(new Action(() => DisplaySearchResults(results)));
                     return;
                 }
-
-                _logService.LogMessage($"DisplaySearchResults: グリッドをクリアして結果を表示します。件数={results.Count}");
-
-                // 結果グリッドをクリア
                 grdResults.Rows.Clear();
-
-                // 結果をグリッドに表示
                 foreach (var result in results)
                 {
                     AddSearchResultToGrid(result);
                 }
-
-                // UIの更新を強制
                 grdResults.Refresh();
-
                 _logService.LogMessage($"グリッドに {results.Count} 件の結果を表示しました");
             }
             catch (Exception ex)
@@ -788,7 +787,7 @@ namespace SimpleExcelGrep.Forms
         }
 
         /// <summary>
-        /// 検索結果を1件グリッドに追加（リアルタイム表示用およびTSV読み込み用）
+        /// 検索結果を1件グリッドに追加
         /// </summary>
         private void AddSearchResultToGrid(SearchResult result)
         {
@@ -801,31 +800,19 @@ namespace SimpleExcelGrep.Forms
                 }
 
                 string fileName = "";
-                try
-                {
-                     fileName = Path.GetFileName(result.FilePath);
-                }
+                try { fileName = Path.GetFileName(result.FilePath); }
                 catch (ArgumentException ex)
                 {
                     _logService.LogMessage($"ファイルパスからファイル名取得エラー: {result.FilePath}, {ex.Message}");
-                    // 不正なパスの場合はファイルパスをそのまま表示するか、エラーを示す文字列にする
                     fileName = result.FilePath;
                 }
 
-
-                // デバッグ情報を追加
-                _logService.LogMessage($"結果追加: {fileName}, シート={result.SheetName}, セル={result.CellPosition}");
-
                 int rowIndex = grdResults.Rows.Add(result.FilePath, fileName, result.SheetName, result.CellPosition, result.CellValue);
 
-                // 最新の行にスクロール (リアルタイム表示時のみ)
                 if (_isSearching && chkRealTimeDisplay.Checked && grdResults.Rows.Count > 0)
                 {
                     grdResults.FirstDisplayedScrollingRowIndex = grdResults.Rows.Count - 1;
                 }
-
-                // UIの更新を強制 (頻繁な更新を避けるため、呼び出し元で制御するか検討)
-                // grdResults.Refresh(); // ここでのRefreshは重い可能性があるので注意
             }
             catch (Exception ex)
             {
@@ -862,7 +849,6 @@ namespace SimpleExcelGrep.Forms
                 _logService.LogMessage($"TSVファイル書き出し開始: {filePath}");
 
                 StringBuilder sb = new StringBuilder();
-                // ヘッダー行
                 sb.AppendLine("ファイルパス\tファイル名\tシート名\tセル位置\tセルの値");
 
                 foreach (var result in results)
@@ -895,7 +881,6 @@ namespace SimpleExcelGrep.Forms
         {
             if (string.IsNullOrEmpty(field))
                 return "";
-            // タブ、改行、ダブルクォートが含まれる場合はダブルクォートで囲み、中のダブルクォートは2つにする
             if (field.Contains('\t') || field.Contains('\n') || field.Contains('\r') || field.Contains('"'))
             {
                 return $"\"{field.Replace("\"", "\"\"")}\"";
@@ -917,14 +902,13 @@ namespace SimpleExcelGrep.Forms
 
                 string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
 
-                if (lines.Length <= 1) // ヘッダーのみ、または空ファイル
+                if (lines.Length <= 1)
                 {
                     _logService.LogMessage("TSVファイルにデータがありません。");
                     MessageBox.Show("TSVファイルに読み込むデータがありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-
-                // ヘッダー行をスキップしてデータを読み込む (lines[0] はヘッダー)
+                
                 for (int i = 1; i < lines.Length; i++)
                 {
                     string line = lines[i];
@@ -932,12 +916,11 @@ namespace SimpleExcelGrep.Forms
 
                     string[] fields = ParseTsvLine(line);
 
-                    if (fields.Length >= 5) // 少なくとも5列あることを期待
+                    if (fields.Length >= 5)
                     {
                         SearchResult result = new SearchResult
                         {
                             FilePath = UnescapeTsvField(fields[0]),
-                            // ファイル名はFilePathから取得するため、TSVの2列目は参照しない
                             SheetName = UnescapeTsvField(fields[2]),
                             CellPosition = UnescapeTsvField(fields[3]),
                             CellValue = UnescapeTsvField(fields[4])
@@ -950,7 +933,7 @@ namespace SimpleExcelGrep.Forms
                         _logService.LogMessage($"TSV行の形式が不正です (列数不足): {line}");
                     }
                 }
-                grdResults.Refresh(); // 最後にまとめてリフレッシュ
+                grdResults.Refresh();
                 UpdateStatus($"TSVファイルから {_searchResults.Count} 件の結果を読み込みました。");
                 _logService.LogMessage($"TSVファイル読み込み完了: {_searchResults.Count}件");
             }
@@ -963,7 +946,7 @@ namespace SimpleExcelGrep.Forms
         }
 
         /// <summary>
-        /// TSVの1行をパースする (簡易版、ダブルクォートによるエスケープ対応)
+        /// TSVの1行をパースする
         /// </summary>
         private string[] ParseTsvLine(string line)
         {
@@ -979,9 +962,8 @@ namespace SimpleExcelGrep.Forms
                 {
                     if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
                     {
-                        // エスケープされたダブルクォート
                         currentField.Append('"');
-                        i++; // 次の文字をスキップ
+                        i++;
                     }
                     else
                     {
@@ -998,10 +980,9 @@ namespace SimpleExcelGrep.Forms
                     currentField.Append(c);
                 }
             }
-            fields.Add(currentField.ToString()); // 最後のフィールドを追加
+            fields.Add(currentField.ToString());
             return fields.ToArray();
         }
-
 
         /// <summary>
         /// TSVフィールドのアンエスケープ処理

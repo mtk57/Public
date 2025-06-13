@@ -13,6 +13,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
+Const VER = "1.0.1"
+
 ' 検索キーワードが変更されたかを判断するための変数
 Private lastSearchTerm As String
 ' 見つかった図形を格納するコレクション
@@ -22,6 +24,9 @@ Private currentShapeIndex As Long
 
 ' フォームが初期化されたときの処理
 Private Sub UserForm_Initialize()
+    ' フォームのキャプションにバージョンを追加
+    Me.Caption = "図形内の文字列の検索/置換 (ver " & VER & ")"
+    
     ' ラジオボタンのデフォルトを「現在のシートのみ」に設定
     Me.optCurrentSheet.Value = True
 End Sub
@@ -141,6 +146,12 @@ Private Sub btnSearch_Click()
     Else
         Beep
     End If
+
+    ' ★変更点: AppActivateでフォームを強制的にアクティブにし、テキストボックスにフォーカスを戻す
+    On Error Resume Next ' AppActivateが稀に失敗する場合があるためエラーを無視する
+    AppActivate Me.Caption
+    On Error GoTo 0
+    Me.txtSearch.SetFocus
 End Sub
 
 

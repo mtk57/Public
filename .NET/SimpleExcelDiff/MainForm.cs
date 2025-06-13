@@ -164,29 +164,51 @@ namespace SimpleExcelDiff
             }
         }
 
-        // ### ここから下のロジックは前回と同じですが、念のため全体を掲載します ###
-
+        /// <summary>
+        /// 差分を検索するメインロジック
+        /// </summary>
         private List<DiffResult> FindDifferences(string pathSrc, string pathDst, bool includeSubDir)
         {
-            var searchOption = includeSubDir ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            var filesSrc = GetExcelFiles(pathSrc, searchOption);
-            var filesDst = GetExcelFiles(pathDst, searchOption);
-
             var diffResults = new List<DiffResult>();
             int id = 1;
 
-            var fileMapSrc = filesSrc.ToDictionary(f => Path.GetFileName(f), f => f);
-            var fileMapDst = filesDst.ToDictionary(f => Path.GetFileName(f), f => f);
-
-            foreach (var fileName in fileMapSrc.Keys.Intersect(fileMapDst.Keys))
+            // 仕様変更②: ファイルが直接指定された場合の処理
+            if (File.Exists(pathSrc) && File.Exists(pathDst))
             {
-                var results = CompareExcelFiles(fileMapSrc[fileName], fileMapDst[fileName]);
+                var results = CompareExcelFiles(pathSrc, pathDst);
                 foreach (var res in results)
                 {
                     res.Id = id++;
                     diffResults.Add(res);
                 }
             }
+            // 仕様変更①: 従来通りフォルダが指定された場合の処理
+            else if (Directory.Exists(pathSrc) && Directory.Exists(pathDst))
+            {
+                var searchOption = includeSubDir ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                var filesSrc = GetExcelFiles(pathSrc, searchOption);
+                var filesDst = GetExcelFiles(pathDst, searchOption);
+
+                var fileMapSrc = filesSrc.ToDictionary(f => Path.GetFileName(f), f => f);
+                var fileMapDst = filesDst.ToDictionary(f => Path.GetFileName(f), f => f);
+
+                // ファイル名が共通のものを比較
+                foreach (var fileName in fileMapSrc.Keys.Intersect(fileMapDst.Keys))
+                {
+                    var results = CompareExcelFiles(fileMapSrc[fileName], fileMapDst[fileName]);
+                    foreach (var res in results)
+                    {
+                        res.Id = id++;
+                        diffResults.Add(res);
+                    }
+                }
+            }
+            else
+            {
+                 // どちらかのパス、あるいは両方が無効な場合
+                 throw new FileNotFoundException("指定された比較元または比較先のパスが見つかりません。");
+            }
+            
             return diffResults;
         }
 

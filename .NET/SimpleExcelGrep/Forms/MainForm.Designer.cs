@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent ()
         {
+            this.components = new System.ComponentModel.Container();
             this.btnStartSearch = new System.Windows.Forms.Button();
             this.btnCancelSearch = new System.Windows.Forms.Button();
             this.chkRealTimeDisplay = new System.Windows.Forms.CheckBox();
@@ -55,6 +56,10 @@
             this.txtIgnoreFileSizeMB = new System.Windows.Forms.TextBox();
             this.lblIgnoreFileSizeUnit = new System.Windows.Forms.Label();
             this.btnLoadTsv = new System.Windows.Forms.Button();
+            this.txtCellAddress = new System.Windows.Forms.TextBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.chkCellMode = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -86,7 +91,7 @@
             this.chkRealTimeDisplay.Location = new System.Drawing.Point(233, 213);
             this.chkRealTimeDisplay.Name = "chkRealTimeDisplay";
             this.chkRealTimeDisplay.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.chkRealTimeDisplay.Size = new System.Drawing.Size(111, 16);
+            this.chkRealTimeDisplay.Size = new System.Drawing.Size(106, 16);
             this.chkRealTimeDisplay.TabIndex = 12;
             this.chkRealTimeDisplay.Text = "リアルタイム表示";
             this.chkRealTimeDisplay.UseVisualStyleBackColor = true;
@@ -97,7 +102,7 @@
             this.lblParallelism.Location = new System.Drawing.Point(350, 214);
             this.lblParallelism.Name = "lblParallelism";
             this.lblParallelism.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.lblParallelism.Size = new System.Drawing.Size(46, 12);
+            this.lblParallelism.Size = new System.Drawing.Size(48, 12);
             this.lblParallelism.TabIndex = 13;
             this.lblParallelism.Text = "並列数:";
             // 
@@ -315,7 +320,7 @@
             this.lblIgnoreFileSizeUnit.AutoSize = true;
             this.lblIgnoreFileSizeUnit.Location = new System.Drawing.Point(199, 145);
             this.lblIgnoreFileSizeUnit.Name = "lblIgnoreFileSizeUnit";
-            this.lblIgnoreFileSizeUnit.Size = new System.Drawing.Size(31, 12);
+            this.lblIgnoreFileSizeUnit.Size = new System.Drawing.Size(30, 12);
             this.lblIgnoreFileSizeUnit.TabIndex = 6;
             this.lblIgnoreFileSizeUnit.Text = "(MB)";
             // 
@@ -329,11 +334,43 @@
             this.btnLoadTsv.Text = "TSV読み込み";
             this.btnLoadTsv.UseVisualStyleBackColor = true;
             // 
+            // txtCellAddress
+            // 
+            this.txtCellAddress.Enabled = false;
+            this.txtCellAddress.Location = new System.Drawing.Point(338, 142);
+            this.txtCellAddress.Name = "txtCellAddress";
+            this.txtCellAddress.Size = new System.Drawing.Size(180, 19);
+            this.txtCellAddress.TabIndex = 63;
+            this.txtCellAddress.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.toolTip1.SetToolTip(this.txtCellAddress, "A1形式で指定。半角カンマで複数指定可。");
+            // 
+            // label2
+            // 
+            this.label2.Location = new System.Drawing.Point(254, 137);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(85, 28);
+            this.label2.TabIndex = 65;
+            this.label2.Text = "指定セルモード:";
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // chkCellMode
+            // 
+            this.chkCellMode.AutoSize = true;
+            this.chkCellMode.Location = new System.Drawing.Point(524, 145);
+            this.chkCellMode.Name = "chkCellMode";
+            this.chkCellMode.Size = new System.Drawing.Size(68, 16);
+            this.chkCellMode.TabIndex = 66;
+            this.chkCellMode.Text = "ON/OFF";
+            this.chkCellMode.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
+            this.Controls.Add(this.chkCellMode);
+            this.Controls.Add(this.txtCellAddress);
+            this.Controls.Add(this.label2);
             this.Controls.Add(this.btnLoadTsv);
             this.Controls.Add(this.lblIgnoreFileSizeUnit);
             this.Controls.Add(this.txtIgnoreFileSizeMB);
@@ -394,5 +431,9 @@
         private System.Windows.Forms.TextBox txtIgnoreFileSizeMB;
         private System.Windows.Forms.Label lblIgnoreFileSizeUnit;
         private System.Windows.Forms.Button btnLoadTsv;
+        private System.Windows.Forms.TextBox txtCellAddress;
+        private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.CheckBox chkCellMode;
     }
 }

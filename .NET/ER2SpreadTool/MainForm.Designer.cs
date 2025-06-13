@@ -31,115 +31,120 @@ namespace ER2SpreadTool
         /// </summary>
         private void InitializeComponent ()
         {
-            label1 = new Label();
-            txtFilePath = new TextBox();
-            btnBrowse = new Button();
-            label2 = new Label();
-            txtSheetName = new TextBox();
-            btnProcess = new Button();
-            label3 = new Label();
-            txtResults = new TextBox();
-            lblStatus = new Label();
-            SuspendLayout();
-
-                        // 
+            this.label1 = new System.Windows.Forms.Label();
+            this.txtFilePath = new System.Windows.Forms.TextBox();
+            this.btnBrowse = new System.Windows.Forms.Button();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtSheetName = new System.Windows.Forms.TextBox();
+            this.btnProcess = new System.Windows.Forms.Button();
+            this.label3 = new System.Windows.Forms.Label();
+            this.txtResults = new System.Windows.Forms.TextBox();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.SuspendLayout();
+            // 
             // label1
             // 
-            label1.AutoSize = true;
-            label1.Location = new Point(23, 25);
-            label1.Name = "label1";
-            label1.Size = new Size(87, 15);
-            label1.TabIndex = 0;
-            label1.Text = "Excelファイルパス";
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(20, 20);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(86, 12);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "Excelファイルパス";
             // 
             // txtFilePath
             // 
-            txtFilePath.Location = new Point(23, 43);
-            txtFilePath.Name = "txtFilePath";
-            txtFilePath.Size = new Size(526, 23);
-            txtFilePath.TabIndex = 1;
+            this.txtFilePath.Location = new System.Drawing.Point(20, 34);
+            this.txtFilePath.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.txtFilePath.Name = "txtFilePath";
+            this.txtFilePath.Size = new System.Drawing.Size(451, 19);
+            this.txtFilePath.TabIndex = 1;
             // 
             // btnBrowse
             // 
-            btnBrowse.Location = new Point(555, 43);
-            btnBrowse.Name = "btnBrowse";
-            btnBrowse.Size = new Size(75, 23);
-            btnBrowse.TabIndex = 2;
-            btnBrowse.Text = "参照";
-            btnBrowse.UseVisualStyleBackColor = true;
-            btnBrowse.Click += btnBrowse_Click;
+            this.btnBrowse.Location = new System.Drawing.Point(476, 34);
+            this.btnBrowse.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.btnBrowse.Name = "btnBrowse";
+            this.btnBrowse.Size = new System.Drawing.Size(64, 18);
+            this.btnBrowse.TabIndex = 2;
+            this.btnBrowse.Text = "参照";
+            this.btnBrowse.UseVisualStyleBackColor = true;
             // 
             // label2
             // 
-            label2.AutoSize = true;
-            label2.Location = new Point(23, 103);
-            label2.Name = "label2";
-            label2.Size = new Size(45, 15);
-            label2.TabIndex = 3;
-            label2.Text = "シート名";
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(20, 82);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(45, 12);
+            this.label2.TabIndex = 3;
+            this.label2.Text = "シート名";
             // 
             // txtSheetName
             // 
-            txtSheetName.Location = new Point(23, 121);
-            txtSheetName.Name = "txtSheetName";
-            txtSheetName.Size = new Size(526, 23);
-            txtSheetName.TabIndex = 4;
+            this.txtSheetName.Location = new System.Drawing.Point(20, 97);
+            this.txtSheetName.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.txtSheetName.Name = "txtSheetName";
+            this.txtSheetName.Size = new System.Drawing.Size(451, 19);
+            this.txtSheetName.TabIndex = 4;
             // 
             // btnProcess
             // 
-            btnProcess.Location = new Point(277, 296);
-            btnProcess.Name = "btnProcess";
-            btnProcess.Size = new Size(75, 23);
-            btnProcess.TabIndex = 5;
-            btnProcess.Text = "処理開始";
-            btnProcess.UseVisualStyleBackColor = true;
-            btnProcess.Click += btnProcess_Click;
+            this.btnProcess.Location = new System.Drawing.Point(237, 237);
+            this.btnProcess.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.btnProcess.Name = "btnProcess";
+            this.btnProcess.Size = new System.Drawing.Size(64, 27);
+            this.btnProcess.TabIndex = 5;
+            this.btnProcess.Text = "処理開始";
+            this.btnProcess.UseVisualStyleBackColor = true;
             // 
             // label3
             // 
-            label3.AutoSize = true;
-            label3.Location = new Point(23, 170);
-            label3.Name = "label3";
-            label3.Size = new Size(55, 15);
-            label3.TabIndex = 6;
-            label3.Text = "処理結果";
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(20, 136);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(53, 12);
+            this.label3.TabIndex = 6;
+            this.label3.Text = "処理結果";
             // 
             // txtResults
             // 
-            txtResults.Location = new Point(23, 187);
-            txtResults.Multiline = true;
-            txtResults.Name = "txtResults";
-            txtResults.ReadOnly = true;
-            txtResults.ScrollBars = ScrollBars.Both;
-            txtResults.Size = new Size(607, 87);
-            txtResults.TabIndex = 7;
+            this.txtResults.Location = new System.Drawing.Point(20, 150);
+            this.txtResults.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.txtResults.Multiline = true;
+            this.txtResults.Name = "txtResults";
+            this.txtResults.ReadOnly = true;
+            this.txtResults.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtResults.Size = new System.Drawing.Size(521, 70);
+            this.txtResults.TabIndex = 7;
             // 
             // lblStatus
             // 
-            lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(23, 347);
-            lblStatus.Name = "lblStatus";
-            lblStatus.Size = new Size(55, 15);
-            lblStatus.TabIndex = 8;
-            lblStatus.Text = "準備完了";
+            this.lblStatus.AutoSize = true;
+            this.lblStatus.Location = new System.Drawing.Point(20, 278);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(53, 12);
+            this.lblStatus.TabIndex = 8;
+            this.lblStatus.Text = "準備完了";
+            // 
+            // MainForm
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(562, 297);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.txtResults);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.btnProcess);
+            this.Controls.Add(this.txtSheetName);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.btnBrowse);
+            this.Controls.Add(this.txtFilePath);
+            this.Controls.Add(this.label1);
+            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.Name = "MainForm";
+            this.Text = "ER図スプレッドツール";
+            this.ResumeLayout(false);
+            this.PerformLayout();
 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(656, 371);
-            Controls.Add(lblStatus);
-            Controls.Add(txtResults);
-            Controls.Add(label3);
-            Controls.Add(btnProcess);
-            Controls.Add(txtSheetName);
-            Controls.Add(label2);
-            Controls.Add(btnBrowse);
-            Controls.Add(txtFilePath);
-            Controls.Add(label1);
-
-            Name = "MainForm";
-            Text = "ER図スプレッドツール";
-            ResumeLayout(false);
-            PerformLayout();
         }
 
         private Label label1;

@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+// ★ 以下のusingディレクティブを追加
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Windows.Forms;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Spreadsheet;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-// ★ 以下のusingディレクティブを追加
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
-using System.Text;
 
 namespace ER2SpreadTool
 {
@@ -27,6 +28,20 @@ namespace ER2SpreadTool
 
             // ドラッグアンドドロップ機能の初期化
             InitializeDragDrop();
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            // タイトルにバージョン情報を表示
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version}";
+
+            LoadSettings();
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveSettings();
         }
 
         private void InitializeDragDrop()
@@ -62,16 +77,6 @@ namespace ER2SpreadTool
                 // 必要であれば、ここでファイルの拡張子をチェックすることも可能です。
                 txtFilePath.Text = files[0];
             }
-        }
-
-        private void MainForm_Load(object sender, EventArgs e)
-        {
-            LoadSettings();
-        }
-
-        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            SaveSettings();
         }
 
         private void LoadSettings()

@@ -35,11 +35,14 @@
             this.txtPathSrc = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.chkEnableSubDir = new System.Windows.Forms.CheckBox();
-            this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.dgvSrc = new System.Windows.Forms.DataGridView();
             this.btnBrowseDst = new System.Windows.Forms.Button();
             this.txtPathDst = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            this.dgvDst = new System.Windows.Forms.DataGridView();
+            this.label4 = new System.Windows.Forms.Label();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSrc)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvDst)).BeginInit();
             this.SuspendLayout();
             // 
             // lblStatus
@@ -56,9 +59,9 @@
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(22, 222);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(53, 12);
+            this.label3.Size = new System.Drawing.Size(43, 12);
             this.label3.TabIndex = 15;
-            this.label3.Text = "処理結果";
+            this.label3.Text = "比較元:";
             // 
             // btnProcess
             // 
@@ -73,7 +76,7 @@
             // 
             // btnBrowseSrc
             // 
-            this.btnBrowseSrc.Location = new System.Drawing.Point(478, 36);
+            this.btnBrowseSrc.Location = new System.Drawing.Point(687, 36);
             this.btnBrowseSrc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowseSrc.Name = "btnBrowseSrc";
             this.btnBrowseSrc.Size = new System.Drawing.Size(64, 19);
@@ -87,7 +90,7 @@
             this.txtPathSrc.Location = new System.Drawing.Point(22, 36);
             this.txtPathSrc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPathSrc.Name = "txtPathSrc";
-            this.txtPathSrc.Size = new System.Drawing.Size(451, 19);
+            this.txtPathSrc.Size = new System.Drawing.Size(659, 19);
             this.txtPathSrc.TabIndex = 10;
             // 
             // label1
@@ -109,18 +112,18 @@
             this.chkEnableSubDir.Text = "サブフォルダも含める";
             this.chkEnableSubDir.UseVisualStyleBackColor = true;
             // 
-            // dataGridView1
+            // dgvSrc
             // 
-            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(24, 237);
-            this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(528, 216);
-            this.dataGridView1.TabIndex = 21;
+            this.dgvSrc.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvSrc.Location = new System.Drawing.Point(24, 237);
+            this.dgvSrc.Name = "dgvSrc";
+            this.dgvSrc.RowTemplate.Height = 21;
+            this.dgvSrc.Size = new System.Drawing.Size(366, 303);
+            this.dgvSrc.TabIndex = 21;
             // 
             // btnBrowseDst
             // 
-            this.btnBrowseDst.Location = new System.Drawing.Point(478, 87);
+            this.btnBrowseDst.Location = new System.Drawing.Point(687, 87);
             this.btnBrowseDst.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowseDst.Name = "btnBrowseDst";
             this.btnBrowseDst.Size = new System.Drawing.Size(64, 19);
@@ -133,7 +136,7 @@
             this.txtPathDst.Location = new System.Drawing.Point(22, 87);
             this.txtPathDst.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPathDst.Name = "txtPathDst";
-            this.txtPathDst.Size = new System.Drawing.Size(451, 19);
+            this.txtPathDst.Size = new System.Drawing.Size(659, 19);
             this.txtPathDst.TabIndex = 23;
             // 
             // label2
@@ -145,15 +148,35 @@
             this.label2.TabIndex = 22;
             this.label2.Text = "Excelフォルダ or ファイル パス (比較先)";
             // 
+            // dgvDst
+            // 
+            this.dgvDst.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvDst.Location = new System.Drawing.Point(396, 237);
+            this.dgvDst.Name = "dgvDst";
+            this.dgvDst.RowTemplate.Height = 21;
+            this.dgvDst.Size = new System.Drawing.Size(366, 303);
+            this.dgvDst.TabIndex = 25;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(394, 222);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(43, 12);
+            this.label4.TabIndex = 26;
+            this.label4.Text = "比較先:";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(576, 474);
+            this.ClientSize = new System.Drawing.Size(781, 552);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.dgvDst);
             this.Controls.Add(this.btnBrowseDst);
             this.Controls.Add(this.txtPathDst);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.dataGridView1);
+            this.Controls.Add(this.dgvSrc);
             this.Controls.Add(this.chkEnableSubDir);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.label3);
@@ -163,7 +186,8 @@
             this.Controls.Add(this.label1);
             this.Name = "MainForm";
             this.Text = "Simple Excel Diff";
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSrc)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvDst)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -178,9 +202,11 @@
         private System.Windows.Forms.TextBox txtPathSrc;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.CheckBox chkEnableSubDir;
-        private System.Windows.Forms.DataGridView dataGridView1;
+        private System.Windows.Forms.DataGridView dgvSrc;
         private System.Windows.Forms.Button btnBrowseDst;
         private System.Windows.Forms.TextBox txtPathDst;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.DataGridView dgvDst;
+        private System.Windows.Forms.Label label4;
     }
 }

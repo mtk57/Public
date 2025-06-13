@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,21 +20,13 @@ namespace SimpleExcelDiff
         public MainForm()
         {
             InitializeComponent();
-
-            // 設定ファイルのパスを定義
             settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SimpleExcelDiff_Settings.json");
-
-            // イベントハンドラを登録
             this.Load += MainForm_Load;
             this.FormClosing += MainForm_FormClosing;
-
             lblStatus.Text = "準備完了";
-
-            // 両方のテキストボックスでドラッグ＆ドロップを有効化
             this.txtPathSrc.AllowDrop = true;
             this.txtPathSrc.DragEnter += new DragEventHandler(textBox_DragEnter);
             this.txtPathSrc.DragDrop += new DragEventHandler(textBox_DragDrop);
-
             this.txtPathDst.AllowDrop = true;
             this.txtPathDst.DragEnter += new DragEventHandler(textBox_DragEnter);
             this.txtPathDst.DragDrop += new DragEventHandler(textBox_DragDrop);
@@ -43,7 +34,6 @@ namespace SimpleExcelDiff
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            // バージョン情報をタイトルに表示
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
             LoadSettings();
@@ -98,10 +88,8 @@ namespace SimpleExcelDiff
 
         private void textBox_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                e.Effect = DragDropEffects.Copy;
-            else
-                e.Effect = DragDropEffects.None;
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+            else e.Effect = DragDropEffects.None;
         }
 
         private void textBox_DragDrop(object sender, DragEventArgs e)
@@ -112,6 +100,7 @@ namespace SimpleExcelDiff
                 ((TextBox)sender).Text = files[0];
             }
         }
+
 
         private void btnBrowseSrc_Click(object sender, EventArgs e)
         {
@@ -139,9 +128,8 @@ namespace SimpleExcelDiff
         {
             lblStatus.Text = "処理中...";
             this.Enabled = false;
-            // ★★★ UIに合わせて dgvSrc と dgvDst をクリア
-            dgvSrc.DataSource = null;
-            dgvDst.DataSource = null;
+            // ★★★ UIに合わせて dataGridView1 をクリア
+            dataGridView1.DataSource = null;
 
             var pathSrc = txtPathSrc.Text;
             var pathDst = txtPathDst.Text;
@@ -150,7 +138,7 @@ namespace SimpleExcelDiff
             try
             {
                 var diffResults = await Task.Run(() => FindDifferences(pathSrc, pathDst, includeSubDir));
-                DisplayResults(diffResults); // 新しい表示メソッドを呼び出し
+                DisplayResults(diffResults);
                 lblStatus.Text = $"処理完了: {diffResults.Count}件の差分を検出しました。";
             }
             catch (Exception ex)
@@ -164,15 +152,11 @@ namespace SimpleExcelDiff
             }
         }
 
-        /// <summary>
-        /// 差分を検索するメインロジック
-        /// </summary>
         private List<DiffResult> FindDifferences(string pathSrc, string pathDst, bool includeSubDir)
         {
             var diffResults = new List<DiffResult>();
             int id = 1;
 
-            // 仕様変更②: ファイルが直接指定された場合の処理
             if (File.Exists(pathSrc) && File.Exists(pathDst))
             {
                 var results = CompareExcelFiles(pathSrc, pathDst);
@@ -182,7 +166,6 @@ namespace SimpleExcelDiff
                     diffResults.Add(res);
                 }
             }
-            // 仕様変更①: 従来通りフォルダが指定された場合の処理
             else if (Directory.Exists(pathSrc) && Directory.Exists(pathDst))
             {
                 var searchOption = includeSubDir ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -192,7 +175,6 @@ namespace SimpleExcelDiff
                 var fileMapSrc = filesSrc.ToDictionary(f => Path.GetFileName(f), f => f);
                 var fileMapDst = filesDst.ToDictionary(f => Path.GetFileName(f), f => f);
 
-                // ファイル名が共通のものを比較
                 foreach (var fileName in fileMapSrc.Keys.Intersect(fileMapDst.Keys))
                 {
                     var results = CompareExcelFiles(fileMapSrc[fileName], fileMapDst[fileName]);
@@ -205,7 +187,6 @@ namespace SimpleExcelDiff
             }
             else
             {
-                 // どちらかのパス、あるいは両方が無効な場合
                  throw new FileNotFoundException("指定された比較元または比較先のパスが見つかりません。");
             }
             
@@ -214,15 +195,8 @@ namespace SimpleExcelDiff
 
         private IEnumerable<string> GetExcelFiles(string path, SearchOption searchOption)
         {
-            if (File.Exists(path) && (path.EndsWith(".xlsx") || path.EndsWith(".xlsm")))
-            {
-                return new[] { path };
-            }
-            if (Directory.Exists(path))
-            {
-                return Directory.EnumerateFiles(path, "*.xlsx", searchOption)
-                                .Union(Directory.EnumerateFiles(path, "*.xlsm", searchOption));
-            }
+            if (File.Exists(path) && (path.EndsWith(".xlsx") || path.EndsWith(".xlsm"))) return new[] { path };
+            if (Directory.Exists(path)) return Directory.EnumerateFiles(path, "*.xlsx", searchOption).Union(Directory.EnumerateFiles(path, "*.xlsm", searchOption));
             return Enumerable.Empty<string>();
         }
 
@@ -234,18 +208,11 @@ namespace SimpleExcelDiff
             {
                 var wbPartSrc = docSrc.WorkbookPart;
                 var wbPartDst = docDst.WorkbookPart;
-
                 var sheetsSrc = wbPartSrc.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
                 var sheetsDst = wbPartDst.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
 
-                foreach (var sheetName in sheetsSrc.Keys.Except(sheetsDst.Keys))
-                {
-                    results.Add(new DiffResult { DiffType = DiffType.SheetMissingInDst, SheetName = sheetName });
-                }
-                foreach (var sheetName in sheetsDst.Keys.Except(sheetsSrc.Keys))
-                {
-                    results.Add(new DiffResult { DiffType = DiffType.SheetMissingInSrc, SheetName = sheetName });
-                }
+                foreach (var sheetName in sheetsSrc.Keys.Except(sheetsDst.Keys)) results.Add(new DiffResult { DiffType = DiffType.SheetMissingInDst, SheetName = sheetName });
+                foreach (var sheetName in sheetsDst.Keys.Except(sheetsSrc.Keys)) results.Add(new DiffResult { DiffType = DiffType.SheetMissingInSrc, SheetName = sheetName });
                 foreach (var sheetName in sheetsSrc.Keys.Intersect(sheetsDst.Keys))
                 {
                     var wsPartSrc = (WorksheetPart)wbPartSrc.GetPartById(sheetsSrc[sheetName]);
@@ -258,7 +225,6 @@ namespace SimpleExcelDiff
                     }
                 }
             }
-            // ファイル情報をここでまとめて付与
             results.ForEach(r => {
                 r.FolderPathSrc = Path.GetDirectoryName(fileSrc);
                 r.FileNameSrc = Path.GetFileName(fileSrc);
@@ -280,11 +246,7 @@ namespace SimpleExcelDiff
             {
                 var valSrc = cellsSrc.ContainsKey(cellRef) ? GetCellValue(cellsSrc[cellRef], wbPartSrc) : "";
                 var valDst = cellsDst.ContainsKey(cellRef) ? GetCellValue(cellsDst[cellRef], wbPartDst) : "";
-
-                if (valSrc != valDst)
-                {
-                    return new DiffResult { DiffType = DiffType.CellValueMismatch, CellAddress = cellRef, CellValueSrc = valSrc, CellValueDst = valDst };
-                }
+                if (valSrc != valDst) return new DiffResult { DiffType = DiffType.CellValueMismatch, CellAddress = cellRef, CellValueSrc = valSrc, CellValueDst = valDst };
             }
             return null;
         }
@@ -293,84 +255,76 @@ namespace SimpleExcelDiff
         {
             if (cell?.CellValue == null) return "";
             string value = cell.CellValue.InnerText;
-            if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
-            {
-                return wbPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault()?.SharedStringTable.ElementAt(int.Parse(value)).InnerText ?? value;
-            }
+            if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString) return wbPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault()?.SharedStringTable.ElementAt(int.Parse(value)).InnerText ?? value;
             return value;
         }
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ DisplayResultsメソッドを2つの表に対応するように全面的に書き換え ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ DisplayResultsメソッドを1つの表に対応するように全面的に書き換え ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         private void DisplayResults(List<DiffResult> results)
         {
-            var dtSrc = new DataTable();
-            var dtDst = new DataTable();
-            var columns = new[] { "ID", "フォルダパス", "ファイル名", "シート名", "セル位置", "セル値" };
-            foreach (var col in columns)
-            {
-                dtSrc.Columns.Add(col);
-                dtDst.Columns.Add(col);
-            }
-
-            var resultsDict = results.ToDictionary(r => r.Id, r => r);
+            var dt = new DataTable();
+            dt.Columns.Add("ID", typeof(int));
+            dt.Columns.Add("差分種別", typeof(string));
+            dt.Columns.Add("比較元フォルダ", typeof(string));
+            dt.Columns.Add("比較元ファイル", typeof(string));
+            dt.Columns.Add("比較元シート", typeof(string));
+            dt.Columns.Add("比較元セル", typeof(string));
+            dt.Columns.Add("比較元値", typeof(string));
+            dt.Columns.Add("比較先フォルダ", typeof(string));
+            dt.Columns.Add("比較先ファイル", typeof(string));
+            dt.Columns.Add("比較先シート", typeof(string));
+            dt.Columns.Add("比較先セル", typeof(string));
+            dt.Columns.Add("比較先値", typeof(string));
+            // 差分種別を判定するための非表示列
+            dt.Columns.Add("DiffTypeEnum", typeof(DiffType));
 
             foreach (var r in results)
             {
-                DataRow drSrc = dtSrc.NewRow();
-                DataRow drDst = dtDst.NewRow();
-
+                string diffTypeText = "";
                 switch (r.DiffType)
                 {
                     case DiffType.CellValueMismatch:
-                        drSrc.ItemArray = new object[] { r.Id, r.FolderPathSrc, r.FileNameSrc, r.SheetName, r.CellAddress, r.CellValueSrc };
-                        drDst.ItemArray = new object[] { r.Id, r.FolderPathDst, r.FileNameDst, r.SheetName, r.CellAddress, r.CellValueDst };
-                        dtSrc.Rows.Add(drSrc);
-                        dtDst.Rows.Add(drDst);
+                        diffTypeText = "値の不一致";
+                        dt.Rows.Add(r.Id, diffTypeText, r.FolderPathSrc, r.FileNameSrc, r.SheetName, r.CellAddress, r.CellValueSrc, r.FolderPathDst, r.FileNameDst, r.SheetName, r.CellAddress, r.CellValueDst, r.DiffType);
                         break;
-                    case DiffType.SheetMissingInDst: // 比較元にのみシートが存在
-                        drSrc.ItemArray = new object[] { r.Id, r.FolderPathSrc, r.FileNameSrc, r.SheetName, r.CellAddress, r.CellValueSrc };
-                        dtSrc.Rows.Add(drSrc);
+                    case DiffType.SheetMissingInDst:
+                        diffTypeText = "シート不足(比較先)";
+                        dt.Rows.Add(r.Id, diffTypeText, r.FolderPathSrc, r.FileNameSrc, r.SheetName, null, null, r.FolderPathDst, r.FileNameDst, null, null, null, r.DiffType);
                         break;
-                    case DiffType.SheetMissingInSrc: // 比較先にのみシートが存在
-                        drDst.ItemArray = new object[] { r.Id, r.FolderPathDst, r.FileNameDst, r.SheetName, r.CellAddress, r.CellValueDst };
-                        dtDst.Rows.Add(drDst);
+                    case DiffType.SheetMissingInSrc:
+                         diffTypeText = "シート不足(比較元)";
+                        dt.Rows.Add(r.Id, diffTypeText, r.FolderPathSrc, r.FileNameSrc, null, null, null, r.FolderPathDst, r.FileNameDst, r.SheetName, null, null, r.DiffType);
                         break;
                 }
             }
-
-            dgvSrc.DataSource = dtSrc;
-            dgvDst.DataSource = dtDst;
+            
+            dataGridView1.DataSource = dt;
+            // 非表示列を実際に非表示にする
+            dataGridView1.Columns["DiffTypeEnum"].Visible = false;
 
             // ハイライト処理
-            HighlightGrid(dgvSrc, resultsDict);
-            HighlightGrid(dgvDst, resultsDict);
-
-            dgvSrc.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
-            dgvDst.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
-        }
-        
-        private void HighlightGrid(DataGridView dgv, Dictionary<int, DiffResult> results)
-        {
-            foreach (DataGridViewRow row in dgv.Rows)
+            foreach (DataGridViewRow row in dataGridView1.Rows)
             {
                 if (row.IsNewRow) continue;
-                var id = int.Parse(row.Cells["ID"].Value.ToString());
-                if (results.TryGetValue(id, out var result))
+                var diffType = (DiffType)row.Cells["DiffTypeEnum"].Value;
+                switch (diffType)
                 {
-                    switch (result.DiffType)
-                    {
-                        case DiffType.CellValueMismatch:
-                            row.Cells["セル値"].Style.BackColor = System.Drawing.Color.Yellow;
-                            break;
-                        case DiffType.SheetMissingInDst:
-                        case DiffType.SheetMissingInSrc:
-                             row.Cells["シート名"].Style.BackColor = System.Drawing.Color.Yellow;
-                            break;
-                    }
+                    case DiffType.CellValueMismatch:
+                        row.Cells["比較元値"].Style.BackColor = System.Drawing.Color.Yellow;
+                        row.Cells["比較先値"].Style.BackColor = System.Drawing.Color.Yellow;
+                        break;
+                    case DiffType.SheetMissingInDst:
+                        row.Cells["比較元シート"].Style.BackColor = System.Drawing.Color.Yellow;
+                        break;
+                    case DiffType.SheetMissingInSrc:
+                        row.Cells["比較先シート"].Style.BackColor = System.Drawing.Color.Yellow;
+                        break;
                 }
             }
+
+            dataGridView1.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
         }
     }
 
@@ -382,7 +336,6 @@ namespace SimpleExcelDiff
         [DataMember] public bool EnableSubDir { get; set; }
     }
     
-    // 差分種別をEnumで管理するように変更
     internal enum DiffType { CellValueMismatch, SheetMissingInDst, SheetMissingInSrc }
 
     internal class DiffResult

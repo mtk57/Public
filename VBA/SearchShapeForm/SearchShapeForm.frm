@@ -20,8 +20,14 @@ Private foundShapes As Collection
 ' 次に表示する図形のインデックス
 Private currentShapeIndex As Long
 
+' フォームが初期化されたときの処理
+Private Sub UserForm_Initialize()
+    ' ラジオボタンのデフォルトを「現在のシートのみ」に設定
+    Me.optCurrentSheet.Value = True
+End Sub
 
-' 図形からテキストを安全に取得するための専用関数 (変更なし)
+
+' 図形からテキストを安全に取得するための専用関数
 Private Function GetShapeText(ByVal targetShape As Shape) As String
     On Error Resume Next
     GetShapeText = ""
@@ -36,7 +42,7 @@ Private Function GetShapeText(ByVal targetShape As Shape) As String
 End Function
 
 
-' 図形を再帰的に検索するためのプロシージャ (変更なし)
+' 図形を再帰的に検索するためのプロシージャ
 Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTerm As String, ByRef results As Collection)
     On Error Resume Next
 
@@ -60,7 +66,7 @@ Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTe
 End Sub
 
 
-' 検索を実行する共通プロシージャ (変更なし)
+' 検索を実行する共通プロシージャ
 Private Sub ExecuteSearch()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
@@ -83,7 +89,7 @@ Private Sub ExecuteSearch()
 End Sub
 
 
-' テキストボックスでキーが押されたときの処理 (変更なし)
+' テキストボックスでキーが押されたときの処理
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     If KeyCode <> vbKeyReturn Then Exit Sub
     KeyCode = 0
@@ -91,7 +97,7 @@ Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shif
 End Sub
 
 
-' 「次を検索」ボタンが押されたときの処理 (変更なし)
+' 「次を検索」ボタンが押されたときの処理
 Private Sub btnSearch_Click()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
@@ -138,8 +144,13 @@ Private Sub btnSearch_Click()
 End Sub
 
 
-' 「置換」ボタンが押されたときの処理 (変更なし)
+' 「置換」ボタンが押されたときの処理
 Private Sub btnReplace_Click()
+    ' 確認ダイアログの表示
+    If MsgBox("現在の図形のテキストを置換しますか？", vbYesNo + vbQuestion, "置換の確認") = vbNo Then
+        Exit Sub
+    End If
+    
     Dim searchTerm As String, replaceTerm As String
     searchTerm = Me.txtSearch.Text
     replaceTerm = Me.txtReplace.Text
@@ -163,8 +174,24 @@ Private Sub btnReplace_Click()
 End Sub
 
 
-' 「すべて置換」ボタンが押されたときの処理 (変更なし)
+' 「すべて置換」ボタンが押されたときの処理
 Private Sub btnReplaceAll_Click()
+    Dim scopeText As String
+    If Me.optAllSheets.Value = True Then
+        scopeText = "すべてのシート"
+    Else
+        scopeText = "現在のシート"
+    End If
+
+    Dim confirmMsg As String
+    confirmMsg = "検索範囲：「" & scopeText & "」" & vbCrLf & vbCrLf
+    confirmMsg = confirmMsg & "「" & Me.txtSearch.Text & "」をすべて「" & Me.txtReplace.Text & "」に置換します。" & vbCrLf
+    confirmMsg = confirmMsg & "この操作は元に戻せません。よろしいですか？"
+    
+    If MsgBox(confirmMsg, vbYesNo + vbExclamation, "すべての置換の確認") = vbNo Then
+        Exit Sub
+    End If
+
     Dim searchTerm As String, replaceTerm As String
     searchTerm = Me.txtSearch.Text
     replaceTerm = Me.txtReplace.Text
@@ -207,7 +234,6 @@ Private Sub btnReplaceAll_Click()
 End Sub
 
 
-'--- ▼ここからが新規追加部分▼ ---
 ' 検索範囲のオプションが変更されたら、検索結果をリセットする
 Private Sub optAllSheets_Click()
     Set foundShapes = Nothing
@@ -216,16 +242,15 @@ End Sub
 Private Sub optCurrentSheet_Click()
     Set foundShapes = Nothing
 End Sub
-'--- ▲ここまでが新規追加部分▲ ---
 
 
-' 「終了」ボタンが押されたときの処理 (変更なし)
+' 「終了」ボタンが押されたときの処理
 Private Sub btnClose_Click()
     Unload Me
 End Sub
 
 
-' フォームが閉じられるときの処理 (変更なし)
+' フォームが閉じられるときの処理
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
     Set foundShapes = Nothing
 End Sub

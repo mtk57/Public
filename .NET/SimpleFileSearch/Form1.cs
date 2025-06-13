@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
@@ -22,6 +23,10 @@ namespace SimpleFileSearch
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            // タイトルにバージョン情報を表示
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version}";
+
             // 設定ファイルからデータを読み込む
             LoadSettings();
         }

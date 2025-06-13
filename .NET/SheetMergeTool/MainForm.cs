@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+// ★ 以下のusingディレクティブを追加 (設定ファイル対応)
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-// ★ 以下のusingディレクティブを追加 (設定ファイル対応)
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
-using System.Text;
 
 namespace SheetMergeTool
 {
@@ -42,6 +43,10 @@ namespace SheetMergeTool
         // ★ MainForm_Load イベントハンドラ (設定読み込み)
         private void MainForm_Load(object sender, EventArgs e)
         {
+            // タイトルにバージョン情報を表示
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version}";
+
             LoadSettings();
         }
 

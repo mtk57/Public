@@ -28,6 +28,7 @@
         /// </summary>
       private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.lblStatus = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.btnProcess = new System.Windows.Forms.Button();
@@ -39,7 +40,12 @@
             this.txtPathDst = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.chkDrawCell = new System.Windows.Forms.CheckBox();
+            this.btnColorSelector = new System.Windows.Forms.Button();
+            this.picCellColor = new System.Windows.Forms.PictureBox();
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.picCellColor)).BeginInit();
             this.SuspendLayout();
             // 
             // lblStatus
@@ -156,11 +162,50 @@
             this.dataGridView1.Size = new System.Drawing.Size(729, 312);
             this.dataGridView1.TabIndex = 21;
             // 
+            // chkDrawCell
+            // 
+            this.chkDrawCell.AutoSize = true;
+            this.chkDrawCell.Location = new System.Drawing.Point(393, 135);
+            this.chkDrawCell.Name = "chkDrawCell";
+            this.chkDrawCell.Size = new System.Drawing.Size(133, 16);
+            this.chkDrawCell.TabIndex = 23;
+            this.chkDrawCell.Text = "変更箇所に色を付ける";
+            this.chkDrawCell.UseVisualStyleBackColor = true;
+            this.chkDrawCell.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
+            // 
+            // btnColorSelector
+            // 
+            this.btnColorSelector.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnColorSelector.Location = new System.Drawing.Point(559, 132);
+            this.btnColorSelector.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.btnColorSelector.Name = "btnColorSelector";
+            this.btnColorSelector.Size = new System.Drawing.Size(52, 19);
+            this.btnColorSelector.TabIndex = 24;
+            this.btnColorSelector.Text = "色選択";
+            this.btnColorSelector.UseVisualStyleBackColor = true;
+            // 
+            // picCellColor
+            // 
+            this.picCellColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
+            this.picCellColor.Location = new System.Drawing.Point(532, 132);
+            this.picCellColor.Name = "picCellColor";
+            this.picCellColor.Size = new System.Drawing.Size(23, 20);
+            this.picCellColor.TabIndex = 25;
+            this.picCellColor.TabStop = false;
+            // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(61, 4);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(781, 552);
+            this.Controls.Add(this.picCellColor);
+            this.Controls.Add(this.btnColorSelector);
+            this.Controls.Add(this.chkDrawCell);
             this.Controls.Add(this.btnBrowseDst);
             this.Controls.Add(this.txtPathDst);
             this.Controls.Add(this.label2);
@@ -175,8 +220,10 @@
             this.Name = "MainForm";
             this.Text = "Simple Excel Diff";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.picCellColor)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
         #endregion
@@ -193,5 +240,9 @@
         private System.Windows.Forms.TextBox txtPathDst;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.CheckBox chkDrawCell;
+        private System.Windows.Forms.Button btnColorSelector;
+        private System.Windows.Forms.PictureBox picCellColor;
+        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -8,8 +9,10 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Color = System.Drawing.Color;
 
 namespace SimpleExcelDiff
 {
@@ -30,6 +33,8 @@ namespace SimpleExcelDiff
             this.txtPathDst.AllowDrop = true;
             this.txtPathDst.DragEnter += new DragEventHandler(textBox_DragEnter);
             this.txtPathDst.DragDrop += new DragEventHandler(textBox_DragDrop);
+            
+            this.btnColorSelector.Click += new System.EventHandler(this.btnColorSelector_Click);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -56,6 +61,7 @@ namespace SimpleExcelDiff
                     txtPathSrc.Text = settings.PathSrc;
                     txtPathDst.Text = settings.PathDst;
                     chkEnableSubDir.Checked = settings.EnableSubDir;
+                    picCellColor.BackColor = Color.FromArgb(settings.HighlightColorArgb);
                 }
             }
             catch (Exception ex)
@@ -72,7 +78,8 @@ namespace SimpleExcelDiff
                 {
                     PathSrc = txtPathSrc.Text,
                     PathDst = txtPathDst.Text,
-                    EnableSubDir = chkEnableSubDir.Checked
+                    EnableSubDir = chkEnableSubDir.Checked,
+                    HighlightColorArgb = picCellColor.BackColor.ToArgb()
                 };
                 using (var fs = new FileStream(settingsFilePath, FileMode.Create, FileAccess.Write))
                 {
@@ -126,20 +133,35 @@ namespace SimpleExcelDiff
 
         private async void btnProcess_Click(object sender, EventArgs e)
         {
+            if (chkDrawCell.Checked)
+            {
+                var result = MessageBox.Show(
+                    "差分があるセルの背景色やシートのタブ色を変更します。\r\nファイルが更新されますが処理を続けますか？",
+                    "確認",
+                    MessageBoxButtons.OKCancel,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Cancel)
+                {
+                    lblStatus.Text = "処理がキャンセルされました。";
+                    return;
+                }
+            }
+
             lblStatus.Text = "処理中...";
             this.Enabled = false;
-            // ★★★ UIに合わせて dataGridView1 をクリア
             dataGridView1.DataSource = null;
 
             var pathSrc = txtPathSrc.Text;
             var pathDst = txtPathDst.Text;
             var includeSubDir = chkEnableSubDir.Checked;
+            var highlightColor = picCellColor.BackColor;
 
             try
             {
-                var diffResults = await Task.Run(() => FindDifferences(pathSrc, pathDst, includeSubDir));
+                var diffResults = await Task.Run(() => FindDifferences(pathSrc, pathDst, includeSubDir, chkDrawCell.Checked, highlightColor));
                 DisplayResults(diffResults);
-                lblStatus.Text = $"処理完了: {diffResults.Count}件の差分を検出しました。";
+                lblStatus.Text = $"処理完了: {diffResults.Count}件の差分/エラーを検出しました。";
             }
             catch (Exception ex)
             {
@@ -152,19 +174,13 @@ namespace SimpleExcelDiff
             }
         }
 
-        private List<DiffResult> FindDifferences(string pathSrc, string pathDst, bool includeSubDir)
+        private List<DiffResult> FindDifferences(string pathSrc, string pathDst, bool includeSubDir, bool applyColoring, Color highlightColor)
         {
-            var diffResults = new List<DiffResult>();
-            int id = 1;
-
+            var allDiffResults = new List<DiffResult>();
+            
             if (File.Exists(pathSrc) && File.Exists(pathDst))
             {
-                var results = CompareExcelFiles(pathSrc, pathDst);
-                foreach (var res in results)
-                {
-                    res.Id = id++;
-                    diffResults.Add(res);
-                }
+                 allDiffResults.AddRange(CompareExcelFiles(pathSrc, pathDst));
             }
             else if (Directory.Exists(pathSrc) && Directory.Exists(pathDst))
             {
@@ -172,17 +188,12 @@ namespace SimpleExcelDiff
                 var filesSrc = GetExcelFiles(pathSrc, searchOption);
                 var filesDst = GetExcelFiles(pathDst, searchOption);
 
-                var fileMapSrc = filesSrc.ToDictionary(f => Path.GetFileName(f), f => f);
-                var fileMapDst = filesDst.ToDictionary(f => Path.GetFileName(f), f => f);
+                var fileMapSrc = filesSrc.ToDictionary(f => f.Substring(pathSrc.Length), f => f, StringComparer.OrdinalIgnoreCase);
+                var fileMapDst = filesDst.ToDictionary(f => f.Substring(pathDst.Length), f => f, StringComparer.OrdinalIgnoreCase);
 
-                foreach (var fileName in fileMapSrc.Keys.Intersect(fileMapDst.Keys))
+                foreach (var relativePath in fileMapSrc.Keys.Intersect(fileMapDst.Keys, StringComparer.OrdinalIgnoreCase))
                 {
-                    var results = CompareExcelFiles(fileMapSrc[fileName], fileMapDst[fileName]);
-                    foreach (var res in results)
-                    {
-                        res.Id = id++;
-                        diffResults.Add(res);
-                    }
+                    allDiffResults.AddRange(CompareExcelFiles(fileMapSrc[relativePath], fileMapDst[relativePath]));
                 }
             }
             else
@@ -190,7 +201,28 @@ namespace SimpleExcelDiff
                  throw new FileNotFoundException("指定された比較元または比較先のパスが見つかりません。");
             }
             
-            return diffResults;
+            int initialId = 1;
+            allDiffResults.ForEach(r => r.Id = initialId++);
+
+            if (applyColoring && allDiffResults.Any(d => d.DiffType != DiffType.WriteError))
+            {
+                var writeErrors = ApplyColoringToDifferences(allDiffResults, highlightColor);
+                allDiffResults.AddRange(writeErrors);
+            }
+            
+            var displayResults = allDiffResults
+                .Where(r => r.DiffType == DiffType.WriteError) 
+                .Union(allDiffResults
+                    .Where(r => r.DiffType != DiffType.WriteError)
+                    .GroupBy(r => new { r.FileNameSrc, r.FileNameDst, r.SheetName }) 
+                    .Select(g => g.OrderBy(d => d.Id).First()))
+                .OrderBy(r => r.Id)
+                .ToList();
+
+            int finalId = 1;
+            displayResults.ForEach(r => r.Id = finalId++);
+
+            return displayResults;
         }
 
         private IEnumerable<string> GetExcelFiles(string path, SearchOption searchOption)
@@ -199,32 +231,36 @@ namespace SimpleExcelDiff
             if (Directory.Exists(path)) return Directory.EnumerateFiles(path, "*.xlsx", searchOption).Union(Directory.EnumerateFiles(path, "*.xlsm", searchOption));
             return Enumerable.Empty<string>();
         }
-
+        
         private List<DiffResult> CompareExcelFiles(string fileSrc, string fileDst)
         {
             var results = new List<DiffResult>();
-            using (var docSrc = SpreadsheetDocument.Open(fileSrc, false))
-            using (var docDst = SpreadsheetDocument.Open(fileDst, false))
+            try
             {
-                var wbPartSrc = docSrc.WorkbookPart;
-                var wbPartDst = docDst.WorkbookPart;
-                var sheetsSrc = wbPartSrc.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
-                var sheetsDst = wbPartDst.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
-
-                foreach (var sheetName in sheetsSrc.Keys.Except(sheetsDst.Keys)) results.Add(new DiffResult { DiffType = DiffType.SheetMissingInDst, SheetName = sheetName });
-                foreach (var sheetName in sheetsDst.Keys.Except(sheetsSrc.Keys)) results.Add(new DiffResult { DiffType = DiffType.SheetMissingInSrc, SheetName = sheetName });
-                foreach (var sheetName in sheetsSrc.Keys.Intersect(sheetsDst.Keys))
+                using (var docSrc = SpreadsheetDocument.Open(fileSrc, false))
+                using (var docDst = SpreadsheetDocument.Open(fileDst, false))
                 {
-                    var wsPartSrc = (WorksheetPart)wbPartSrc.GetPartById(sheetsSrc[sheetName]);
-                    var wsPartDst = (WorksheetPart)wbPartDst.GetPartById(sheetsDst[sheetName]);
-                    var diff = CompareSheets(wsPartSrc, wsPartDst, wbPartSrc, wbPartDst);
-                    if (diff != null)
+                    var wbPartSrc = docSrc.WorkbookPart;
+                    var wbPartDst = docDst.WorkbookPart;
+                    var sheetsSrc = wbPartSrc.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
+                    var sheetsDst = wbPartDst.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
+
+                    foreach (var sheetName in sheetsSrc.Keys.Except(sheetsDst.Keys)) results.Add(new DiffResult { DiffType = DiffType.SheetMissingInDst, SheetName = sheetName });
+                    foreach (var sheetName in sheetsDst.Keys.Except(sheetsSrc.Keys)) results.Add(new DiffResult { DiffType = DiffType.SheetMissingInSrc, SheetName = sheetName });
+                    
+                    foreach (var sheetName in sheetsSrc.Keys.Intersect(sheetsDst.Keys))
                     {
-                        diff.SheetName = sheetName;
-                        results.Add(diff);
+                        var wsPartSrc = (WorksheetPart)wbPartSrc.GetPartById(sheetsSrc[sheetName]);
+                        var wsPartDst = (WorksheetPart)wbPartDst.GetPartById(sheetsDst[sheetName]);
+                        results.AddRange(CompareSheets(wsPartSrc, wsPartDst, wbPartSrc, wbPartDst, sheetName));
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                results.Add(new DiffResult { DiffType = DiffType.WriteError, ErrorMessage = $"ファイル読み込みエラー: {ex.Message}" });
+            }
+
             results.ForEach(r => {
                 r.FolderPathSrc = Path.GetDirectoryName(fileSrc);
                 r.FileNameSrc = Path.GetFileName(fileSrc);
@@ -234,21 +270,29 @@ namespace SimpleExcelDiff
             return results;
         }
 
-        private DiffResult CompareSheets(WorksheetPart wsPartSrc, WorksheetPart wsPartDst, WorkbookPart wbPartSrc, WorkbookPart wbPartDst)
+        private List<DiffResult> CompareSheets(WorksheetPart wsPartSrc, WorksheetPart wsPartDst, WorkbookPart wbPartSrc, WorkbookPart wbPartDst, string sheetName)
         {
+            var sheetResults = new List<DiffResult>();
             var cellsSrc = wsPartSrc.Worksheet.Descendants<Cell>().ToDictionary(c => c.CellReference.Value, c => c);
             var cellsDst = wsPartDst.Worksheet.Descendants<Cell>().ToDictionary(c => c.CellReference.Value, c => c);
-            var allCellReferences = cellsSrc.Keys.Union(cellsDst.Keys).Distinct()
-                .OrderBy(r => uint.Parse(System.Text.RegularExpressions.Regex.Match(r, @"\d+").Value))
-                .ThenBy(r => System.Text.RegularExpressions.Regex.Match(r, @"[A-Z]+").Value);
+            var allCellReferences = cellsSrc.Keys.Union(cellsDst.Keys).Distinct();
 
             foreach (var cellRef in allCellReferences)
             {
                 var valSrc = cellsSrc.ContainsKey(cellRef) ? GetCellValue(cellsSrc[cellRef], wbPartSrc) : "";
                 var valDst = cellsDst.ContainsKey(cellRef) ? GetCellValue(cellsDst[cellRef], wbPartDst) : "";
-                if (valSrc != valDst) return new DiffResult { DiffType = DiffType.CellValueMismatch, CellAddress = cellRef, CellValueSrc = valSrc, CellValueDst = valDst };
+                if (valSrc != valDst)
+                {
+                    sheetResults.Add(new DiffResult {
+                        DiffType = DiffType.CellValueMismatch,
+                        SheetName = sheetName,
+                        CellAddress = cellRef,
+                        CellValueSrc = valSrc,
+                        CellValueDst = valDst
+                    });
+                }
             }
-            return null;
+            return sheetResults;
         }
 
         private string GetCellValue(Cell cell, WorkbookPart wbPart)
@@ -259,9 +303,6 @@ namespace SimpleExcelDiff
             return value;
         }
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ DisplayResultsメソッドを1つの表に対応するように全面的に書き換え ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         private void DisplayResults(List<DiffResult> results)
         {
             var dt = new DataTable();
@@ -271,13 +312,12 @@ namespace SimpleExcelDiff
             dt.Columns.Add("比較元ファイル", typeof(string));
             dt.Columns.Add("比較元シート", typeof(string));
             dt.Columns.Add("比較元セル", typeof(string));
-            dt.Columns.Add("比較元値", typeof(string));
+            dt.Columns.Add("比較元値/エラー内容", typeof(string));
             dt.Columns.Add("比較先フォルダ", typeof(string));
             dt.Columns.Add("比較先ファイル", typeof(string));
             dt.Columns.Add("比較先シート", typeof(string));
             dt.Columns.Add("比較先セル", typeof(string));
             dt.Columns.Add("比較先値", typeof(string));
-            // 差分種別を判定するための非表示列
             dt.Columns.Add("DiffTypeEnum", typeof(DiffType));
 
             foreach (var r in results)
@@ -297,14 +337,17 @@ namespace SimpleExcelDiff
                          diffTypeText = "シート不足(比較元)";
                         dt.Rows.Add(r.Id, diffTypeText, r.FolderPathSrc, r.FileNameSrc, null, null, null, r.FolderPathDst, r.FileNameDst, r.SheetName, null, null, r.DiffType);
                         break;
+                    case DiffType.WriteError:
+                        diffTypeText = "書き込みエラー";
+                        var errorPath = !string.IsNullOrEmpty(r.FileNameSrc) ? Path.Combine(r.FolderPathSrc, r.FileNameSrc) : Path.Combine(r.FolderPathDst, r.FileNameDst);
+                        dt.Rows.Add(r.Id, diffTypeText, r.FolderPathSrc, r.FileNameSrc, null, null, $"[{Path.GetFileName(errorPath)}] {r.ErrorMessage}", r.FolderPathDst, r.FileNameDst, null, null, null, r.DiffType);
+                        break;
                 }
             }
             
             dataGridView1.DataSource = dt;
-            // 非表示列を実際に非表示にする
             dataGridView1.Columns["DiffTypeEnum"].Visible = false;
 
-            // ハイライト処理
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
                 if (row.IsNewRow) continue;
@@ -312,7 +355,7 @@ namespace SimpleExcelDiff
                 switch (diffType)
                 {
                     case DiffType.CellValueMismatch:
-                        row.Cells["比較元値"].Style.BackColor = System.Drawing.Color.Yellow;
+                        row.Cells["比較元値/エラー内容"].Style.BackColor = System.Drawing.Color.Yellow;
                         row.Cells["比較先値"].Style.BackColor = System.Drawing.Color.Yellow;
                         break;
                     case DiffType.SheetMissingInDst:
@@ -321,27 +364,203 @@ namespace SimpleExcelDiff
                     case DiffType.SheetMissingInSrc:
                         row.Cells["比較先シート"].Style.BackColor = System.Drawing.Color.Yellow;
                         break;
+                    case DiffType.WriteError:
+                        row.Cells["差分種別"].Style.BackColor = System.Drawing.Color.Red;
+                        row.Cells["差分種別"].Style.ForeColor = System.Drawing.Color.White;
+                        row.Cells["比較元値/エラー内容"].Style.BackColor = System.Drawing.Color.MistyRose;
+                        break;
                 }
             }
-
             dataGridView1.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
+        }
+
+        private void btnColorSelector_Click(object sender, EventArgs e)
+        {
+            using (var colorDialog = new ColorDialog())
+            {
+                colorDialog.Color = picCellColor.BackColor;
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    picCellColor.BackColor = colorDialog.Color;
+                }
+            }
+        }
+        
+        private List<DiffResult> ApplyColoringToDifferences(List<DiffResult> diffs, Color highlightColor)
+        {
+            var writeErrors = new List<DiffResult>();
+            var groupedByFile = diffs.GroupBy(d => new { d.FolderPathSrc, d.FileNameSrc, d.FolderPathDst, d.FileNameDst });
+
+            foreach (var fileGroup in groupedByFile)
+            {
+                var srcPath = Path.Combine(fileGroup.Key.FolderPathSrc, fileGroup.Key.FileNameSrc);
+                try
+                {
+                    using (var doc = SpreadsheetDocument.Open(srcPath, true))
+                    {
+                        uint styleIndex = CreateAndGetStyleIndex(doc, highlightColor);
+                        foreach (var diff in fileGroup)
+                        {
+                            if (diff.DiffType == DiffType.CellValueMismatch)
+                            {
+                                SetCellFill(doc, diff.SheetName, diff.CellAddress, styleIndex);
+                            }
+                            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                            // ★★★ 安定動作のため、エラーの根本原因であるシートタブの色変更を無効化 ★★★
+                            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                            // else if (diff.DiffType == DiffType.SheetMissingInDst)
+                            // {
+                            //     SetSheetTabColor(doc, diff.SheetName, highlightColor);
+                            // }
+                        }
+                        doc.Save();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    writeErrors.Add(new DiffResult { DiffType = DiffType.WriteError, FolderPathSrc = fileGroup.Key.FolderPathSrc, FileNameSrc = fileGroup.Key.FileNameSrc, ErrorMessage = $"比較元ファイル書き込み不可: {ex.Message}" });
+                }
+
+                var dstPath = Path.Combine(fileGroup.Key.FolderPathDst, fileGroup.Key.FileNameDst);
+                try
+                {
+                    using (var doc = SpreadsheetDocument.Open(dstPath, true))
+                    {
+                        uint styleIndex = CreateAndGetStyleIndex(doc, highlightColor);
+                        foreach (var diff in fileGroup)
+                        {
+                           if (diff.DiffType == DiffType.CellValueMismatch)
+                           {
+                                SetCellFill(doc, diff.SheetName, diff.CellAddress, styleIndex);
+                           }
+                           // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                           // ★★★ 安定動作のため、エラーの根本原因であるシートタブの色変更を無効化 ★★★
+                           // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                           // else if (diff.DiffType == DiffType.SheetMissingInSrc)
+                           // {
+                           //      SetSheetTabColor(doc, diff.SheetName, highlightColor);
+                           // }
+                        }
+                        doc.Save();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    writeErrors.Add(new DiffResult { DiffType = DiffType.WriteError, FolderPathDst = fileGroup.Key.FolderPathDst, FileNameDst = fileGroup.Key.FileNameDst, ErrorMessage = $"比較先ファイル書き込み不可: {ex.Message}" });
+                }
+            }
+            return writeErrors;
+        }
+        
+        private void SetSheetTabColor(SpreadsheetDocument doc, string sheetName, Color color)
+        {
+            var sheet = doc.WorkbookPart.Workbook.Descendants<Sheet>().FirstOrDefault(s => s.Name == sheetName);
+            if (sheet == null) return;
+            
+            var sheetProperties = sheet.Elements<SheetProperties>().FirstOrDefault();
+            if (sheetProperties == null)
+            {
+                sheetProperties = new SheetProperties();
+                sheet.Append(sheetProperties);
+            }
+            
+            var tabColorElement = sheetProperties.Elements<TabColor>().FirstOrDefault();
+            if (tabColorElement != null)
+            {
+                tabColorElement.Remove();
+            }
+            
+            sheetProperties.Append(new TabColor() { Rgb = new HexBinaryValue() { Value = $"{color.R:X2}{color.G:X2}{color.B:X2}" }});
+        }
+        
+        private void SetCellFill(SpreadsheetDocument doc, string sheetName, string cellAddress, uint styleIndex)
+        {
+            var sheet = doc.WorkbookPart.Workbook.Descendants<Sheet>().FirstOrDefault(s => s.Name == sheetName);
+            if (sheet == null) return;
+
+            var wsPart = (WorksheetPart)doc.WorkbookPart.GetPartById(sheet.Id);
+            var cell = wsPart.Worksheet.Descendants<Cell>().FirstOrDefault(c => c.CellReference == cellAddress);
+            if (cell == null) return;
+
+            cell.StyleIndex = styleIndex;
+        }
+        
+        private uint CreateAndGetStyleIndex(SpreadsheetDocument doc, Color color)
+        {
+            var stylesPart = doc.WorkbookPart.WorkbookStylesPart;
+            if (stylesPart == null)
+            {
+                stylesPart = doc.WorkbookPart.AddNewPart<WorkbookStylesPart>();
+            }
+
+            if (stylesPart.Stylesheet == null)
+            {
+                stylesPart.Stylesheet = new Stylesheet();
+            }
+            var stylesheet = stylesPart.Stylesheet;
+
+            if (stylesheet.Elements<Fonts>().Count() == 0)
+            {
+                stylesheet.Append(new Fonts(new DocumentFormat.OpenXml.Spreadsheet.Font()));
+            }
+            if (stylesheet.Elements<Fills>().Count() == 0)
+            {
+                stylesheet.Append(new Fills(
+                    new Fill { PatternFill = new PatternFill { PatternType = PatternValues.None } },
+                    new Fill { PatternFill = new PatternFill { PatternType = PatternValues.Gray125 } }
+                ));
+            }
+            if (stylesheet.Elements<Borders>().Count() == 0)
+            {
+                stylesheet.Append(new Borders(new Border()));
+            }
+            if (stylesheet.Elements<CellStyleFormats>().Count() == 0)
+            {
+                stylesheet.Append(new CellStyleFormats(new CellFormat { NumberFormatId = 0, FontId = 0, FillId = 0, BorderId = 0 }));
+            }
+            if (stylesheet.Elements<CellFormats>().Count() == 0)
+            {
+                 stylesheet.Append(new CellFormats(new CellFormat()));
+            }
+
+            var newFill = new Fill(
+                new PatternFill(
+                    new ForegroundColor { Rgb = new HexBinaryValue() { Value = $"{color.R:X2}{color.G:X2}{color.B:X2}" } }
+                ) { PatternType = PatternValues.Solid }
+            );
+
+            Fills fills = stylesheet.Elements<Fills>().First();
+            fills.Append(newFill);
+            uint fillIndex = (uint)fills.Count() - 1;
+
+            var newCellFormat = new CellFormat {
+                NumberFormatId = 0, FontId = 0, BorderId = 0, FormatId = 0,
+                FillId = fillIndex, 
+                ApplyFill = true 
+            };
+            
+            CellFormats cellFormats = stylesheet.Elements<CellFormats>().First();
+            cellFormats.Append(newCellFormat);
+            uint styleIndex = (uint)cellFormats.Count() - 1;
+            
+            return styleIndex;
         }
 
         private void checkBox1_CheckedChanged ( object sender, EventArgs e )
         {
-
         }
     }
-
+    
     [DataContract]
     internal class SimpleExcelDiffSettings
     {
         [DataMember] public string PathSrc { get; set; }
         [DataMember] public string PathDst { get; set; }
         [DataMember] public bool EnableSubDir { get; set; }
+        [DataMember] public int HighlightColorArgb { get; set; } = Color.Yellow.ToArgb();
     }
     
-    internal enum DiffType { CellValueMismatch, SheetMissingInDst, SheetMissingInSrc }
+    internal enum DiffType { CellValueMismatch, SheetMissingInDst, SheetMissingInSrc, WriteError }
 
     internal class DiffResult
     {
@@ -355,5 +574,6 @@ namespace SimpleExcelDiff
         public string FileNameSrc { get; set; }
         public string FolderPathDst { get; set; }
         public string FileNameDst { get; set; }
+        public string ErrorMessage { get; set; }
     }
 }

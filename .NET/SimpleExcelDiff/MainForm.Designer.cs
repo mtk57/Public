@@ -44,8 +44,10 @@
             this.btnColorSelector = new System.Windows.Forms.Button();
             this.picCellColor = new System.Windows.Forms.PictureBox();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picCellColor)).BeginInit();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // lblStatus
@@ -81,7 +83,7 @@
             // btnBrowseSrc
             // 
             this.btnBrowseSrc.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowseSrc.Location = new System.Drawing.Point(687, 36);
+            this.btnBrowseSrc.Location = new System.Drawing.Point(901, 36);
             this.btnBrowseSrc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowseSrc.Name = "btnBrowseSrc";
             this.btnBrowseSrc.Size = new System.Drawing.Size(64, 19);
@@ -97,7 +99,7 @@
             this.txtPathSrc.Location = new System.Drawing.Point(22, 36);
             this.txtPathSrc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPathSrc.Name = "txtPathSrc";
-            this.txtPathSrc.Size = new System.Drawing.Size(659, 19);
+            this.txtPathSrc.Size = new System.Drawing.Size(873, 19);
             this.txtPathSrc.TabIndex = 0;
             // 
             // label1
@@ -122,7 +124,7 @@
             // btnBrowseDst
             // 
             this.btnBrowseDst.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowseDst.Location = new System.Drawing.Point(687, 87);
+            this.btnBrowseDst.Location = new System.Drawing.Point(901, 87);
             this.btnBrowseDst.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowseDst.Name = "btnBrowseDst";
             this.btnBrowseDst.Size = new System.Drawing.Size(64, 19);
@@ -138,7 +140,7 @@
             this.txtPathDst.Location = new System.Drawing.Point(22, 87);
             this.txtPathDst.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPathDst.Name = "txtPathDst";
-            this.txtPathDst.Size = new System.Drawing.Size(659, 19);
+            this.txtPathDst.Size = new System.Drawing.Size(873, 19);
             this.txtPathDst.TabIndex = 1;
             // 
             // label2
@@ -159,35 +161,36 @@
             this.dataGridView1.Location = new System.Drawing.Point(22, 196);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(729, 312);
+            this.dataGridView1.Size = new System.Drawing.Size(943, 312);
             this.dataGridView1.TabIndex = 21;
             // 
             // chkDrawCell
             // 
             this.chkDrawCell.AutoSize = true;
-            this.chkDrawCell.Location = new System.Drawing.Point(393, 135);
+            this.chkDrawCell.Location = new System.Drawing.Point(17, 27);
             this.chkDrawCell.Name = "chkDrawCell";
-            this.chkDrawCell.Size = new System.Drawing.Size(133, 16);
+            this.chkDrawCell.Size = new System.Drawing.Size(48, 16);
             this.chkDrawCell.TabIndex = 23;
-            this.chkDrawCell.Text = "変更箇所に色を付ける";
+            this.chkDrawCell.Text = "有効";
             this.chkDrawCell.UseVisualStyleBackColor = true;
             this.chkDrawCell.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
             // btnColorSelector
             // 
             this.btnColorSelector.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnColorSelector.Location = new System.Drawing.Point(559, 132);
+            this.btnColorSelector.Location = new System.Drawing.Point(103, 23);
             this.btnColorSelector.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnColorSelector.Name = "btnColorSelector";
             this.btnColorSelector.Size = new System.Drawing.Size(52, 19);
             this.btnColorSelector.TabIndex = 24;
             this.btnColorSelector.Text = "色選択";
             this.btnColorSelector.UseVisualStyleBackColor = true;
+            this.btnColorSelector.Click += new System.EventHandler(this.btnColorSelector_Click);
             // 
             // picCellColor
             // 
             this.picCellColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.picCellColor.Location = new System.Drawing.Point(532, 132);
+            this.picCellColor.Location = new System.Drawing.Point(71, 23);
             this.picCellColor.Name = "picCellColor";
             this.picCellColor.Size = new System.Drawing.Size(23, 20);
             this.picCellColor.TabIndex = 25;
@@ -198,14 +201,24 @@
             this.contextMenuStrip1.Name = "contextMenuStrip1";
             this.contextMenuStrip1.Size = new System.Drawing.Size(61, 4);
             // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.chkDrawCell);
+            this.groupBox1.Controls.Add(this.btnColorSelector);
+            this.groupBox1.Controls.Add(this.picCellColor);
+            this.groupBox1.Location = new System.Drawing.Point(373, 113);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(161, 58);
+            this.groupBox1.TabIndex = 26;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "セル色変更";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(781, 552);
-            this.Controls.Add(this.picCellColor);
-            this.Controls.Add(this.btnColorSelector);
-            this.Controls.Add(this.chkDrawCell);
+            this.ClientSize = new System.Drawing.Size(995, 552);
+            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.btnBrowseDst);
             this.Controls.Add(this.txtPathDst);
             this.Controls.Add(this.label2);
@@ -221,6 +234,8 @@
             this.Text = "Simple Excel Diff";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picCellColor)).EndInit();
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -244,5 +259,6 @@
         private System.Windows.Forms.Button btnColorSelector;
         private System.Windows.Forms.PictureBox picCellColor;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
+        private System.Windows.Forms.GroupBox groupBox1;
     }
 }

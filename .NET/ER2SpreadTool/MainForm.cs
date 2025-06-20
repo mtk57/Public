@@ -34,7 +34,7 @@ namespace ER2SpreadTool
         {
             // タイトルにバージョン情報を表示
             var version = Assembly.GetExecutingAssembly().GetName().Version;
-            this.Text = $"{this.Text}  ver {version}";
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
 
             LoadSettings();
         }
@@ -443,11 +443,11 @@ namespace ER2SpreadTool
                 return null;
             }
             
-            List<string> finalColumns = columnLinesAggregated
-                                        .Where(l => !string.IsNullOrWhiteSpace(l)) 
-                                        .Select(l => l.Trim())                     
-                                        .Distinct(StringComparer.OrdinalIgnoreCase) 
-                                        .ToList();
+                List<string> finalColumns = columnLinesAggregated
+                                                        .Where(l => !string.IsNullOrWhiteSpace(l)) 
+                                                        .Select(l => l.Trim())                     
+                                                        // .Distinct(StringComparer.OrdinalIgnoreCase) を削除
+                                                        .ToList();
 
             if (finalColumns.Count == 0) 
             {

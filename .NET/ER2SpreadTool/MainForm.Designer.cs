@@ -95,6 +95,7 @@ namespace ER2SpreadTool
             this.btnProcess.TabIndex = 5;
             this.btnProcess.Text = "処理開始";
             this.btnProcess.UseVisualStyleBackColor = true;
+            this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
             // 
             // label3
             // 

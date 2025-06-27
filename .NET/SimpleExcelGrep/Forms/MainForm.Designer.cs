@@ -60,6 +60,9 @@
             this.label2 = new System.Windows.Forms.Label();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.chkCellMode = new System.Windows.Forms.CheckBox();
+            this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
+            this.chkEnableLog = new System.Windows.Forms.CheckBox();
+            this.chkEnableInvisibleSheet = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -363,11 +366,44 @@
             this.chkCellMode.UseVisualStyleBackColor = true;
             this.chkCellMode.CheckedChanged += new System.EventHandler(this.ChkCellMode_CheckedChanged);
             // 
+            // chkSearchSubDir
+            // 
+            this.chkSearchSubDir.AutoSize = true;
+            this.chkSearchSubDir.Location = new System.Drawing.Point(107, 35);
+            this.chkSearchSubDir.Name = "chkSearchSubDir";
+            this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
+            this.chkSearchSubDir.TabIndex = 67;
+            this.chkSearchSubDir.Text = "サブフォルダも対象";
+            this.chkSearchSubDir.UseVisualStyleBackColor = true;
+            // 
+            // chkEnableLog
+            // 
+            this.chkEnableLog.AutoSize = true;
+            this.chkEnableLog.Location = new System.Drawing.Point(352, 178);
+            this.chkEnableLog.Name = "chkEnableLog";
+            this.chkEnableLog.Size = new System.Drawing.Size(75, 16);
+            this.chkEnableLog.TabIndex = 68;
+            this.chkEnableLog.Text = "ログを出力";
+            this.chkEnableLog.UseVisualStyleBackColor = true;
+            // 
+            // chkEnableInvisibleSheet
+            // 
+            this.chkEnableInvisibleSheet.AutoSize = true;
+            this.chkEnableInvisibleSheet.Location = new System.Drawing.Point(443, 178);
+            this.chkEnableInvisibleSheet.Name = "chkEnableInvisibleSheet";
+            this.chkEnableInvisibleSheet.Size = new System.Drawing.Size(121, 16);
+            this.chkEnableInvisibleSheet.TabIndex = 69;
+            this.chkEnableInvisibleSheet.Text = "非表示シートも対象";
+            this.chkEnableInvisibleSheet.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
+            this.Controls.Add(this.chkEnableInvisibleSheet);
+            this.Controls.Add(this.chkEnableLog);
+            this.Controls.Add(this.chkSearchSubDir);
             this.Controls.Add(this.chkCellMode);
             this.Controls.Add(this.txtCellAddress);
             this.Controls.Add(this.label2);
@@ -435,5 +471,8 @@
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.CheckBox chkCellMode;
+        private System.Windows.Forms.CheckBox chkSearchSubDir;
+        private System.Windows.Forms.CheckBox chkEnableLog;
+        private System.Windows.Forms.CheckBox chkEnableInvisibleSheet;
     }
 }

@@ -55,9 +55,10 @@ namespace SimpleExcelGrep.Forms
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
 
+            // 設定読み込みより先にログを有効化しておく
+            LoadSettings(); 
             _logService.LogMessage("アプリケーション起動");
             _logService.LogEnvironmentInfo();
-            LoadSettings();
         }
         
         /// <summary>
@@ -90,6 +91,12 @@ namespace SimpleExcelGrep.Forms
                 txtIgnoreFileSizeMB.Text = settings.IgnoreFileSizeMB.ToString(CultureInfo.InvariantCulture);
                 chkCellMode.Checked = settings.CellModeEnabled;
                 txtCellAddress.Text = settings.CellAddress;
+
+                // 追加された設定の読み込み
+                chkSearchSubDir.Checked = settings.SearchSubDirectories;
+                chkEnableLog.Checked = settings.EnableLog;
+                _logService.IsLoggingEnabled = settings.EnableLog; // LogServiceの状態も更新
+                chkEnableInvisibleSheet.Checked = settings.SearchInvisibleSheets;
                 
                 txtCellAddress.Enabled = chkCellMode.Checked;
             }
@@ -123,7 +130,12 @@ namespace SimpleExcelGrep.Forms
                 SearchShapes = chkSearchShapes.Checked,
                 IgnoreFileSizeMB = ignoreFileSize,
                 CellModeEnabled = chkCellMode.Checked,
-                CellAddress = txtCellAddress.Text
+                CellAddress = txtCellAddress.Text,
+
+                // 追加された設定の保存
+                SearchSubDirectories = chkSearchSubDir.Checked,
+                EnableLog = chkEnableLog.Checked,
+                SearchInvisibleSheets = chkEnableInvisibleSheet.Checked
             };
 
             if (!_settingsService.SaveSettings(settings))
@@ -143,7 +155,8 @@ namespace SimpleExcelGrep.Forms
             var controlsToToggle = new Control[] {
                 cmbFolderPath, btnSelectFolder, cmbKeyword, cmbIgnoreKeywords,
                 txtIgnoreFileSizeMB, chkRegex, chkSearchShapes, chkFirstHitOnly,
-                nudParallelism, btnStartSearch, btnLoadTsv, chkCellMode
+                nudParallelism, btnStartSearch, btnLoadTsv, chkCellMode,
+                chkSearchSubDir, chkEnableLog, chkEnableInvisibleSheet
             };
             foreach (var control in controlsToToggle)
             {

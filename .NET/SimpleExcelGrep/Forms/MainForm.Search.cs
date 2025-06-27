@@ -33,7 +33,8 @@ namespace SimpleExcelGrep.Forms
 
                 return await _excelSearchService.SearchExcelFilesAsync(cmbFolderPath.Text, cmbKeyword.Text, chkRegex.Checked, regex,
                     ignoreKeywords, chkRealTimeDisplay.Checked, chkSearchShapes.Checked, chkFirstHitOnly.Checked,
-                    (int)nudParallelism.Value, ignoreSize, pendingResults, UpdateStatus, token);
+                    (int)nudParallelism.Value, ignoreSize, chkSearchSubDir.Checked, chkEnableInvisibleSheet.Checked, 
+                    pendingResults, UpdateStatus, token);
             });
         }
 
@@ -52,7 +53,8 @@ namespace SimpleExcelGrep.Forms
                 double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out var ignoreSize);
 
                 return await _excelSearchService.SearchCellsByAddressAsync(cmbFolderPath.Text, addresses, ignoreKeywords,
-                    (int)nudParallelism.Value, ignoreSize, pendingResults, UpdateStatus, token);
+                    (int)nudParallelism.Value, ignoreSize, chkSearchSubDir.Checked, chkEnableInvisibleSheet.Checked, 
+                    pendingResults, UpdateStatus, token);
             });
         }
         

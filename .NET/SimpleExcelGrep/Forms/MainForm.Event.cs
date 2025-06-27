@@ -30,7 +30,8 @@ namespace SimpleExcelGrep.Forms
             // 設定関連のUIイベント
             var controls = new Control[] {
                 chkRealTimeDisplay, nudParallelism, chkFirstHitOnly, chkSearchShapes,
-                txtIgnoreFileSizeMB, chkCellMode, txtCellAddress
+                txtIgnoreFileSizeMB, chkCellMode, txtCellAddress,
+                chkSearchSubDir, chkEnableInvisibleSheet // chkEnableLogは別途処理
             };
             foreach (var control in controls)
             {
@@ -38,6 +39,9 @@ namespace SimpleExcelGrep.Forms
                 if (control is TextBox txt) txt.TextChanged += (s, e) => { if (!_isLoading) SaveCurrentSettings(); };
                 if (control is NumericUpDown nud) nud.ValueChanged += (s, e) => { if (!_isLoading) SaveCurrentSettings(); };
             }
+
+            // ログ有効化チェックボックスは、LogServiceの状態も変更する必要があるため、専用のハンドラを登録
+            chkEnableLog.CheckedChanged += ChkEnableLog_CheckedChanged;
             
             chkCellMode.CheckedChanged += ChkCellMode_CheckedChanged;
         }
@@ -119,6 +123,18 @@ namespace SimpleExcelGrep.Forms
         {
             txtCellAddress.Enabled = chkCellMode.Checked;
             if (!_isLoading) SaveCurrentSettings();
+        }
+
+        /// <summary>
+        /// ログ出力チェックボックス変更時の処理
+        /// </summary>
+        private void ChkEnableLog_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!_isLoading)
+            {
+                _logService.IsLoggingEnabled = chkEnableLog.Checked;
+                SaveCurrentSettings();
+            }
         }
 
         /// <summary>

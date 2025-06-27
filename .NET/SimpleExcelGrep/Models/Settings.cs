@@ -52,5 +52,14 @@ namespace SimpleExcelGrep.Models
 
         [DataMember]
         public string CellAddress { get; set; } = ""; // 検索対象のセルアドレス
+
+        [DataMember]
+        public bool SearchSubDirectories { get; set; } = true; // サブフォルダも検索対象にするか
+
+        [DataMember]
+        public bool EnableLog { get; set; } = true; // ログファイルを出力するか
+
+        [DataMember]
+        public bool SearchInvisibleSheets { get; set; } = true; // 非表示シートも検索対象にするか
     }
 }

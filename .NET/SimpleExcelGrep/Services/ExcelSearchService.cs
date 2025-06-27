@@ -44,19 +44,22 @@ namespace SimpleExcelGrep.Services
             bool firstHitOnly,
             int maxParallelism,
             double ignoreFileSizeMB,
+            bool searchSubDirectories,
+            bool searchInvisibleSheets,
             ConcurrentQueue<SearchResult> resultQueue,
             Action<string> statusUpdateCallback,
             CancellationToken cancellationToken)
         {
             _logger.LogMessage($"SearchExcelFilesAsync 開始: フォルダ={folderPath}");
-            _logger.LogMessage($"GREP検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
+            _logger.LogMessage($"GREP検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}, サブフォルダ対象={searchSubDirectories}, 非表示シート対象={searchInvisibleSheets}");
 
             List<SearchResult> results = new List<SearchResult>();
 
             try
             {
-                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", SearchOption.AllDirectories)
-                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", SearchOption.AllDirectories))
+                var searchOption = searchSubDirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", searchOption)
+                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", searchOption))
                                           .ToArray();
                 _logger.LogMessage($"{excelFiles.Length} 個のExcelファイル(.xlsx, .xlsm)が見つかりました");
 
@@ -110,7 +113,7 @@ namespace SimpleExcelGrep.Services
                             _logger.LogMessage($"ファイル処理開始: {filePath}");
                             List<SearchResult> fileResults = SearchInXlsxFile(
                                 filePath, keyword, useRegex, regex, resultQueue,
-                                firstHitOnly, searchShapes, cancellationToken);
+                                firstHitOnly, searchShapes, searchInvisibleSheets, cancellationToken);
 
                             _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
 
@@ -160,19 +163,22 @@ namespace SimpleExcelGrep.Services
             List<string> ignoreKeywords,
             int maxParallelism,
             double ignoreFileSizeMB,
+            bool searchSubDirectories,
+            bool searchInvisibleSheets,
             ConcurrentQueue<SearchResult> resultQueue,
             Action<string> statusUpdateCallback,
             CancellationToken cancellationToken)
         {
             _logger.LogMessage($"SearchCellsByAddressAsync 開始: フォルダ={folderPath}");
-            _logger.LogMessage($"セル検索開始: アドレス='{string.Join(", ", cellAddresses)}', 無視ファイルサイズ(MB)={ignoreFileSizeMB}");
+            _logger.LogMessage($"セル検索開始: アドレス='{string.Join(", ", cellAddresses)}', 無視ファイルサイズ(MB)={ignoreFileSizeMB}, サブフォルダ対象={searchSubDirectories}, 非表示シート対象={searchInvisibleSheets}");
 
             List<SearchResult> results = new List<SearchResult>();
             
             try
             {
-                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", SearchOption.AllDirectories)
-                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", SearchOption.AllDirectories))
+                var searchOption = searchSubDirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", searchOption)
+                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", searchOption))
                                           .ToArray();
                 _logger.LogMessage($"{excelFiles.Length} 個のExcelファイルが見つかりました");
 
@@ -225,7 +231,7 @@ namespace SimpleExcelGrep.Services
                         {
                             _logger.LogMessage($"セル値取得開始: {filePath}");
                             List<SearchResult> fileResults = SearchCellsInXlsxFile(
-                                filePath, cellAddresses, resultQueue, cancellationToken);
+                                filePath, cellAddresses, searchInvisibleSheets, resultQueue, cancellationToken);
                             
                             _logger.LogMessage($"セル値取得完了: {filePath}, {fileResults.Count}件");
 
@@ -267,6 +273,7 @@ namespace SimpleExcelGrep.Services
         private List<SearchResult> SearchCellsInXlsxFile(
             string filePath,
             string[] cellAddresses,
+            bool searchInvisibleSheets,
             ConcurrentQueue<SearchResult> pendingResults,
             CancellationToken cancellationToken)
         {
@@ -277,7 +284,7 @@ namespace SimpleExcelGrep.Services
                 using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
                 {
                     WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
-                    if (workbookPart == null) return localResults;
+                    if (workbookPart == null || workbookPart.Workbook == null) return localResults;
 
                     SharedStringTablePart sharedStringTablePart = workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
                     SharedStringTable sharedStringTable = sharedStringTablePart?.SharedStringTable;
@@ -285,7 +292,17 @@ namespace SimpleExcelGrep.Services
                     foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        string sheetName = GetSheetName(workbookPart, worksheetPart) ?? "不明なシート";
+
+                        string sheetId = workbookPart.GetIdOfPart(worksheetPart);
+                        Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().FirstOrDefault(s => s.Id?.Value == sheetId);
+
+                        if (!searchInvisibleSheets && sheet != null && sheet.State != null && sheet.State.Value != SheetStateValues.Visible)
+                        {
+                            _logger.LogMessage($"非表示シートのためスキップ: {sheet.Name?.Value} in {filePath}");
+                            continue;
+                        }
+                        
+                        string sheetName = sheet?.Name?.Value ?? "不明なシート";
 
                         foreach (string address in cellAddresses)
                         {
@@ -337,6 +354,7 @@ namespace SimpleExcelGrep.Services
             ConcurrentQueue<SearchResult> pendingResults,
             bool firstHitOnly,
             bool searchShapes,
+            bool searchInvisibleSheets,
             CancellationToken cancellationToken)
         {
             List<SearchResult> localResults = new List<SearchResult>();
@@ -347,7 +365,7 @@ namespace SimpleExcelGrep.Services
                 using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
                 {
                     WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
-                    if (workbookPart == null) return localResults;
+                    if (workbookPart == null || workbookPart.Workbook == null) return localResults;
 
                     SharedStringTablePart sharedStringTablePart = workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
                     SharedStringTable sharedStringTable = sharedStringTablePart?.SharedStringTable;
@@ -355,9 +373,19 @@ namespace SimpleExcelGrep.Services
                     foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (firstHitOnly && foundHitInFile) break;
 
-                        string sheetName = GetSheetName(workbookPart, worksheetPart) ?? "不明なシート";
+                        string sheetId = workbookPart.GetIdOfPart(worksheetPart);
+                        Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().FirstOrDefault(s => s.Id?.Value == sheetId);
+
+                        if (!searchInvisibleSheets && sheet != null && sheet.State != null && sheet.State.Value != SheetStateValues.Visible)
+                        {
+                            _logger.LogMessage($"非表示シートのためスキップ: {sheet.Name?.Value} in {filePath}");
+                            continue;
+                        }
+                        
+                        if (firstHitOnly && foundHitInFile) break;
+                        
+                        string sheetName = sheet?.Name?.Value ?? "不明なシート";
 
                         // 1. セル内のテキスト検索
                         foundHitInFile = SearchInCells(

@@ -12,7 +12,7 @@ namespace SimpleExcelGrep.Services
     internal class LogService
     {
         private readonly string _logFilePath;
-        private readonly bool _isLoggingEnabled;
+        public bool IsLoggingEnabled { get; set; }
         private readonly Label _statusLabel;
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace SimpleExcelGrep.Services
         public LogService(Label statusLabel, bool isLoggingEnabled = true)
         {
             _statusLabel = statusLabel;
-            _isLoggingEnabled = isLoggingEnabled;
+            IsLoggingEnabled = isLoggingEnabled;
             _logFilePath = Path.Combine(
                 Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                 "SimpleExcelGrep_log.txt");
@@ -34,7 +34,7 @@ namespace SimpleExcelGrep.Services
         /// </summary>
         public void LogMessage(string message, bool showInStatus = false)
         {
-            if (!_isLoggingEnabled) return;
+            if (!IsLoggingEnabled) return;
 
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string logEntry = $"[{timestamp}] {message}";

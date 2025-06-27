@@ -11,13 +11,13 @@
         /// 使用中のリソースをすべてクリーンアップします。
         /// </summary>
         /// <param name="disposing">マネージド リソースを破棄する場合は true を指定し、その他の場合は false を指定します。</param>
-        protected override void Dispose ( bool disposing )
+        protected override void Dispose(bool disposing)
         {
-            if ( disposing && ( components != null ) )
+            if (disposing && (components != null))
             {
                 components.Dispose();
             }
-            base.Dispose( disposing );
+            base.Dispose(disposing);
         }
 
         #region Windows フォーム デザイナーで生成されたコード
@@ -26,7 +26,7 @@
         /// デザイナー サポートに必要なメソッドです。このメソッドの内容を
         /// コード エディターで変更しないでください。
         /// </summary>
-        private void InitializeComponent ()
+        private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
             this.textCursorMoveTimeSec = new System.Windows.Forms.TextBox();
@@ -87,7 +87,6 @@
 
         }
 
-
         #endregion
 
         private System.Windows.Forms.TextBox textCursorMoveTimeSec;
@@ -97,4 +96,3 @@
         private System.Windows.Forms.Timer timer1;
     }
 }
-

@@ -33,7 +33,7 @@ namespace SimpleExcelGrep.Forms
             InitializeComponent();
 
             // サービスの初期化
-            _logService = new LogService(lblStatus, true); // ログ出力を有効化
+            _logService = new LogService(lblStatus, false);
             _settingsService = new SettingsService(_logService);
             _excelSearchService = new ExcelSearchService(_logService);
             _excelInteropService = new ExcelInteropService(_logService);
@@ -51,9 +51,9 @@ namespace SimpleExcelGrep.Forms
         /// </summary>
         private void MainForm_Load(object sender, EventArgs e)
         {
-            // ① タイトルにバージョン情報を表示
+            // タイトルにバージョン情報を表示
             var version = Assembly.GetExecutingAssembly().GetName().Version;
-            this.Text = $"{this.Text}  ver {version}";
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
 
             _logService.LogMessage("アプリケーション起動");
             _logService.LogEnvironmentInfo();

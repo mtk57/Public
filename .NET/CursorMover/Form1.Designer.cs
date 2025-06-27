@@ -75,13 +75,14 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(242, 158);
+            this.ClientSize = new System.Drawing.Size(292, 158);
             this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.textCursorMoveTimeSec);
             this.Name = "MainForm";
             this.Text = "Cursor Mover";
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

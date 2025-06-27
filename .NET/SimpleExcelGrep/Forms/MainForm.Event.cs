@@ -27,6 +27,11 @@ namespace SimpleExcelGrep.Forms
             
             cmbKeyword.KeyDown += CmbKeyword_KeyDown;
 
+            // cmbFolderPath でドラッグアンドドロップを有効化
+            cmbFolderPath.AllowDrop = true;
+            cmbFolderPath.DragEnter += CmbFolderPath_DragEnter;
+            cmbFolderPath.DragDrop += CmbFolderPath_DragDrop;
+
             // 設定関連のUIイベント
             var controls = new Control[] {
                 chkRealTimeDisplay, nudParallelism, chkFirstHitOnly, chkSearchShapes,
@@ -149,6 +154,59 @@ namespace SimpleExcelGrep.Forms
                 _cancellationTokenSource.Cancel();
             }
             SaveCurrentSettings();
+        }
+
+        /// <summary>
+        /// フォルダパスのコンボボックスにオブジェクトがドラッグされた際の処理
+        /// </summary>
+        private void CmbFolderPath_DragEnter(object sender, DragEventArgs e)
+        {
+            // ドラッグされているデータがファイル/フォルダであるかを確認
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                // ドロップを許可するエフェクトを表示
+                e.Effect = DragDropEffects.Copy;
+            }
+            else
+            {
+                // ファイル/フォルダ以外は許可しない
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        /// <summary>
+        /// フォルダパスのコンボボックスにオブジェクトがドロップされた際の処理
+        /// </summary>
+        private void CmbFolderPath_DragDrop(object sender, DragEventArgs e)
+        {
+            // ドロップされたファイルのパスリストを取得
+            string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            if (paths != null && paths.Length > 0)
+            {
+                string droppedPath = paths[0]; // 複数ドロップされた場合は最初の項目を使用
+                string targetDirectory = null;
+
+                // ドロップされたのがフォルダかどうかを判定
+                if (Directory.Exists(droppedPath))
+                {
+                    targetDirectory = droppedPath;
+                }
+                // ドロップされたのがファイルなら、そのファイルを含むディレクトリを取得
+                else if (File.Exists(droppedPath))
+                {
+                    targetDirectory = Path.GetDirectoryName(droppedPath);
+                }
+
+                // 有効なディレクトリパスが取得できた場合
+                if (!string.IsNullOrEmpty(targetDirectory))
+                {
+                    // テキストを更新し、履歴に追加して設定を保存
+                    cmbFolderPath.Text = targetDirectory;
+                    _settingsService.AddToComboBoxHistory(cmbFolderPath, targetDirectory);
+                    SaveCurrentSettings();
+                }
+            }
         }
     }
 }

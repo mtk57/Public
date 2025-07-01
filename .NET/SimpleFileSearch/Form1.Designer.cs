@@ -93,6 +93,7 @@
             this.cmbFolderPath.Name = "cmbFolderPath";
             this.cmbFolderPath.Size = new System.Drawing.Size(632, 20);
             this.cmbFolderPath.TabIndex = 1;
+            this.cmbFolderPath.AllowDrop = true;
             // 
             // btnSearch
             // 

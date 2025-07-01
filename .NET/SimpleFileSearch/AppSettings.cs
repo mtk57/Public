@@ -13,5 +13,6 @@ namespace SimpleFileSearch
         public bool IncludeFolderNames { get; set; } = false;
         public bool UsePartialMatch { get; set; } = false;
         public bool SearchSubDir { get; set; } = true;
+        public bool DblClickToOpen { get; set; } = false;
     }
 }

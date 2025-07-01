@@ -41,6 +41,7 @@
             this.labelResult = new System.Windows.Forms.Label();
             this.chkPartialMatch = new System.Windows.Forms.CheckBox();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
+            this.chkDblClickToOpen = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -86,6 +87,7 @@
             // 
             // cmbFolderPath
             // 
+            this.cmbFolderPath.AllowDrop = true;
             this.cmbFolderPath.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbFolderPath.FormattingEnabled = true;
@@ -93,7 +95,6 @@
             this.cmbFolderPath.Name = "cmbFolderPath";
             this.cmbFolderPath.Size = new System.Drawing.Size(632, 20);
             this.cmbFolderPath.TabIndex = 1;
-            this.cmbFolderPath.AllowDrop = true;
             // 
             // btnSearch
             // 
@@ -178,12 +179,35 @@
             this.chkSearchSubDir.TabIndex = 68;
             this.chkSearchSubDir.Text = "サブフォルダも対象";
             this.chkSearchSubDir.UseVisualStyleBackColor = true;
+
+            // 
+            // chkDblClickToOpen
+            // 
+            this.chkDblClickToOpen.AutoSize = true;
+            this.chkDblClickToOpen.Location = new System.Drawing.Point(310, 76);
+            this.chkDblClickToOpen.Name = "chkDblClickToOpen";
+            this.chkDblClickToOpen.Size = new System.Drawing.Size(144, 16);
+            this.chkDblClickToOpen.TabIndex = 69;
+            this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
+            this.chkDblClickToOpen.UseVisualStyleBackColor = true;
+            // 
+            // chkDblClickToOpen
+            // 
+            this.chkDblClickToOpen.AutoSize = true;
+            this.chkDblClickToOpen.Location = new System.Drawing.Point(323, 76);
+            this.chkDblClickToOpen.Name = "chkDblClickToOpen";
+            this.chkDblClickToOpen.Size = new System.Drawing.Size(153, 16);
+            this.chkDblClickToOpen.TabIndex = 69;
+            this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
+            this.chkDblClickToOpen.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 510);
+            this.Controls.Add(this.chkDblClickToOpen);
+            this.Controls.Add(this.chkDblClickToOpen);
             this.Controls.Add(this.chkSearchSubDir);
             this.Controls.Add(this.labelResult);
             this.Controls.Add(this.chkIncludeFolderNames);
@@ -223,6 +247,7 @@
         // 変数宣言部分に追加
         private System.Windows.Forms.CheckBox chkPartialMatch;
         private System.Windows.Forms.CheckBox chkSearchSubDir;
+        private System.Windows.Forms.CheckBox chkDblClickToOpen;
     }
 }
 

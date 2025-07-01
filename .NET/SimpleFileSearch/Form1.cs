@@ -29,7 +29,7 @@ namespace SimpleFileSearch
         {
             // タイトルにバージョン情報を表示
             var version = Assembly.GetExecutingAssembly().GetName().Version;
-            this.Text = $"{this.Text}  ver {version}";
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
 
             // 設定ファイルからデータを読み込む
             LoadSettings();
@@ -277,12 +277,20 @@ namespace SimpleFileSearch
                 {
                     try
                     {
-                        // エクスプローラーでフォルダを開いてファイルを選択
-                        Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                        if (chkDblClickToOpen.Checked)
+                        {
+                            // ファイルを開く
+                            Process.Start(filePath);
+                        }
+                        else
+                        {
+                            // エクスプローラーでフォルダを開いてファイルを選択
+                            Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"フォルダを開けませんでした: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"処理中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -336,7 +344,8 @@ namespace SimpleFileSearch
                     UseRegex = chkUseRegex.Checked,
                     IncludeFolderNames = chkIncludeFolderNames.Checked,
                     UsePartialMatch = chkPartialMatch.Checked,
-                    SearchSubDir = chkSearchSubDir.Checked
+                    SearchSubDir = chkSearchSubDir.Checked,
+                    DblClickToOpen = chkDblClickToOpen.Checked
                 };
 
                 // キーワード履歴を保存
@@ -409,6 +418,9 @@ namespace SimpleFileSearch
 
                     // サブフォルダ検索の設定を読み込み
                     chkSearchSubDir.Checked = settings.SearchSubDir;
+
+                    // ダブルクリックでファイルを開くの設定を読み込み
+                    chkDblClickToOpen.Checked = settings.DblClickToOpen;
 
                     // 最新の項目をテキストボックスに表示
                     if (cmbKeyword.Items.Count > 0)

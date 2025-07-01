@@ -40,6 +40,7 @@
             this.chkIncludeFolderNames = new System.Windows.Forms.CheckBox();
             this.labelResult = new System.Windows.Forms.Label();
             this.chkPartialMatch = new System.Windows.Forms.CheckBox();
+            this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -50,7 +51,7 @@
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
             this.btnBrowse.TabIndex = 0;
-            this.btnBrowse.Text = "ref";
+            this.btnBrowse.Text = "参照";
             this.btnBrowse.UseVisualStyleBackColor = true;
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             // 
@@ -61,23 +62,23 @@
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(83, 12);
             this.label1.TabIndex = 2;
-            this.label1.Text = "Search dir path";
+            this.label1.Text = "検索フォルダパス";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(46, 82);
+            this.label2.Location = new System.Drawing.Point(46, 110);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(91, 12);
+            this.label2.Size = new System.Drawing.Size(75, 12);
             this.label2.TabIndex = 3;
-            this.label2.Text = "Search file name";
+            this.label2.Text = "検索ファイル名";
             // 
             // cmbKeyword
             // 
             this.cmbKeyword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbKeyword.FormattingEnabled = true;
-            this.cmbKeyword.Location = new System.Drawing.Point(48, 101);
+            this.cmbKeyword.Location = new System.Drawing.Point(48, 125);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(632, 20);
             this.cmbKeyword.TabIndex = 0;
@@ -96,22 +97,22 @@
             // btnSearch
             // 
             this.btnSearch.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSearch.Location = new System.Drawing.Point(307, 132);
+            this.btnSearch.Location = new System.Drawing.Point(307, 156);
             this.btnSearch.Name = "btnSearch";
             this.btnSearch.Size = new System.Drawing.Size(75, 33);
             this.btnSearch.TabIndex = 5;
-            this.btnSearch.Text = "SEARCH";
+            this.btnSearch.Text = "検索";
             this.btnSearch.UseVisualStyleBackColor = true;
             this.btnSearch.Click += new System.EventHandler(this.btnSearch_Click);
             // 
             // chkUseRegex
             // 
             this.chkUseRegex.AutoSize = true;
-            this.chkUseRegex.Location = new System.Drawing.Point(169, 81);
+            this.chkUseRegex.Location = new System.Drawing.Point(48, 76);
             this.chkUseRegex.Name = "chkUseRegex";
-            this.chkUseRegex.Size = new System.Drawing.Size(88, 16);
+            this.chkUseRegex.Size = new System.Drawing.Size(72, 16);
             this.chkUseRegex.TabIndex = 6;
-            this.chkUseRegex.Text = "RegEx Mode";
+            this.chkUseRegex.Text = "正規表現";
             this.chkUseRegex.UseVisualStyleBackColor = true;
             // 
             // dataGridViewResults
@@ -124,10 +125,10 @@
             this.dataGridViewResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.columnFilePath});
-            this.dataGridViewResults.Location = new System.Drawing.Point(48, 174);
+            this.dataGridViewResults.Location = new System.Drawing.Point(48, 206);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(660, 324);
+            this.dataGridViewResults.Size = new System.Drawing.Size(660, 292);
             this.dataGridViewResults.TabIndex = 6;
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             // 
@@ -141,36 +142,48 @@
             // chkIncludeFolderNames
             // 
             this.chkIncludeFolderNames.AutoSize = true;
-            this.chkIncludeFolderNames.Location = new System.Drawing.Point(294, 81);
+            this.chkIncludeFolderNames.Location = new System.Drawing.Point(137, 76);
             this.chkIncludeFolderNames.Name = "chkIncludeFolderNames";
-            this.chkIncludeFolderNames.Size = new System.Drawing.Size(104, 16);
+            this.chkIncludeFolderNames.Size = new System.Drawing.Size(71, 16);
             this.chkIncludeFolderNames.TabIndex = 7;
-            this.chkIncludeFolderNames.Text = "With Dir Search";
+            this.chkIncludeFolderNames.Text = "フォルダ名";
             this.chkIncludeFolderNames.UseVisualStyleBackColor = true;
             // 
             // labelResult
             // 
             this.labelResult.AutoSize = true;
-            this.labelResult.Location = new System.Drawing.Point(398, 142);
+            this.labelResult.Location = new System.Drawing.Point(398, 166);
             this.labelResult.Name = "labelResult";
             this.labelResult.Size = new System.Drawing.Size(38, 12);
             this.labelResult.TabIndex = 8;
             this.labelResult.Text = "Result";
-
+            // 
+            // chkPartialMatch
+            // 
             this.chkPartialMatch.AutoSize = true;
-            this.chkPartialMatch.Location = new System.Drawing.Point(440, 81);
+            this.chkPartialMatch.Location = new System.Drawing.Point(224, 76);
             this.chkPartialMatch.Name = "chkPartialMatch";
-            this.chkPartialMatch.Size = new System.Drawing.Size(120, 16);
+            this.chkPartialMatch.Size = new System.Drawing.Size(72, 16);
             this.chkPartialMatch.TabIndex = 9;
-            this.chkPartialMatch.Text = "Partial Match Mode";
+            this.chkPartialMatch.Text = "部分一致";
             this.chkPartialMatch.UseVisualStyleBackColor = true;
-
+            // 
+            // chkSearchSubDir
+            // 
+            this.chkSearchSubDir.AutoSize = true;
+            this.chkSearchSubDir.Location = new System.Drawing.Point(48, 54);
+            this.chkSearchSubDir.Name = "chkSearchSubDir";
+            this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
+            this.chkSearchSubDir.TabIndex = 68;
+            this.chkSearchSubDir.Text = "サブフォルダも対象";
+            this.chkSearchSubDir.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 510);
+            this.Controls.Add(this.chkSearchSubDir);
             this.Controls.Add(this.labelResult);
             this.Controls.Add(this.chkIncludeFolderNames);
             this.Controls.Add(this.dataGridViewResults);
@@ -189,6 +202,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
         #endregion
@@ -207,6 +221,7 @@
 
         // 変数宣言部分に追加
         private System.Windows.Forms.CheckBox chkPartialMatch;
+        private System.Windows.Forms.CheckBox chkSearchSubDir;
     }
 }
 

@@ -12,5 +12,6 @@ namespace SimpleFileSearch
         public bool UseRegex { get; set; } = false;
         public bool IncludeFolderNames { get; set; } = false;
         public bool UsePartialMatch { get; set; } = false;
+        public bool SearchSubDir { get; set; } = true;
     }
 }

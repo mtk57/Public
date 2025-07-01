@@ -91,6 +91,7 @@ namespace SimpleFileSearch
                 string searchPattern = cmbKeyword.Text;
                 bool useRegex = chkUseRegex.Checked;
                 bool includeFolderNames = chkIncludeFolderNames.Checked;
+                bool searchSubDir = chkSearchSubDir.Checked;
                 
                 List<string> foundFiles = new List<string>();
 
@@ -104,7 +105,7 @@ namespace SimpleFileSearch
                         
                         // ディレクトリを再帰的に列挙
                         string rootPath = cmbFolderPath.Text;
-                        SearchFilesAndFoldersWithRegex(rootPath, regex, includeFolderNames, foundFiles);
+                        SearchFilesAndFoldersWithRegex(rootPath, regex, includeFolderNames, foundFiles, searchSubDir);
                     }
                     catch (ArgumentException ex)
                     {
@@ -124,18 +125,19 @@ namespace SimpleFileSearch
                             // 部分一致モード - 正規表現に変換して検索
                             Regex regex = new Regex(Regex.Escape(searchPattern), RegexOptions.IgnoreCase);
                             string rootPath = cmbFolderPath.Text;
-                            SearchFilesAndFoldersWithRegex(rootPath, regex, includeFolderNames, foundFiles);
+                            SearchFilesAndFoldersWithRegex(rootPath, regex, includeFolderNames, foundFiles, searchSubDir);
                         }
                         else
                         {
                             // 通常のワイルドカードモード
-                            foundFiles.AddRange(Directory.GetFiles(cmbFolderPath.Text, searchPattern, SearchOption.AllDirectories));
+                            SearchOption searchOption = searchSubDir ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                            foundFiles.AddRange(Directory.GetFiles(cmbFolderPath.Text, searchPattern, searchOption));
             
                             // フォルダ名も検索対象に含める場合
                             if (includeFolderNames)
                             {
                                 string rootPath = cmbFolderPath.Text;
-                                SearchFoldersWithWildcard(rootPath, searchPattern, foundFiles);
+                                SearchFoldersWithWildcard(rootPath, searchPattern, foundFiles, searchSubDir);
                             }
                         }
                     }
@@ -171,7 +173,7 @@ namespace SimpleFileSearch
         }
 
         // 正規表現を使用してファイルとフォルダを再帰的に検索
-        private void SearchFilesAndFoldersWithRegex(string folderPath, Regex regex, bool includeFolderNames, List<string> results)
+        private void SearchFilesAndFoldersWithRegex(string folderPath, Regex regex, bool includeFolderNames, List<string> results, bool searchSubDir)
         {
             try
             {
@@ -186,21 +188,24 @@ namespace SimpleFileSearch
                 }
 
                 // サブフォルダを処理
-                foreach (string dir in Directory.GetDirectories(folderPath))
+                if (searchSubDir)
                 {
-                    // フォルダ名を検索対象に含める場合
-                    if (includeFolderNames)
+                    foreach (string dir in Directory.GetDirectories(folderPath))
                     {
-                        string dirName = Path.GetFileName(dir);
-                        if (regex.IsMatch(dirName))
+                        // フォルダ名を検索対象に含める場合
+                        if (includeFolderNames)
                         {
-                            // フォルダが見つかった場合、そのフォルダ内のすべてのファイルを追加
-                            results.AddRange(Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories));
+                            string dirName = Path.GetFileName(dir);
+                            if (regex.IsMatch(dirName))
+                            {
+                                // フォルダが見つかった場合、そのフォルダ内のすべてのファイルを追加
+                                results.AddRange(Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories));
+                            }
                         }
-                    }
 
-                    // 再帰的に検索
-                    SearchFilesAndFoldersWithRegex(dir, regex, includeFolderNames, results);
+                        // 再帰的に検索
+                        SearchFilesAndFoldersWithRegex(dir, regex, includeFolderNames, results, searchSubDir);
+                    }
                 }
             }
             catch (UnauthorizedAccessException)
@@ -214,7 +219,7 @@ namespace SimpleFileSearch
         }
 
         // ワイルドカードを使用してフォルダを検索
-        private void SearchFoldersWithWildcard(string folderPath, string searchPattern, List<string> results)
+        private void SearchFoldersWithWildcard(string folderPath, string searchPattern, List<string> results, bool searchSubDir)
         {
             try
             {
@@ -230,19 +235,22 @@ namespace SimpleFileSearch
                 };
 
                 // サブフォルダを処理
-                foreach (string dir in Directory.GetDirectories(folderPath))
+                if (searchSubDir)
                 {
-                    string dirName = Path.GetFileName(dir);
-                    
-                    // フォルダ名がパターンに合致する場合
-                    if (matchesPattern(dirName))
+                    foreach (string dir in Directory.GetDirectories(folderPath))
                     {
-                        // フォルダが見つかった場合、そのフォルダ内のすべてのファイルを追加
-                        results.AddRange(Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories));
+                        string dirName = Path.GetFileName(dir);
+
+                        // フォルダ名がパターンに合致する場合
+                        if (matchesPattern(dirName))
+                        {
+                            // フォルダが見つかった場合、そのフォルダ内のすべてのファイルを追加
+                            results.AddRange(Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories));
+                        }
+
+                        // 再帰的に検索
+                        SearchFoldersWithWildcard(dir, searchPattern, results, searchSubDir);
                     }
-                    
-                    // 再帰的に検索
-                    SearchFoldersWithWildcard(dir, searchPattern, results);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -323,7 +331,8 @@ namespace SimpleFileSearch
                     FolderPathHistory = new List<string>(),
                     UseRegex = chkUseRegex.Checked,
                     IncludeFolderNames = chkIncludeFolderNames.Checked,
-                    UsePartialMatch = chkPartialMatch.Checked
+                    UsePartialMatch = chkPartialMatch.Checked,
+                    SearchSubDir = chkSearchSubDir.Checked
                 };
 
                 // キーワード履歴を保存
@@ -393,6 +402,9 @@ namespace SimpleFileSearch
 
                     // 部分一致モードの設定を読み込み (追加)
                     chkPartialMatch.Checked = settings.UsePartialMatch;
+
+                    // サブフォルダ検索の設定を読み込み
+                    chkSearchSubDir.Checked = settings.SearchSubDir;
 
                     // 最新の項目をテキストボックスに表示
                     if (cmbKeyword.Items.Count > 0)

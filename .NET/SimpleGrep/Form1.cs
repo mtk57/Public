@@ -178,7 +178,6 @@ namespace SimpleGrep
             {
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
-                MessageBox.Show("検索が完了しました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
         

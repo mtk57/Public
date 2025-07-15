@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -42,6 +43,7 @@ namespace SimpleGrep
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
+            this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
         }
 
@@ -58,6 +60,70 @@ namespace SimpleGrep
         {
             SaveSettings();
         }
+
+        private void dataGridViewResults_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            try
+            {
+                string filePath = dataGridViewResults.Rows[e.RowIndex].Cells[0].Value.ToString();
+                string lineNumber = dataGridViewResults.Rows[e.RowIndex].Cells[1].Value.ToString();
+
+                if (!File.Exists(filePath))
+                {
+                    MessageBox.Show("ファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                string sakuraPath = FindSakuraPath();
+
+                if (sakuraPath != null)
+                {
+                    Process.Start(sakuraPath, $"\"-Y={lineNumber}\" \"{filePath}\"");
+                }
+                else
+                {
+                    // Fallback to default editor
+                    Process.Start(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ファイルを開けませんでした: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string FindSakuraPath()
+        {
+            string[] searchPaths = {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "sakura", "sakura.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "sakura", "sakura.exe")
+            };
+
+            foreach (var path in searchPaths)
+            {
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+            
+            // Check PATH environment variable
+            var pathVar = Environment.GetEnvironmentVariable("PATH");
+            if (pathVar != null)
+            {
+                foreach (var p in pathVar.Split(';'))
+                {
+                    var fullPath = Path.Combine(p, "sakura.exe");
+                    if (File.Exists(fullPath))
+                        return fullPath;
+                }
+            }
+
+            return null; // Not found
+        }
+
 
         private void LoadSettings()
         {

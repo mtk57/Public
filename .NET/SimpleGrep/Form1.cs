@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -40,6 +41,7 @@ namespace SimpleGrep
             this.cmbFolderPath.DragDrop += new DragEventHandler(cmbFolderPath_DragDrop);
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
+            this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
         }
 
@@ -47,6 +49,8 @@ namespace SimpleGrep
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
+            dataGridViewResults.Columns.Add("Encoding", "Encoding");
+            dataGridViewResults.Columns["Encoding"].Visible = false;
             LoadSettings();
         }
 
@@ -199,8 +203,10 @@ namespace SimpleGrep
                 {
                     try
                     {
-                        using (var reader = new StreamReader(filePath))
+                        string encodingName = "UTF-8"; // Default
+                        using (var reader = new StreamReader(filePath, true))
                         {
+                            encodingName = GetEncodingName(reader.CurrentEncoding);
                             string line;
                             int lineNumber = 1;
                             while ((line = reader.ReadLine()) != null)
@@ -227,7 +233,7 @@ namespace SimpleGrep
                                 {
                                     this.Invoke((Action)(() =>
                                     {
-                                        dataGridViewResults.Rows.Add(filePath, lineNumber, line);
+                                        dataGridViewResults.Rows.Add(filePath, lineNumber, line, encodingName);
                                     }));
                                 }
                                 lineNumber++;
@@ -248,6 +254,49 @@ namespace SimpleGrep
                 }));
             }
         }
+
+        private void btnExportSakura_Click(object sender, EventArgs e)
+        {
+            if (dataGridViewResults.Rows.Count == 0)
+            {
+                MessageBox.Show("エクスポートするデータがありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".grep";
+                using (var writer = new StreamWriter(fileName, false, Encoding.UTF8))
+                {
+                    foreach (DataGridViewRow row in dataGridViewResults.Rows)
+                    {
+                        string filePath = row.Cells[0].Value.ToString();
+                        string lineNumber = row.Cells[1].Value.ToString();
+                        string lineContent = row.Cells[2].Value.ToString();
+                        string encoding = row.Cells.Count > 3 && row.Cells[3].Value != null ? row.Cells[3].Value.ToString() : "UTF-8";
+                        
+                        writer.WriteLine($"{filePath}({lineNumber},1)  [{encoding}]: {lineContent}");
+                    }
+                }
+                MessageBox.Show($"{fileName} に結果を保存しました。", "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"エクスポート中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string GetEncodingName(Encoding encoding)
+        {
+            if (encoding.Equals(Encoding.UTF8))
+                return "UTF-8";
+            if (encoding.Equals(Encoding.Unicode))
+                return "UTF-16";
+            if (encoding.Equals(Encoding.Default))
+                return "Shift_JIS"; // Or appropriate default
+            return encoding.WebName.ToUpper();
+        }
+
 
         private void cmbFolderPath_DragEnter(object sender, DragEventArgs e)
         {

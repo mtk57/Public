@@ -1,13 +1,37 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SimpleGrep
 {
+    [DataContract]
+    public class AppSettings
+    {
+        [DataMember]
+        public List<string> FolderPathHistory { get; set; } = new List<string>();
+        [DataMember]
+        public List<string> FilePatternHistory { get; set; } = new List<string>();
+        [DataMember]
+        public List<string> GrepPatternHistory { get; set; } = new List<string>();
+        [DataMember]
+        public bool SearchSubDir { get; set; }
+        [DataMember]
+        public bool CaseSensitive { get; set; }
+        [DataMember]
+        public bool UseRegex { get; set; }
+    }
+
     public partial class MainForm : Form
     {
+        private const string SettingsFileName = "SimpleGrep.settings.json";
+        private const int MaxHistoryCount = 10;
+
         public MainForm()
         {
             InitializeComponent();
@@ -15,13 +39,93 @@ namespace SimpleGrep
             this.cmbFolderPath.DragDrop += new DragEventHandler(cmbFolderPath_DragDrop);
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
+            this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
+            LoadSettings();
         }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveSettings();
+        }
+
+        private void LoadSettings()
+        {
+            if (!File.Exists(SettingsFileName)) return;
+
+            try
+            {
+                using (var stream = new FileStream(SettingsFileName, FileMode.Open, FileAccess.Read))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    var settings = (AppSettings)serializer.ReadObject(stream);
+
+                    LoadHistory(cmbFolderPath, settings.FolderPathHistory);
+                    LoadHistory(comboBox1, settings.FilePatternHistory);
+                    LoadHistory(cmbKeyword, settings.GrepPatternHistory);
+
+                    chkSearchSubDir.Checked = settings.SearchSubDir;
+                    chkCase.Checked = settings.CaseSensitive;
+                    chkUseRegex.Checked = settings.UseRegex;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定ファイルの読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SaveSettings()
+        {
+            var settings = new AppSettings
+            {
+                FolderPathHistory = GetHistory(cmbFolderPath),
+                FilePatternHistory = GetHistory(comboBox1),
+                GrepPatternHistory = GetHistory(cmbKeyword),
+                SearchSubDir = chkSearchSubDir.Checked,
+                CaseSensitive = chkCase.Checked,
+                UseRegex = chkUseRegex.Checked
+            };
+
+            try
+            {
+                using (var stream = new FileStream(SettingsFileName, FileMode.Create, FileAccess.Write))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    serializer.WriteObject(stream, settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定ファイルの保存に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadHistory(ComboBox comboBox, List<string> history)
+        {
+            if (history != null && history.Any())
+            {
+                comboBox.Items.AddRange(history.ToArray());
+                comboBox.Text = history.First();
+            }
+        }
+
+        private List<string> GetHistory(ComboBox comboBox)
+        {
+            var history = new List<string>();
+            if (!string.IsNullOrWhiteSpace(comboBox.Text))
+            {
+                history.Add(comboBox.Text);
+            }
+            history.AddRange(comboBox.Items.Cast<string>().Where(item => item != comboBox.Text));
+            return history.Distinct().Take(MaxHistoryCount).ToList();
+        }
+
 
         private void btnBrowse_Click(object sender, EventArgs e)
         {
@@ -45,6 +149,10 @@ namespace SimpleGrep
                 MessageBox.Show("検索フォルダー、ファイルパターン、検索パターンを正しく入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            
+            UpdateHistory(cmbFolderPath, folderPath);
+            UpdateHistory(comboBox1, filePattern);
+            UpdateHistory(cmbKeyword, grepPattern);
 
             dataGridViewResults.Rows.Clear();
             button1.Enabled = false;
@@ -68,6 +176,16 @@ namespace SimpleGrep
                 MessageBox.Show("検索が完了しました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
+        
+        private void UpdateHistory(ComboBox comboBox, string newItem)
+        {
+            var items = comboBox.Items.Cast<string>().ToList();
+            items.Remove(newItem);
+            items.Insert(0, newItem);
+            comboBox.Items.Clear();
+            comboBox.Items.AddRange(items.Take(MaxHistoryCount).ToArray());
+            comboBox.Text = newItem;
+        }
 
         private void SearchFiles(string folderPath, string filePattern, string grepPattern)
         {
@@ -84,6 +202,7 @@ namespace SimpleGrep
                             int lineNumber = 1;
                             while ((line = reader.ReadLine()) != null)
                             {
+                                // TODO: Implement case-sensitive and regex search
                                 if (line.Contains(grepPattern))
                                 {
                                     this.Invoke((Action)(() =>
@@ -97,7 +216,7 @@ namespace SimpleGrep
                     }
                     catch (Exception)
                     {
-                        // ファイル読み取りエラーはスキップ
+                        // Skip file read errors
                     }
                 }
             }
@@ -117,7 +236,7 @@ namespace SimpleGrep
                 e.Effect = DragDropEffects.Copy;
             }
             else
-            { 
+            {
                 e.Effect = DragDropEffects.None;
             }
         }

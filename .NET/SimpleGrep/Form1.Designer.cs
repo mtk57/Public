@@ -245,7 +245,6 @@
             this.Controls.Add(this.btnBrowse);
             this.Name = "MainForm";
             this.Text = "Simple Grep";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).EndInit();
             this.ResumeLayout(false);

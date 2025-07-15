@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -192,6 +193,8 @@ namespace SimpleGrep
             try
             {
                 var searchOption = chkSearchSubDir.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                var regexOptions = chkCase.Checked ? RegexOptions.None : RegexOptions.IgnoreCase;
+
                 foreach (var filePath in Directory.EnumerateFiles(folderPath, filePattern, searchOption))
                 {
                     try
@@ -202,8 +205,25 @@ namespace SimpleGrep
                             int lineNumber = 1;
                             while ((line = reader.ReadLine()) != null)
                             {
-                                // TODO: Implement case-sensitive and regex search
-                                if (line.Contains(grepPattern))
+                                bool isMatch = false;
+                                if (chkUseRegex.Checked)
+                                {
+                                    try
+                                    {
+                                        isMatch = Regex.IsMatch(line, grepPattern, regexOptions);
+                                    }
+                                    catch (ArgumentException)
+                                    {
+                                        // Invalid regex pattern, skip
+                                    }
+                                }
+                                else
+                                {
+                                    var comparisonType = chkCase.Checked ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                                    isMatch = line.IndexOf(grepPattern, comparisonType) >= 0;
+                                }
+
+                                if (isMatch)
                                 {
                                     this.Invoke((Action)(() =>
                                     {

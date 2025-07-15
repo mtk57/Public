@@ -52,7 +52,6 @@ namespace SimpleGrep
             try
             {
                 string filePath = dataGridViewResults.Rows[e.RowIndex].Cells[0].Value.ToString();
-                string lineNumber = dataGridViewResults.Rows[e.RowIndex].Cells[1].Value.ToString();
 
                 if (!File.Exists(filePath))
                 {
@@ -60,21 +59,34 @@ namespace SimpleGrep
                     return;
                 }
 
-                string sakuraPath = FindSakuraPath();
-
-                if (sakuraPath != null)
+                // Assumes a checkbox named 'chkTagJump' has been added to the form.
+                // Its state determines the double-click action.
+                if (chkTagJump.Checked)
                 {
-                    Process.Start(sakuraPath, $"-Y={lineNumber} \"{filePath}\"");
+                    // ON: Original behavior - open file at the specific line (Tag Jump).
+                    string lineNumber = dataGridViewResults.Rows[e.RowIndex].Cells[1].Value.ToString();
+                    string sakuraPath = FindSakuraPath();
+
+                    if (sakuraPath != null)
+                    {
+                        Process.Start(sakuraPath, $"-Y={lineNumber} \"{filePath}\"");
+                    }
+                    else
+                    {
+                        // Fallback to default editor
+                        Process.Start(filePath);
+                    }
                 }
                 else
                 {
-                    // Fallback to default editor
-                    Process.Start(filePath);
+                    // OFF: New behavior - open the containing folder in Explorer.
+                    string directoryPath = Path.GetDirectoryName(filePath);
+                    Process.Start("explorer.exe", $"\"{directoryPath}\"");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ファイルを開けませんでした: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"操作を実行できませんでした: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -142,6 +154,7 @@ namespace SimpleGrep
                     chkSearchSubDir.Checked = settings.SearchSubDir;
                     chkCase.Checked = settings.CaseSensitive;
                     chkUseRegex.Checked = settings.UseRegex;
+                    chkTagJump.Checked = settings.TagJump; // ADDED: Load the state for the new checkbox.
                 }
             }
             catch (Exception ex)
@@ -159,7 +172,8 @@ namespace SimpleGrep
                 GrepPatternHistory = GetHistory(cmbKeyword),
                 SearchSubDir = chkSearchSubDir.Checked,
                 CaseSensitive = chkCase.Checked,
-                UseRegex = chkUseRegex.Checked
+                UseRegex = chkUseRegex.Checked,
+                TagJump = chkTagJump.Checked // ADDED: Save the state for the new checkbox.
             };
 
             try
@@ -406,6 +420,9 @@ namespace SimpleGrep
             public bool CaseSensitive { get; set; }
             [DataMember]
             public bool UseRegex { get; set; }
+            
+            [DataMember]
+            public bool TagJump { get; set; } = true;
         }
     }
 }

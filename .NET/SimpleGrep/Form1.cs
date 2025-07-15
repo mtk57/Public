@@ -13,23 +13,6 @@ using System.Windows.Forms;
 
 namespace SimpleGrep
 {
-    [DataContract]
-    public class AppSettings
-    {
-        [DataMember]
-        public List<string> FolderPathHistory { get; set; } = new List<string>();
-        [DataMember]
-        public List<string> FilePatternHistory { get; set; } = new List<string>();
-        [DataMember]
-        public List<string> GrepPatternHistory { get; set; } = new List<string>();
-        [DataMember]
-        public bool SearchSubDir { get; set; }
-        [DataMember]
-        public bool CaseSensitive { get; set; }
-        [DataMember]
-        public bool UseRegex { get; set; }
-    }
-
     public partial class MainForm : Form
     {
         private const string SettingsFileName = "SimpleGrep.settings.json";
@@ -391,5 +374,24 @@ namespace SimpleGrep
                 }
             }
         }
+
+        [DataContract]
+        private class AppSettings
+        {
+            [DataMember]
+            public List<string> FolderPathHistory { get; set; } = new List<string>();
+            [DataMember]
+            public List<string> FilePatternHistory { get; set; } = new List<string>();
+            [DataMember]
+            public List<string> GrepPatternHistory { get; set; } = new List<string>();
+            [DataMember]
+            public bool SearchSubDir { get; set; }
+            [DataMember]
+            public bool CaseSensitive { get; set; }
+            [DataMember]
+            public bool UseRegex { get; set; }
+        }
     }
+
+
 }

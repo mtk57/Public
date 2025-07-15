@@ -36,16 +36,17 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.labelResult = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
             this.button1 = new System.Windows.Forms.Button();
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnExportSakura = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.chkTagJump = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -136,6 +137,25 @@
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 311);
             this.dataGridViewResults.TabIndex = 6;
             // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmLine
+            // 
+            this.clmLine.HeaderText = "行";
+            this.clmLine.Name = "clmLine";
+            this.clmLine.ReadOnly = true;
+            // 
+            // clmGrepResult
+            // 
+            this.clmGrepResult.HeaderText = "Grep結果";
+            this.clmGrepResult.Name = "clmGrepResult";
+            this.clmGrepResult.ReadOnly = true;
+            // 
             // labelResult
             // 
             this.labelResult.AutoSize = true;
@@ -175,25 +195,6 @@
             this.button1.Text = "検索";
             this.button1.UseVisualStyleBackColor = true;
             // 
-            // clmFilePath
-            // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
-            // 
-            // clmLine
-            // 
-            this.clmLine.HeaderText = "行";
-            this.clmLine.Name = "clmLine";
-            this.clmLine.ReadOnly = true;
-            // 
-            // clmGrepResult
-            // 
-            this.clmGrepResult.HeaderText = "Grep結果";
-            this.clmGrepResult.Name = "clmGrepResult";
-            this.clmGrepResult.ReadOnly = true;
-            // 
             // btnExportSakura
             // 
             this.btnExportSakura.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -223,11 +224,22 @@
             this.comboBox1.Size = new System.Drawing.Size(632, 20);
             this.comboBox1.TabIndex = 73;
             // 
+            // chkTagJump
+            // 
+            this.chkTagJump.AutoSize = true;
+            this.chkTagJump.Location = new System.Drawing.Point(233, 182);
+            this.chkTagJump.Name = "chkTagJump";
+            this.chkTagJump.Size = new System.Drawing.Size(77, 16);
+            this.chkTagJump.TabIndex = 74;
+            this.chkTagJump.Text = "タグジャンプ";
+            this.chkTagJump.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 607);
+            this.Controls.Add(this.chkTagJump);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.btnExportSakura);
@@ -272,6 +284,7 @@
         private System.Windows.Forms.Button btnExportSakura;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.CheckBox chkTagJump;
     }
 }
 

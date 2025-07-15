@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -63,7 +64,7 @@ namespace SimpleGrep
 
                 if (sakuraPath != null)
                 {
-                    Process.Start(sakuraPath, $"\"-Y={lineNumber}\" \"{filePath}\"");
+                    Process.Start(sakuraPath, $"-Y={lineNumber} \"{filePath}\"");
                 }
                 else
                 {
@@ -79,6 +80,21 @@ namespace SimpleGrep
 
         private string FindSakuraPath()
         {
+            // 1. App.configからパスを取得
+            try
+            {
+                var configPath = ConfigurationManager.AppSettings["SakuraEditorPath"];
+                if (!string.IsNullOrEmpty(configPath) && File.Exists(configPath))
+                {
+                    return configPath;
+                }
+            }
+            catch (ConfigurationErrorsException)
+            {
+                // 設定ファイルのエラーは無視して次に進む
+            }
+
+            // 2. 一般的なインストール場所を検索
             string[] searchPaths = {
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "sakura", "sakura.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "sakura", "sakura.exe")
@@ -92,11 +108,11 @@ namespace SimpleGrep
                 }
             }
             
-            // Check PATH environment variable
+            // 3. 環境変数PATHを検索
             var pathVar = Environment.GetEnvironmentVariable("PATH");
             if (pathVar != null)
             {
-                foreach (var p in pathVar.Split(';'))
+                foreach (var p in pathVar.Split(Path.PathSeparator))
                 {
                     var fullPath = Path.Combine(p, "sakura.exe");
                     if (File.Exists(fullPath))
@@ -104,7 +120,7 @@ namespace SimpleGrep
                 }
             }
 
-            return null; // Not found
+            return null; // 見つからない場合
         }
 
 
@@ -392,6 +408,4 @@ namespace SimpleGrep
             public bool UseRegex { get; set; }
         }
     }
-
-
 }

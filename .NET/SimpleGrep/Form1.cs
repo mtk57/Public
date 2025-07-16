@@ -320,10 +320,12 @@ namespace SimpleGrep
                 {
                     try
                     {
-                        string encodingName = "UTF-8"; // Default
-                        using (var reader = new StreamReader(filePath, true))
+                        // ★★ここから修正★★
+                        Encoding encoding = DetectEncoding(filePath); // ファイルごとにエンコーディングを判定
+                        string encodingName = GetEncodingName(encoding);
+
+                        using (var reader = new StreamReader(filePath, encoding))
                         {
-                            encodingName = GetEncodingName(reader.CurrentEncoding);
                             string line;
                             int lineNumber = 1;
                             while ((line = reader.ReadLine()) != null)
@@ -350,6 +352,7 @@ namespace SimpleGrep
                                 lineNumber++;
                             }
                         }
+                        // ★★ここまで修正★★
                     }
                     catch (Exception) { /* Skip file read errors */ }
                     finally
@@ -407,16 +410,102 @@ namespace SimpleGrep
             }
         }
 
+        // ★★ここから修正★★
         private string GetEncodingName(Encoding encoding)
         {
-            if (encoding.Equals(Encoding.UTF8))
+            // 日本語(Shift-JIS)のコードページは932
+            if (encoding.CodePage == 932)
+            {
+                return "Shift_JIS";
+            }
+            // UTF-8 BOM付き と BOMなし を区別せず "UTF-8" として表示
+            if (encoding is UTF8Encoding)
+            {
                 return "UTF-8";
-            if (encoding.Equals(Encoding.Unicode))
-                return "UTF-16";
-            if (encoding.Equals(Encoding.Default))
-                return "Shift_JIS"; // Or appropriate default
+            }
             return encoding.WebName.ToUpper();
         }
+
+        /// <summary>
+        /// ファイルのエンコーディングを判別します。
+        /// </summary>
+        /// <param name="filePath">判別するファイルのパス。</param>
+        /// <returns>検出されたエンコーディング。</returns>
+        private Encoding DetectEncoding(string filePath)
+        {
+            byte[] bom = new byte[4];
+            try
+            {
+                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                {
+                    fs.Read(bom, 0, 4);
+                }
+            }
+            catch {
+                return Encoding.Default; // ファイルがロックされている場合などはデフォルト
+            }
+
+            // BOMで判定
+            if (bom[0] == 0xef && bom[1] == 0xbb && bom[2] == 0xbf)
+                return new UTF8Encoding(true); // UTF-8 BOMあり
+            if (bom[0] == 0xff && bom[1] == 0xfe)
+                return Encoding.Unicode; // UTF-16 LE
+            if (bom[0] == 0xfe && bom[1] == 0xff)
+                return Encoding.BigEndianUnicode; // UTF-16 BE
+
+            // BOMがない場合、ファイルの内容からUTF-8かShift_JISかを推定
+            byte[] fileBytes;
+            try
+            {
+                 fileBytes = File.ReadAllBytes(filePath);
+            }
+            catch {
+                return Encoding.Default;
+            }
+
+            if (IsUtf8(fileBytes))
+            {
+                return new UTF8Encoding(false); // UTF-8 BOMなし
+            }
+
+            // UTF-8でなければShift_JISとみなす
+            return Encoding.GetEncoding("Shift_JIS");
+        }
+
+        /// <summary>
+        /// バイト配列が有効なUTF-8シーケンスであるかを確認します。
+        /// </summary>
+        private bool IsUtf8(byte[] bytes)
+        {
+            int i = 0;
+            while (i < bytes.Length)
+            {
+                if (bytes[i] < 0x80) // 1バイト文字 (ASCII)
+                {
+                    i++;
+                    continue;
+                }
+
+                if (bytes[i] < 0xC2) return false; // 不正な開始バイト
+
+                int extraBytes = 0;
+                if (bytes[i] < 0xE0) extraBytes = 1; // 2バイト文字
+                else if (bytes[i] < 0xF0) extraBytes = 2; // 3バイト文字
+                else if (bytes[i] < 0xF5) extraBytes = 3; // 4バイト文字
+                else return false;
+
+                if (i + extraBytes >= bytes.Length) return false;
+
+                // 後続バイトのチェック
+                for (int j = 1; j <= extraBytes; j++)
+                {
+                    if (bytes[i + j] < 0x80 || bytes[i + j] > 0xBF) return false;
+                }
+                i += (extraBytes + 1);
+            }
+            return true;
+        }
+        // ★★ここまで修正★★
 
 
         private void cmbFolderPath_DragEnter(object sender, DragEventArgs e)

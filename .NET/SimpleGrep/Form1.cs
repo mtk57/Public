@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent; // ConcurrentBagのために追加
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
@@ -9,6 +10,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading; // Interlockedのために追加
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -234,7 +236,7 @@ namespace SimpleGrep
             this.Cursor = Cursors.WaitCursor;
     
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            labelTime.Text = ""; // 表示をリセット
+            labelTime.Text = ""; 
 
             var searchOption = chkSearchSubDir.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
             string[] filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
@@ -245,28 +247,38 @@ namespace SimpleGrep
                 MessageBox.Show("対象ファイルが見つかりません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
-                stopwatch.Stop(); // ストップウォッチを止める
+                stopwatch.Stop();
                 return;
             }
 
-            progressBar.Maximum = totalFiles;
+            progressBar.Maximum = totalFiles; // 最大値をファイル総数に設定
             progressBar.Value = 0;
             lblPer.Text = "0 %";
-            
-            List<object[]> searchResults = null;
+
+            // IProgress<T> を使ってUIスレッドに進捗を通知
+            var progress = new Progress<int>(processedCount =>
+            {
+                progressBar.Value = processedCount;
+                lblPer.Text = $"{(int)((double)processedCount / totalFiles * 100)} %";
+            });
+
+            IEnumerable<object[]> searchResults = null;
             try
             {
-                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern));
+                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress));
 
-                // 検索完了後、結果をまとめてDataGridViewに追加
                 if (searchResults != null && searchResults.Any())
                 {
-                    dataGridViewResults.SuspendLayout(); // 描画を一時停止
-                    foreach (var rowData in searchResults)
+                    dataGridViewResults.SuspendLayout();
+                    // 結果をDataGridView用の配列に変換してから追加
+                    var rows = searchResults.Select(r =>
                     {
-                        dataGridViewResults.Rows.Add(rowData);
-                    }
-                    dataGridViewResults.ResumeLayout(); // 描画を再開
+                        var row = new DataGridViewRow();
+                        row.CreateCells(dataGridViewResults, r);
+                        return row;
+                    }).ToArray();
+                    dataGridViewResults.Rows.AddRange(rows);
+                    dataGridViewResults.ResumeLayout();
                 }
             }
             catch (Exception ex)
@@ -280,7 +292,7 @@ namespace SimpleGrep
         
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
-                progressBar.Value = progressBar.Maximum;
+                progressBar.Value = totalFiles; // 最後に100%にする
                 lblPer.Text = "100 %";
             }
         }
@@ -295,17 +307,16 @@ namespace SimpleGrep
             comboBox.Text = newItem;
         }
 
-        private List<object[]> SearchFiles(string[] filePaths, string grepPattern)
+        private IEnumerable<object[]> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress)
         {
-            var results = new List<object[]>();
+            var results = new ConcurrentBag<object[]>(); // スレッドセーフなコレクションを使用
+            var regexOptions = chkCase.Checked ? RegexOptions.None : RegexOptions.IgnoreCase;
+            int processedFileCount = 0;
+
             try
             {
-                var regexOptions = chkCase.Checked ? RegexOptions.None : RegexOptions.IgnoreCase;
-                
-                int processedFileCount = 0;
-                int totalFiles = filePaths.Length;
-
-                foreach (var filePath in filePaths)
+                // Parallel.ForEach を使ってファイルを並列処理
+                Parallel.ForEach(filePaths, filePath =>
                 {
                     try
                     {
@@ -324,10 +335,7 @@ namespace SimpleGrep
                                     {
                                         isMatch = Regex.IsMatch(line, grepPattern, regexOptions);
                                     }
-                                    catch (ArgumentException)
-                                    {
-                                        // Invalid regex pattern, skip
-                                    }
+                                    catch (ArgumentException) { /* Invalid regex pattern, skip */ }
                                 }
                                 else
                                 {
@@ -337,33 +345,29 @@ namespace SimpleGrep
 
                                 if (isMatch)
                                 {
-                                    // 検索結果をリストに追加
                                     results.Add(new object[] { filePath, lineNumber, line, encodingName });
                                 }
                                 lineNumber++;
                             }
                         }
                     }
-                    catch (Exception)
-                    {
-                        // Skip file read errors
-                    }
+                    catch (Exception) { /* Skip file read errors */ }
                     finally
                     {
-                        processedFileCount++;
-                        int percentage = (int)((double)processedFileCount / totalFiles * 100);
-
-                        // UIスレッドでプログレスバーとラベルを更新
-                        this.Invoke((Action)(() =>
+                        // 処理済みファイル数をスレッドセーフにインクリメント
+                        int currentCount = Interlocked.Increment(ref processedFileCount);
+                        
+                        // 100ファイルごと、または最後のファイル処理時に進捗を通知
+                        if (currentCount % 100 == 0 || currentCount == filePaths.Length)
                         {
-                            progressBar.Value = processedFileCount;
-                            lblPer.Text = $"{percentage} %";
-                        }));
+                            progress?.Report(currentCount);
+                        }
                     }
-                }
+                });
             }
             catch (Exception ex)
             {
+                // UIスレッドで例外を表示
                 this.Invoke((Action)(() =>
                 {
                     MessageBox.Show($"ディレクトリの検索中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);

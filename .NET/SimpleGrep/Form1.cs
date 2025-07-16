@@ -252,13 +252,22 @@ namespace SimpleGrep
             progressBar.Maximum = totalFiles;
             progressBar.Value = 0;
             lblPer.Text = "0 %";
-
+            
+            List<object[]> searchResults = null;
             try
             {
-                await Task.Run(() =>
+                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern));
+
+                // 検索完了後、結果をまとめてDataGridViewに追加
+                if (searchResults != null && searchResults.Any())
                 {
-                    SearchFiles(filesToSearch, grepPattern);
-                });
+                    dataGridViewResults.SuspendLayout(); // 描画を一時停止
+                    foreach (var rowData in searchResults)
+                    {
+                        dataGridViewResults.Rows.Add(rowData);
+                    }
+                    dataGridViewResults.ResumeLayout(); // 描画を再開
+                }
             }
             catch (Exception ex)
             {
@@ -286,8 +295,9 @@ namespace SimpleGrep
             comboBox.Text = newItem;
         }
 
-        private void SearchFiles(string[] filePaths, string grepPattern)
+        private List<object[]> SearchFiles(string[] filePaths, string grepPattern)
         {
+            var results = new List<object[]>();
             try
             {
                 var regexOptions = chkCase.Checked ? RegexOptions.None : RegexOptions.IgnoreCase;
@@ -327,10 +337,8 @@ namespace SimpleGrep
 
                                 if (isMatch)
                                 {
-                                    this.Invoke((Action)(() =>
-                                    {
-                                        dataGridViewResults.Rows.Add(filePath, lineNumber, line, encodingName);
-                                    }));
+                                    // 検索結果をリストに追加
+                                    results.Add(new object[] { filePath, lineNumber, line, encodingName });
                                 }
                                 lineNumber++;
                             }
@@ -361,6 +369,7 @@ namespace SimpleGrep
                     MessageBox.Show($"ディレクトリの検索中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }));
             }
+            return results;
         }
 
         private void btnExportSakura_Click(object sender, EventArgs e)

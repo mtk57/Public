@@ -49,7 +49,6 @@
             this.chkTagJump = new System.Windows.Forms.CheckBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblPer = new System.Windows.Forms.Label();
-            this.chkRealTime = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -253,22 +252,11 @@
             this.lblPer.TabIndex = 76;
             this.lblPer.Text = "0 %";
             // 
-            // chkRealTime
-            // 
-            this.chkRealTime.AutoSize = true;
-            this.chkRealTime.Location = new System.Drawing.Point(331, 182);
-            this.chkRealTime.Name = "chkRealTime";
-            this.chkRealTime.Size = new System.Drawing.Size(101, 16);
-            this.chkRealTime.TabIndex = 77;
-            this.chkRealTime.Text = "リアルタイム表示";
-            this.chkRealTime.UseVisualStyleBackColor = true;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 607);
-            this.Controls.Add(this.chkRealTime);
             this.Controls.Add(this.lblPer);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.chkTagJump);
@@ -319,7 +307,6 @@
         private System.Windows.Forms.CheckBox chkTagJump;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label lblPer;
-        private System.Windows.Forms.CheckBox chkRealTime;
     }
 }
 

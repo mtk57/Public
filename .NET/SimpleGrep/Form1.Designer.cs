@@ -36,9 +36,6 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.labelTime = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
@@ -49,6 +46,9 @@
             this.chkTagJump = new System.Windows.Forms.CheckBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblPer = new System.Windows.Forms.Label();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -137,25 +137,6 @@
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 311);
             this.dataGridViewResults.TabIndex = 6;
-            // 
-            // clmFilePath
-            // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
-            // 
-            // clmLine
-            // 
-            this.clmLine.HeaderText = "行";
-            this.clmLine.Name = "clmLine";
-            this.clmLine.ReadOnly = true;
-            // 
-            // clmGrepResult
-            // 
-            this.clmGrepResult.HeaderText = "Grep結果";
-            this.clmGrepResult.Name = "clmGrepResult";
-            this.clmGrepResult.ReadOnly = true;
             // 
             // labelTime
             // 
@@ -249,6 +230,27 @@
             this.lblPer.TabIndex = 76;
             this.lblPer.Text = "0 %";
             // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmLine
+            // 
+            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmLine.HeaderText = "行";
+            this.clmLine.Name = "clmLine";
+            this.clmLine.ReadOnly = true;
+            // 
+            // clmGrepResult
+            // 
+            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmGrepResult.HeaderText = "Grep結果";
+            this.clmGrepResult.Name = "clmGrepResult";
+            this.clmGrepResult.ReadOnly = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -295,15 +297,15 @@
         private System.Windows.Forms.CheckBox chkSearchSubDir;
         private System.Windows.Forms.CheckBox chkCase;
         private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmFilePath;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmLine;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
         private System.Windows.Forms.Button btnExportSakura;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.CheckBox chkTagJump;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label lblPer;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmFilePath;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmLine;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
     }
 }
 

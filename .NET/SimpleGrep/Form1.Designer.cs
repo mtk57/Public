@@ -39,7 +39,7 @@
             this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.labelResult = new System.Windows.Forms.Label();
+            this.labelTime = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
             this.button1 = new System.Windows.Forms.Button();
@@ -47,6 +47,9 @@
             this.label3 = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.chkTagJump = new System.Windows.Forms.CheckBox();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.lblPer = new System.Windows.Forms.Label();
+            this.chkRealTime = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -156,14 +159,14 @@
             this.clmGrepResult.Name = "clmGrepResult";
             this.clmGrepResult.ReadOnly = true;
             // 
-            // labelResult
+            // labelTime
             // 
-            this.labelResult.AutoSize = true;
-            this.labelResult.Location = new System.Drawing.Point(443, 222);
-            this.labelResult.Name = "labelResult";
-            this.labelResult.Size = new System.Drawing.Size(38, 12);
-            this.labelResult.TabIndex = 8;
-            this.labelResult.Text = "Result";
+            this.labelTime.AutoSize = true;
+            this.labelTime.Location = new System.Drawing.Point(433, 222);
+            this.labelTime.Name = "labelTime";
+            this.labelTime.Size = new System.Drawing.Size(30, 12);
+            this.labelTime.TabIndex = 8;
+            this.labelTime.Text = "Time";
             // 
             // chkSearchSubDir
             // 
@@ -234,11 +237,40 @@
             this.chkTagJump.Text = "タグジャンプ";
             this.chkTagJump.UseVisualStyleBackColor = true;
             // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(271, 251);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(156, 10);
+            this.progressBar.TabIndex = 75;
+            // 
+            // lblPer
+            // 
+            this.lblPer.AutoSize = true;
+            this.lblPer.Location = new System.Drawing.Point(433, 249);
+            this.lblPer.Name = "lblPer";
+            this.lblPer.Size = new System.Drawing.Size(21, 12);
+            this.lblPer.TabIndex = 76;
+            this.lblPer.Text = "0 %";
+            // 
+            // chkRealTime
+            // 
+            this.chkRealTime.AutoSize = true;
+            this.chkRealTime.Location = new System.Drawing.Point(331, 182);
+            this.chkRealTime.Name = "chkRealTime";
+            this.chkRealTime.Size = new System.Drawing.Size(101, 16);
+            this.chkRealTime.TabIndex = 77;
+            this.chkRealTime.Text = "リアルタイム表示";
+            this.chkRealTime.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 607);
+            this.Controls.Add(this.chkRealTime);
+            this.Controls.Add(this.lblPer);
+            this.Controls.Add(this.progressBar);
             this.Controls.Add(this.chkTagJump);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label3);
@@ -246,7 +278,7 @@
             this.Controls.Add(this.button1);
             this.Controls.Add(this.chkCase);
             this.Controls.Add(this.chkSearchSubDir);
-            this.Controls.Add(this.labelResult);
+            this.Controls.Add(this.labelTime);
             this.Controls.Add(this.dataGridViewResults);
             this.Controls.Add(this.chkUseRegex);
             this.Controls.Add(this.btnCancel);
@@ -274,7 +306,7 @@
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.CheckBox chkUseRegex;
         private System.Windows.Forms.DataGridView dataGridViewResults;
-        private System.Windows.Forms.Label labelResult;
+        private System.Windows.Forms.Label labelTime;
         private System.Windows.Forms.CheckBox chkSearchSubDir;
         private System.Windows.Forms.CheckBox chkCase;
         private System.Windows.Forms.Button button1;
@@ -285,6 +317,9 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.CheckBox chkTagJump;
+        private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.Label lblPer;
+        private System.Windows.Forms.CheckBox chkRealTime;
     }
 }
 

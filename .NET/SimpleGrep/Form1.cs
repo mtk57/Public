@@ -232,6 +232,9 @@ namespace SimpleGrep
             dataGridViewResults.Rows.Clear();
             button1.Enabled = false;
             this.Cursor = Cursors.WaitCursor;
+    
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            labelTime.Text = ""; // 表示をリセット
 
             var searchOption = chkSearchSubDir.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
             string[] filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
@@ -242,6 +245,7 @@ namespace SimpleGrep
                 MessageBox.Show("対象ファイルが見つかりません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
+                stopwatch.Stop(); // ストップウォッチを止める
                 return;
             }
 
@@ -262,6 +266,9 @@ namespace SimpleGrep
             }
             finally
             {
+                stopwatch.Stop();
+                labelTime.Text = $"Time: {stopwatch.Elapsed.TotalSeconds:F3} sec";
+        
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
                 progressBar.Value = progressBar.Maximum;

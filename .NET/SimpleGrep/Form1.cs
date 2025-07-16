@@ -59,11 +59,8 @@ namespace SimpleGrep
                     return;
                 }
 
-                // Assumes a checkbox named 'chkTagJump' has been added to the form.
-                // Its state determines the double-click action.
                 if (chkTagJump.Checked)
                 {
-                    // ON: Original behavior - open file at the specific line (Tag Jump).
                     string lineNumber = dataGridViewResults.Rows[e.RowIndex].Cells[1].Value.ToString();
                     string sakuraPath = FindSakuraPath();
 
@@ -73,13 +70,11 @@ namespace SimpleGrep
                     }
                     else
                     {
-                        // Fallback to default editor
                         Process.Start(filePath);
                     }
                 }
                 else
                 {
-                    // OFF: New behavior - open the containing folder in Explorer.
                     string directoryPath = Path.GetDirectoryName(filePath);
                     Process.Start("explorer.exe", $"\"{directoryPath}\"");
                 }
@@ -92,7 +87,6 @@ namespace SimpleGrep
 
         private string FindSakuraPath()
         {
-            // 1. App.configからパスを取得
             try
             {
                 var configPath = ConfigurationManager.AppSettings["SakuraEditorPath"];
@@ -103,10 +97,8 @@ namespace SimpleGrep
             }
             catch (ConfigurationErrorsException)
             {
-                // 設定ファイルのエラーは無視して次に進む
             }
 
-            // 2. 一般的なインストール場所を検索
             string[] searchPaths = {
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "sakura", "sakura.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "sakura", "sakura.exe")
@@ -120,7 +112,6 @@ namespace SimpleGrep
                 }
             }
             
-            // 3. 環境変数PATHを検索
             var pathVar = Environment.GetEnvironmentVariable("PATH");
             if (pathVar != null)
             {
@@ -132,7 +123,7 @@ namespace SimpleGrep
                 }
             }
 
-            return null; // 見つからない場合
+            return null;
         }
 
 
@@ -154,7 +145,7 @@ namespace SimpleGrep
                     chkSearchSubDir.Checked = settings.SearchSubDir;
                     chkCase.Checked = settings.CaseSensitive;
                     chkUseRegex.Checked = settings.UseRegex;
-                    chkTagJump.Checked = settings.TagJump; // ADDED: Load the state for the new checkbox.
+                    chkTagJump.Checked = settings.TagJump;
                 }
             }
             catch (Exception ex)
@@ -173,7 +164,7 @@ namespace SimpleGrep
                 SearchSubDir = chkSearchSubDir.Checked,
                 CaseSensitive = chkCase.Checked,
                 UseRegex = chkUseRegex.Checked,
-                TagJump = chkTagJump.Checked // ADDED: Save the state for the new checkbox.
+                TagJump = chkTagJump.Checked
             };
 
             try
@@ -233,7 +224,7 @@ namespace SimpleGrep
                 MessageBox.Show("検索フォルダー、ファイルパターン、検索パターンを正しく入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            
+
             UpdateHistory(cmbFolderPath, folderPath);
             UpdateHistory(comboBox1, filePattern);
             UpdateHistory(cmbKeyword, grepPattern);
@@ -242,11 +233,27 @@ namespace SimpleGrep
             button1.Enabled = false;
             this.Cursor = Cursors.WaitCursor;
 
+            var searchOption = chkSearchSubDir.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            string[] filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
+            int totalFiles = filesToSearch.Length;
+
+            if (totalFiles == 0)
+            {
+                MessageBox.Show("対象ファイルが見つかりません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                button1.Enabled = true;
+                this.Cursor = Cursors.Default;
+                return;
+            }
+
+            progressBar.Maximum = totalFiles;
+            progressBar.Value = 0;
+            lblPer.Text = "0 %";
+
             try
             {
                 await Task.Run(() =>
                 {
-                    SearchFiles(folderPath, filePattern, grepPattern);
+                    SearchFiles(filesToSearch, grepPattern);
                 });
             }
             catch (Exception ex)
@@ -257,6 +264,8 @@ namespace SimpleGrep
             {
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
+                progressBar.Value = progressBar.Maximum;
+                lblPer.Text = "100 %";
             }
         }
         
@@ -270,14 +279,16 @@ namespace SimpleGrep
             comboBox.Text = newItem;
         }
 
-        private void SearchFiles(string folderPath, string filePattern, string grepPattern)
+        private void SearchFiles(string[] filePaths, string grepPattern)
         {
             try
             {
-                var searchOption = chkSearchSubDir.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
                 var regexOptions = chkCase.Checked ? RegexOptions.None : RegexOptions.IgnoreCase;
+                
+                int processedFileCount = 0;
+                int totalFiles = filePaths.Length;
 
-                foreach (var filePath in Directory.EnumerateFiles(folderPath, filePattern, searchOption))
+                foreach (var filePath in filePaths)
                 {
                     try
                     {
@@ -321,6 +332,18 @@ namespace SimpleGrep
                     catch (Exception)
                     {
                         // Skip file read errors
+                    }
+                    finally
+                    {
+                        processedFileCount++;
+                        int percentage = (int)((double)processedFileCount / totalFiles * 100);
+
+                        // UIスレッドでプログレスバーとラベルを更新
+                        this.Invoke((Action)(() =>
+                        {
+                            progressBar.Value = processedFileCount;
+                            lblPer.Text = $"{percentage} %";
+                        }));
                     }
                 }
             }

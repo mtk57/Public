@@ -103,7 +103,6 @@
             // 
             // btnCancel
             // 
-            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnCancel.Location = new System.Drawing.Point(352, 212);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 33);
@@ -189,7 +188,6 @@
             // 
             // button1
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.button1.Location = new System.Drawing.Point(271, 212);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 33);
@@ -199,7 +197,6 @@
             // 
             // btnExportSakura
             // 
-            this.btnExportSakura.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnExportSakura.Location = new System.Drawing.Point(48, 222);
             this.btnExportSakura.Name = "btnExportSakura";
             this.btnExportSakura.Size = new System.Drawing.Size(96, 23);

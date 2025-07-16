@@ -288,7 +288,9 @@ namespace SimpleGrep
             finally
             {
                 stopwatch.Stop();
-                labelTime.Text = $"Time: {stopwatch.Elapsed.TotalSeconds:F3} sec";
+                // ★★ここから修正★★
+                labelTime.Text = $"Time: {stopwatch.Elapsed:mm\\:ss}";
+                // ★★ここまで修正★★
         
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
@@ -320,7 +322,6 @@ namespace SimpleGrep
                 {
                     try
                     {
-                        // ★★ここから修正★★
                         Encoding encoding = DetectEncoding(filePath); // ファイルごとにエンコーディングを判定
                         string encodingName = GetEncodingName(encoding);
 
@@ -352,7 +353,6 @@ namespace SimpleGrep
                                 lineNumber++;
                             }
                         }
-                        // ★★ここまで修正★★
                     }
                     catch (Exception) { /* Skip file read errors */ }
                     finally
@@ -379,6 +379,7 @@ namespace SimpleGrep
             return results;
         }
 
+        // ★★ここから修正★★
         private void btnExportSakura_Click(object sender, EventArgs e)
         {
             if (dataGridViewResults.Rows.Count == 0)
@@ -387,9 +388,9 @@ namespace SimpleGrep
                 return;
             }
 
+            string fileName = Path.Combine(AppContext.BaseDirectory, DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".grep");
             try
             {
-                string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".grep";
                 using (var writer = new StreamWriter(fileName, false, Encoding.UTF8))
                 {
                     foreach (DataGridViewRow row in dataGridViewResults.Rows)
@@ -402,15 +403,32 @@ namespace SimpleGrep
                         writer.WriteLine($"{filePath}({lineNumber},1)  [{encoding}]: {lineContent}");
                     }
                 }
-                MessageBox.Show($"{fileName} に結果を保存しました。", "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                string sakuraPath = FindSakuraPath();
+                if (sakuraPath != null)
+                {
+                    try
+                    {
+                        Process.Start(sakuraPath, $"\"{fileName}\"");
+                        MessageBox.Show($"{fileName} に結果を保存し、サクラエディタで開きました。", "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"ファイルのエクスポートには成功しましたが、サクラエディタの起動に失敗しました。\nエラー: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show($"{fileName} に結果を保存しました。\n(サクラエディタが見つからなかったため、ファイルは自動で開かれませんでした)", "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"エクスポート中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        // ★★ここまで修正★★
 
-        // ★★ここから修正★★
         private string GetEncodingName(Encoding encoding)
         {
             // 日本語(Shift-JIS)のコードページは932
@@ -505,7 +523,6 @@ namespace SimpleGrep
             }
             return true;
         }
-        // ★★ここまで修正★★
 
 
         private void cmbFolderPath_DragEnter(object sender, DragEventArgs e)

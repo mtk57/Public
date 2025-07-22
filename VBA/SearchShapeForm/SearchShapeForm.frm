@@ -13,63 +13,116 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Const VER = "1.0.1"
+Const VER = "1.1.0" ' バージョンを更新
 
-' 検索キーワードが変更されたかを判断するための変数
+' --- 変数定義 ---
 Private lastSearchTerm As String
-' 見つかった図形を格納するコレクション
-Private foundShapes As Collection
-' 次に表示する図形のインデックス
+' ★変更点: ShapeとRangeの両方を格納するため、変数名をfoundItemsに変更
+Private foundItems As Collection
 Private currentShapeIndex As Long
+' ★追加: 正規表現オブジェクトを格納する変数
+Private regex As Object
 
 ' フォームが初期化されたときの処理
 Private Sub UserForm_Initialize()
     ' フォームのキャプションにバージョンを追加
-    Me.Caption = "図形内の文字列の検索/置換 (ver " & VER & ")"
+    Me.Caption = "図形/セル内の文字列の検索/置換 (ver " & VER & ")"
     
     ' ラジオボタンのデフォルトを「現在のシートのみ」に設定
     Me.optCurrentSheet.Value = True
+    
+    ' ★追加: 新しいチェックボックスのデフォルト値を設定
+    Me.chkSearchInCells.Value = True ' デフォルトでセルも検索対象にする
+    Me.chkUseRegex.Value = False     ' デフォルトで正規表現は使用しない
+    
+    ' ★追加: 正規表現オブジェクトを初期化
+    Set regex = CreateObject("VBScript.RegExp")
 End Sub
 
+' --- ヘルパー関数 ---
 
-' 図形からテキストを安全に取得するための専用関数
+' 図形からテキストを安全に取得するための専用関数（変更なし）
 Private Function GetShapeText(ByVal targetShape As Shape) As String
     On Error Resume Next
     GetShapeText = ""
-    
     If targetShape.HasTextFrame Then
         If targetShape.TextFrame2.HasText Then
             GetShapeText = targetShape.TextFrame.Characters.Text
         End If
     End If
-    
     On Error GoTo 0
 End Function
 
+' ★追加: テキストが検索条件に一致するかを判定する関数
+Private Function IsMatch(ByVal inputText As String, ByVal searchTerm As String) As Boolean
+    If Len(inputText) = 0 Or Len(searchTerm) = 0 Then
+        IsMatch = False
+        Exit Function
+    End If
+
+    If Me.chkUseRegex.Value Then
+        With regex
+            .Pattern = searchTerm
+            .Global = True
+            .MultiLine = True
+            .IgnoreCase = True ' vbTextCompare相当
+            IsMatch = .Test(inputText)
+        End With
+    Else
+        IsMatch = (InStr(1, inputText, searchTerm, vbTextCompare) > 0)
+    End If
+End Function
+
+' ★追加: 正規表現を考慮したテキスト置換関数
+Private Function DoReplace(ByVal inputText As String, ByVal searchTerm As String, ByVal replaceTerm As String) As String
+    If Me.chkUseRegex.Value Then
+        With regex
+            .Pattern = searchTerm
+            .Global = True
+            .MultiLine = True
+            .IgnoreCase = True ' vbTextCompare相当
+            DoReplace = .Replace(inputText, replaceTerm)
+        End With
+    Else
+        DoReplace = Replace(inputText, searchTerm, replaceTerm, 1, -1, vbTextCompare)
+    End If
+End Function
+
+' --- 検索プロシージャ ---
 
 ' 図形を再帰的に検索するためのプロシージャ
 Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTerm As String, ByRef results As Collection)
     On Error Resume Next
-
     Dim shp As Shape
     Dim shapeText As String
-
     For Each shp In shapesToSearch
         If shp.Type = msoGroup Then
             SearchShapesRecursive shp.GroupItems, searchTerm, results
         Else
             shapeText = GetShapeText(shp)
-            If Len(shapeText) > 0 Then
-                If InStr(1, shapeText, searchTerm, vbTextCompare) > 0 Then
-                    results.Add shp
-                End If
+            ' ★変更点: IsMatch関数で検索
+            If IsMatch(shapeText, searchTerm) Then
+                results.Add shp
             End If
         End If
     Next shp
-    
     On Error GoTo 0
 End Sub
 
+' ★追加: セルを検索するためのプロシージャ
+Private Sub SearchCells(ByVal sheetToSearch As Worksheet, ByVal searchTerm As String, ByRef results As Collection)
+    On Error Resume Next
+    Dim cell As Range
+    For Each cell In sheetToSearch.UsedRange.Cells
+        If Not cell.HasFormula Then
+            ' ★変更点: IsMatch関数で検索
+            If IsMatch(cell.Text, searchTerm) Then
+                results.Add cell
+            End If
+        End If
+    Next cell
+    On Error GoTo 0
+End Sub
 
 ' 検索を実行する共通プロシージャ
 Private Sub ExecuteSearch()
@@ -77,191 +130,202 @@ Private Sub ExecuteSearch()
     searchTerm = Me.txtSearch.Text
     
     ' 検索結果を初期化
-    Set foundShapes = New Collection
+    Set foundItems = New Collection
     currentShapeIndex = 0
     lastSearchTerm = searchTerm
 
+    Dim ws As Worksheet
     If Me.optAllSheets.Value = True Then
         ' すべてのシートを検索
-        Dim ws As Worksheet
         For Each ws In ActiveWorkbook.Worksheets
-            SearchShapesRecursive ws.Shapes, searchTerm, foundShapes
+            SearchShapesRecursive ws.Shapes, searchTerm, foundItems
+            ' ★追加: セル内も検索する場合
+            If Me.chkSearchInCells.Value Then
+                SearchCells ws, searchTerm, foundItems
+            End If
         Next ws
     Else
         ' 現在のシートのみ検索
-        SearchShapesRecursive ActiveSheet.Shapes, searchTerm, foundShapes
+        SearchShapesRecursive ActiveSheet.Shapes, searchTerm, foundItems
+        ' ★追加: セル内も検索する場合
+        If Me.chkSearchInCells.Value Then
+            SearchCells ActiveSheet, searchTerm, foundItems
+        End If
     End If
 End Sub
 
+' --- イベントハンドラ ---
 
-' テキストボックスでキーが押されたときの処理
+' テキストボックスでEnterキーが押されたときの処理
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     If KeyCode <> vbKeyReturn Then Exit Sub
     KeyCode = 0
     Call btnSearch_Click
 End Sub
 
-
 ' 「次を検索」ボタンが押されたときの処理
 Private Sub btnSearch_Click()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
-    
     If Len(searchTerm) = 0 Then Exit Sub
     
     ' --- 検索処理 ---
-    ' 検索キーワードが変わったか、初めての検索(foundShapesが空)の場合に共通検索処理を呼び出す
-    If lastSearchTerm <> searchTerm Or foundShapes Is Nothing Then
+    If lastSearchTerm <> searchTerm Or foundItems Is Nothing Then
         Call ExecuteSearch
     End If
     
     ' --- 検索結果の表示 ---
-    If foundShapes.Count > 0 Then
+    If foundItems.Count > 0 Then
         currentShapeIndex = currentShapeIndex + 1
-        If currentShapeIndex > foundShapes.Count Then
-            currentShapeIndex = 1
-        End If
+        If currentShapeIndex > foundItems.Count Then currentShapeIndex = 1
         
-        Dim targetShape As Shape
-        Set targetShape = foundShapes(currentShapeIndex)
+        ' ★変更点: ShapeとRangeの両方を扱えるようにする
+        Dim targetItem As Object
+        Set targetItem = foundItems(currentShapeIndex)
         
-        ' 図形がどのシート上にあるかを直接調べて、そのシートをアクティブにする
+        Dim targetSheet As Worksheet
         On Error Resume Next
-        targetShape.TopLeftCell.Worksheet.Activate
-        On Error GoTo 0
+        If TypeName(targetItem) = "Range" Then
+            Set targetSheet = targetItem.Worksheet
+        Else ' Shape
+            Set targetSheet = targetItem.TopLeftCell.Worksheet
+        End If
+        targetSheet.Activate
         
         ' --- スクロール処理 ---
-        On Error Resume Next
-        Application.GoTo Reference:=targetShape, Scroll:=True
+        Application.GoTo Reference:=targetItem, Scroll:=True
         If Err.Number <> 0 Then
             Err.Clear
-            targetShape.Select
+            targetItem.Select
             With ActiveWindow
-                .ScrollRow = targetShape.TopLeftCell.Row
-                .ScrollColumn = targetShape.TopLeftCell.Column
+                If TypeName(targetItem) = "Range" Then
+                    .ScrollRow = targetItem.Row
+                    .ScrollColumn = targetItem.Column
+                Else ' Shape
+                    .ScrollRow = targetItem.TopLeftCell.Row
+                    .ScrollColumn = targetItem.TopLeftCell.Column
+                End If
             End With
         End If
         On Error GoTo 0
-        
     Else
         Beep
     End If
 
-    ' ★変更点: AppActivateでフォームを強制的にアクティブにし、テキストボックスにフォーカスを戻す
-    On Error Resume Next ' AppActivateが稀に失敗する場合があるためエラーを無視する
     AppActivate Me.Caption
-    On Error GoTo 0
     Me.txtSearch.SetFocus
 End Sub
 
-
 ' 「置換」ボタンが押されたときの処理
 Private Sub btnReplace_Click()
-    ' 確認ダイアログの表示
-    If MsgBox("現在の図形のテキストを置換しますか？", vbYesNo + vbQuestion, "置換の確認") = vbNo Then
-        Exit Sub
-    End If
+    If MsgBox("現在の項目を置換しますか？", vbYesNo + vbQuestion, "置換の確認") = vbNo Then Exit Sub
     
     Dim searchTerm As String, replaceTerm As String
     searchTerm = Me.txtSearch.Text
     replaceTerm = Me.txtReplace.Text
 
-    If Len(searchTerm) = 0 Or foundShapes Is Nothing Or foundShapes.Count = 0 Then
+    If Len(searchTerm) = 0 Or foundItems Is Nothing Or foundItems.Count = 0 Then
         Beep
         Exit Sub
     End If
 
-    Dim targetShape As Shape
-    Set targetShape = foundShapes(currentShapeIndex)
+    ' ★変更点: ShapeとRangeの両方を扱えるようにする
+    Dim targetItem As Object
+    Set targetItem = foundItems(currentShapeIndex)
 
     Dim originalText As String, newText As String
-    originalText = GetShapeText(targetShape)
-    If InStr(1, originalText, searchTerm, vbTextCompare) > 0 Then
-        newText = Replace(originalText, searchTerm, replaceTerm, 1, -1, vbTextCompare)
-        targetShape.TextFrame.Characters.Text = newText
+    If TypeName(targetItem) = "Range" Then
+        originalText = CStr(targetItem.Value)
+        newText = DoReplace(originalText, searchTerm, replaceTerm)
+        targetItem.Value = newText
+    Else ' Shape
+        originalText = GetShapeText(targetItem)
+        If IsMatch(originalText, searchTerm) Then
+            newText = DoReplace(originalText, searchTerm, replaceTerm)
+            targetItem.TextFrame.Characters.Text = newText
+        End If
     End If
     
     Call btnSearch_Click
 End Sub
 
-
 ' 「すべて置換」ボタンが押されたときの処理
 Private Sub btnReplaceAll_Click()
     Dim scopeText As String
-    If Me.optAllSheets.Value = True Then
-        scopeText = "すべてのシート"
-    Else
-        scopeText = "現在のシート"
-    End If
+    If Me.optAllSheets.Value = True Then scopeText = "すべてのシート" Else scopeText = "現在のシート"
 
     Dim confirmMsg As String
     confirmMsg = "検索範囲：「" & scopeText & "」" & vbCrLf & vbCrLf
     confirmMsg = confirmMsg & "「" & Me.txtSearch.Text & "」をすべて「" & Me.txtReplace.Text & "」に置換します。" & vbCrLf
     confirmMsg = confirmMsg & "この操作は元に戻せません。よろしいですか？"
-    
-    If MsgBox(confirmMsg, vbYesNo + vbExclamation, "すべての置換の確認") = vbNo Then
-        Exit Sub
-    End If
+    If MsgBox(confirmMsg, vbYesNo + vbExclamation, "すべての置換の確認") = vbNo Then Exit Sub
 
     Dim searchTerm As String, replaceTerm As String
     searchTerm = Me.txtSearch.Text
     replaceTerm = Me.txtReplace.Text
-
     If Len(searchTerm) = 0 Then Exit Sub
 
-    ' --- 検索がまだ実行されていない場合は、まず検索を実行 ---
-    If foundShapes Is Nothing Or lastSearchTerm <> searchTerm Then
-        Call ExecuteSearch
-    End If
+    If foundItems Is Nothing Or lastSearchTerm <> searchTerm Then Call ExecuteSearch
 
-    ' --- 置換処理 ---
-    If foundShapes.Count > 0 Then
-        Dim shp As Shape
+    If foundItems.Count > 0 Then
+        Dim item As Object
         Dim replacedCount As Long
         replacedCount = 0
-
         On Error Resume Next
-        For Each shp In foundShapes
+        For Each item In foundItems
             Dim originalText As String, newText As String
-            originalText = GetShapeText(shp)
-            
-            If InStr(1, originalText, searchTerm, vbTextCompare) > 0 Then
-                newText = Replace(originalText, searchTerm, replaceTerm, 1, -1, vbTextCompare)
-                shp.TextFrame.Characters.Text = newText
-                replacedCount = replacedCount + 1
+            If TypeName(item) = "Range" Then
+                originalText = CStr(item.Value)
+                If IsMatch(originalText, searchTerm) Then
+                    item.Value = DoReplace(originalText, searchTerm, replaceTerm)
+                    replacedCount = replacedCount + 1
+                End If
+            Else ' Shape
+                originalText = GetShapeText(item)
+                If IsMatch(originalText, searchTerm) Then
+                    item.TextFrame.Characters.Text = DoReplace(originalText, searchTerm, replaceTerm)
+                    replacedCount = replacedCount + 1
+                End If
             End If
-        Next shp
+        Next item
         On Error GoTo 0
 
         MsgBox replacedCount & "個の項目を置換しました。", vbInformation
         
-        Set foundShapes = Nothing
+        Set foundItems = Nothing
         lastSearchTerm = ""
         currentShapeIndex = 0
-
     Else
-        MsgBox "置換対象の図形が見つかりませんでした。", vbExclamation
+        MsgBox "置換対象の項目が見つかりませんでした。", vbExclamation
     End If
 End Sub
 
+' ★追加: 新しいチェックボックスのクリックイベントで検索結果をリセット
+Private Sub chkSearchInCells_Click()
+    Set foundItems = Nothing
+End Sub
+
+Private Sub chkUseRegex_Click()
+    Set foundItems = Nothing
+End Sub
 
 ' 検索範囲のオプションが変更されたら、検索結果をリセットする
 Private Sub optAllSheets_Click()
-    Set foundShapes = Nothing
+    Set foundItems = Nothing
 End Sub
 
 Private Sub optCurrentSheet_Click()
-    Set foundShapes = Nothing
+    Set foundItems = Nothing
 End Sub
-
 
 ' 「終了」ボタンが押されたときの処理
 Private Sub btnClose_Click()
     Unload Me
 End Sub
 
-
 ' フォームが閉じられるときの処理
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
-    Set foundShapes = Nothing
+    Set foundItems = Nothing
+    ' ★追加: オブジェクトを解放
+    Set regex = Nothing
 End Sub

@@ -1,7 +1,7 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} SearchShapeForm 
-   Caption         =   "図形内テキスト検索"
-   ClientHeight    =   4575
+   Caption         =   "テキスト検索"
+   ClientHeight    =   4350
    ClientLeft      =   120
    ClientTop       =   465
    ClientWidth     =   5460

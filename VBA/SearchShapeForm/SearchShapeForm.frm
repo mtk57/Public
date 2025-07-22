@@ -13,14 +13,12 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Const VER = "1.1.0" ' バージョンを更新
+Const VER = "1.2.0" ' バージョンを更新
 
 ' --- 変数定義 ---
 Private lastSearchTerm As String
-' ★変更点: ShapeとRangeの両方を格納するため、変数名をfoundItemsに変更
 Private foundItems As Collection
 Private currentShapeIndex As Long
-' ★追加: 正規表現オブジェクトを格納する変数
 Private regex As Object
 
 ' フォームが初期化されたときの処理
@@ -31,11 +29,15 @@ Private Sub UserForm_Initialize()
     ' ラジオボタンのデフォルトを「現在のシートのみ」に設定
     Me.optCurrentSheet.Value = True
     
-    ' ★追加: 新しいチェックボックスのデフォルト値を設定
+    ' チェックボックスのデフォルト値を設定
     Me.chkSearchInCells.Value = True ' デフォルトでセルも検索対象にする
     Me.chkUseRegex.Value = False     ' デフォルトで正規表現は使用しない
     
-    ' ★追加: 正規表現オブジェクトを初期化
+    ' ★追加: 新しいチェックボックスのデフォルト値を設定
+    Me.chkPartialMatch.Value = True  ' デフォルトで部分一致をオンにする
+    Me.ChkCase.Value = False          ' デフォルトで大文字小文字を区別しない
+    
+    ' 正規表現オブジェクトを初期化
     Set regex = CreateObject("VBScript.RegExp")
 End Sub
 
@@ -53,44 +55,103 @@ Private Function GetShapeText(ByVal targetShape As Shape) As String
     On Error GoTo 0
 End Function
 
-' ★追加: テキストが検索条件に一致するかを判定する関数
+' ★更新: テキストが検索条件に一致するかを判定する関数
 Private Function IsMatch(ByVal inputText As String, ByVal searchTerm As String) As Boolean
     If Len(inputText) = 0 Or Len(searchTerm) = 0 Then
         IsMatch = False
         Exit Function
     End If
 
+    Dim effectiveSearchTerm As String
+    
     If Me.chkUseRegex.Value Then
+        ' --- 正規表現を使用する場合 ---
         With regex
-            .Pattern = searchTerm
+            ' 大文字小文字の区別を設定
+            .IgnoreCase = Not Me.ChkCase.Value
+            
+            ' 部分一致でない場合、完全一致するようにパターンを変更
+            If Not Me.chkPartialMatch.Value Then
+                effectiveSearchTerm = "^" & searchTerm & "$"
+            Else
+                effectiveSearchTerm = searchTerm
+            End If
+            
+            .Pattern = effectiveSearchTerm
             .Global = True
             .MultiLine = True
-            .IgnoreCase = True ' vbTextCompare相当
             IsMatch = .Test(inputText)
         End With
     Else
-        IsMatch = (InStr(1, inputText, searchTerm, vbTextCompare) > 0)
+        ' --- 通常のテキスト検索の場合 ---
+        Dim compareMethod As VbCompareMethod
+        ' 大文字小文字の区別を設定
+        If Me.ChkCase.Value Then
+            compareMethod = vbBinaryCompare ' 区別する
+        Else
+            compareMethod = vbTextCompare   ' 区別しない
+        End If
+
+        ' 部分一致かどうかで処理を分岐
+        If Me.chkPartialMatch.Value Then
+            ' 部分一致検索
+            IsMatch = (InStr(1, inputText, searchTerm, compareMethod) > 0)
+        Else
+            ' 完全一致検索
+            IsMatch = (StrComp(inputText, searchTerm, compareMethod) = 0)
+        End If
     End If
 End Function
 
-' ★追加: 正規表現を考慮したテキスト置換関数
+
+' ★更新: 正規表現や大文字/小文字区別を考慮したテキスト置換関数
 Private Function DoReplace(ByVal inputText As String, ByVal searchTerm As String, ByVal replaceTerm As String) As String
+    Dim effectiveSearchTerm As String
+    
     If Me.chkUseRegex.Value Then
+        ' --- 正規表現を使用する場合 ---
         With regex
-            .Pattern = searchTerm
+            ' 大文字小文字の区別を設定
+            .IgnoreCase = Not Me.ChkCase.Value
+            
+            ' 部分一致でない場合、検索パターンを完全一致に変更
+            If Not Me.chkPartialMatch.Value Then
+                 effectiveSearchTerm = "^" & searchTerm & "$"
+            Else
+                 effectiveSearchTerm = searchTerm
+            End If
+
+            .Pattern = effectiveSearchTerm
             .Global = True
             .MultiLine = True
-            .IgnoreCase = True ' vbTextCompare相当
             DoReplace = .Replace(inputText, replaceTerm)
         End With
     Else
-        DoReplace = Replace(inputText, searchTerm, replaceTerm, 1, -1, vbTextCompare)
+        ' --- 通常のテキスト検索の場合 ---
+        Dim compareMethod As VbCompareMethod
+        If Me.ChkCase.Value Then
+            compareMethod = vbBinaryCompare ' 区別する
+        Else
+            compareMethod = vbTextCompare   ' 区別しない
+        End If
+
+        If Me.chkPartialMatch.Value Then
+            ' 部分一致の置換
+            DoReplace = Replace(inputText, searchTerm, replaceTerm, 1, -1, compareMethod)
+        Else
+            ' 完全一致の場合、テキスト全体が検索語と一致する場合のみ置換
+            If StrComp(inputText, searchTerm, compareMethod) = 0 Then
+                DoReplace = replaceTerm
+            Else
+                DoReplace = inputText ' 一致しない場合は元のテキストを返す
+            End If
+        End If
     End If
 End Function
 
 ' --- 検索プロシージャ ---
 
-' 図形を再帰的に検索するためのプロシージャ
+' 図形を再帰的に検索するためのプロシージャ（変更なし）
 Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTerm As String, ByRef results As Collection)
     On Error Resume Next
     Dim shp As Shape
@@ -100,7 +161,6 @@ Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTe
             SearchShapesRecursive shp.GroupItems, searchTerm, results
         Else
             shapeText = GetShapeText(shp)
-            ' ★変更点: IsMatch関数で検索
             If IsMatch(shapeText, searchTerm) Then
                 results.Add shp
             End If
@@ -109,13 +169,12 @@ Private Sub SearchShapesRecursive(ByVal shapesToSearch As Object, ByVal searchTe
     On Error GoTo 0
 End Sub
 
-' ★追加: セルを検索するためのプロシージャ
+' セルを検索するためのプロシージャ（変更なし）
 Private Sub SearchCells(ByVal sheetToSearch As Worksheet, ByVal searchTerm As String, ByRef results As Collection)
     On Error Resume Next
     Dim cell As Range
     For Each cell In sheetToSearch.UsedRange.Cells
         If Not cell.HasFormula Then
-            ' ★変更点: IsMatch関数で検索
             If IsMatch(cell.Text, searchTerm) Then
                 results.Add cell
             End If
@@ -124,7 +183,7 @@ Private Sub SearchCells(ByVal sheetToSearch As Worksheet, ByVal searchTerm As St
     On Error GoTo 0
 End Sub
 
-' 検索を実行する共通プロシージャ
+' 検索を実行する共通プロシージャ（変更なし）
 Private Sub ExecuteSearch()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
@@ -139,7 +198,6 @@ Private Sub ExecuteSearch()
         ' すべてのシートを検索
         For Each ws In ActiveWorkbook.Worksheets
             SearchShapesRecursive ws.Shapes, searchTerm, foundItems
-            ' ★追加: セル内も検索する場合
             If Me.chkSearchInCells.Value Then
                 SearchCells ws, searchTerm, foundItems
             End If
@@ -147,7 +205,6 @@ Private Sub ExecuteSearch()
     Else
         ' 現在のシートのみ検索
         SearchShapesRecursive ActiveSheet.Shapes, searchTerm, foundItems
-        ' ★追加: セル内も検索する場合
         If Me.chkSearchInCells.Value Then
             SearchCells ActiveSheet, searchTerm, foundItems
         End If
@@ -156,14 +213,14 @@ End Sub
 
 ' --- イベントハンドラ ---
 
-' テキストボックスでEnterキーが押されたときの処理
+' テキストボックスでEnterキーが押されたときの処理（変更なし）
 Private Sub txtSearch_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
     If KeyCode <> vbKeyReturn Then Exit Sub
     KeyCode = 0
     Call btnSearch_Click
 End Sub
 
-' 「次を検索」ボタンが押されたときの処理
+' 「次を検索」ボタンが押されたときの処理（変更なし）
 Private Sub btnSearch_Click()
     Dim searchTerm As String
     searchTerm = Me.txtSearch.Text
@@ -179,7 +236,6 @@ Private Sub btnSearch_Click()
         currentShapeIndex = currentShapeIndex + 1
         If currentShapeIndex > foundItems.Count Then currentShapeIndex = 1
         
-        ' ★変更点: ShapeとRangeの両方を扱えるようにする
         Dim targetItem As Object
         Set targetItem = foundItems(currentShapeIndex)
         
@@ -216,7 +272,7 @@ Private Sub btnSearch_Click()
     Me.txtSearch.SetFocus
 End Sub
 
-' 「置換」ボタンが押されたときの処理
+' 「置換」ボタンが押されたときの処理（変更なし）
 Private Sub btnReplace_Click()
     If MsgBox("現在の項目を置換しますか？", vbYesNo + vbQuestion, "置換の確認") = vbNo Then Exit Sub
     
@@ -229,7 +285,6 @@ Private Sub btnReplace_Click()
         Exit Sub
     End If
 
-    ' ★変更点: ShapeとRangeの両方を扱えるようにする
     Dim targetItem As Object
     Set targetItem = foundItems(currentShapeIndex)
 
@@ -249,7 +304,7 @@ Private Sub btnReplace_Click()
     Call btnSearch_Click
 End Sub
 
-' 「すべて置換」ボタンが押されたときの処理
+' 「すべて置換」ボタンが押されたときの処理（変更なし）
 Private Sub btnReplaceAll_Click()
     Dim scopeText As String
     If Me.optAllSheets.Value = True Then scopeText = "すべてのシート" Else scopeText = "現在のシート"
@@ -301,6 +356,15 @@ Private Sub btnReplaceAll_Click()
 End Sub
 
 ' ★追加: 新しいチェックボックスのクリックイベントで検索結果をリセット
+Private Sub chkCase_Click()
+    Set foundItems = Nothing
+End Sub
+
+Private Sub chkPartialMatch_Click()
+    Set foundItems = Nothing
+End Sub
+
+' オプションが変更されたら、検索結果をリセットする
 Private Sub chkSearchInCells_Click()
     Set foundItems = Nothing
 End Sub
@@ -309,7 +373,6 @@ Private Sub chkUseRegex_Click()
     Set foundItems = Nothing
 End Sub
 
-' 検索範囲のオプションが変更されたら、検索結果をリセットする
 Private Sub optAllSheets_Click()
     Set foundItems = Nothing
 End Sub
@@ -318,14 +381,13 @@ Private Sub optCurrentSheet_Click()
     Set foundItems = Nothing
 End Sub
 
-' 「終了」ボタンが押されたときの処理
+' 「終了」ボタンが押されたときの処理（変更なし）
 Private Sub btnClose_Click()
     Unload Me
 End Sub
 
-' フォームが閉じられるときの処理
+' フォームが閉じられるときの処理（変更なし）
 Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
     Set foundItems = Nothing
-    ' ★追加: オブジェクトを解放
     Set regex = Nothing
 End Sub

@@ -36,6 +36,9 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.labelTime = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
@@ -46,9 +49,6 @@
             this.chkTagJump = new System.Windows.Forms.CheckBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblPer = new System.Windows.Forms.Label();
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -138,6 +138,27 @@
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 311);
             this.dataGridViewResults.TabIndex = 6;
             // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmLine
+            // 
+            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmLine.HeaderText = "行";
+            this.clmLine.Name = "clmLine";
+            this.clmLine.ReadOnly = true;
+            // 
+            // clmGrepResult
+            // 
+            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmGrepResult.HeaderText = "Grep結果";
+            this.clmGrepResult.Name = "clmGrepResult";
+            this.clmGrepResult.ReadOnly = true;
+            // 
             // labelTime
             // 
             this.labelTime.AutoSize = true;
@@ -182,7 +203,7 @@
             this.btnExportSakura.Name = "btnExportSakura";
             this.btnExportSakura.Size = new System.Drawing.Size(96, 23);
             this.btnExportSakura.TabIndex = 71;
-            this.btnExportSakura.Text = "Excport sakura";
+            this.btnExportSakura.Text = "Export sakura";
             this.btnExportSakura.UseVisualStyleBackColor = true;
             // 
             // label3
@@ -229,27 +250,6 @@
             this.lblPer.Size = new System.Drawing.Size(21, 12);
             this.lblPer.TabIndex = 76;
             this.lblPer.Text = "0 %";
-            // 
-            // clmFilePath
-            // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
-            // 
-            // clmLine
-            // 
-            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmLine.HeaderText = "行";
-            this.clmLine.Name = "clmLine";
-            this.clmLine.ReadOnly = true;
-            // 
-            // clmGrepResult
-            // 
-            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmGrepResult.HeaderText = "Grep結果";
-            this.clmGrepResult.Name = "clmGrepResult";
-            this.clmGrepResult.ReadOnly = true;
             // 
             // MainForm
             // 

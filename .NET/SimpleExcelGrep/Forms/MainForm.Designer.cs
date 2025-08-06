@@ -63,6 +63,7 @@
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkEnableLog = new System.Windows.Forms.CheckBox();
             this.chkEnableInvisibleSheet = new System.Windows.Forms.CheckBox();
+            this.chkDblClickToOpen = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -396,11 +397,22 @@
             this.chkEnableInvisibleSheet.Text = "非表示シートも対象";
             this.chkEnableInvisibleSheet.UseVisualStyleBackColor = true;
             // 
+            // chkDblClickToOpen
+            // 
+            this.chkDblClickToOpen.AutoSize = true;
+            this.chkDblClickToOpen.Location = new System.Drawing.Point(256, 35);
+            this.chkDblClickToOpen.Name = "chkDblClickToOpen";
+            this.chkDblClickToOpen.Size = new System.Drawing.Size(153, 16);
+            this.chkDblClickToOpen.TabIndex = 70;
+            this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
+            this.chkDblClickToOpen.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
+            this.Controls.Add(this.chkDblClickToOpen);
             this.Controls.Add(this.chkEnableInvisibleSheet);
             this.Controls.Add(this.chkEnableLog);
             this.Controls.Add(this.chkSearchSubDir);
@@ -474,5 +486,6 @@
         private System.Windows.Forms.CheckBox chkSearchSubDir;
         private System.Windows.Forms.CheckBox chkEnableLog;
         private System.Windows.Forms.CheckBox chkEnableInvisibleSheet;
+        private System.Windows.Forms.CheckBox chkDblClickToOpen;
     }
 }

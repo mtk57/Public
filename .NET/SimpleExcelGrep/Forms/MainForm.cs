@@ -97,7 +97,8 @@ namespace SimpleExcelGrep.Forms
                 chkEnableLog.Checked = settings.EnableLog;
                 _logService.IsLoggingEnabled = settings.EnableLog; // LogServiceの状態も更新
                 chkEnableInvisibleSheet.Checked = settings.SearchInvisibleSheets;
-                
+                chkDblClickToOpen.Checked = settings.DblClickToOpen;
+
                 txtCellAddress.Enabled = chkCellMode.Checked;
             }
             finally
@@ -135,7 +136,8 @@ namespace SimpleExcelGrep.Forms
                 // 追加された設定の保存
                 SearchSubDirectories = chkSearchSubDir.Checked,
                 EnableLog = chkEnableLog.Checked,
-                SearchInvisibleSheets = chkEnableInvisibleSheet.Checked
+                SearchInvisibleSheets = chkEnableInvisibleSheet.Checked,
+                DblClickToOpen = chkDblClickToOpen.Checked
             };
 
             if (!_settingsService.SaveSettings(settings))

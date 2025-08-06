@@ -32,7 +32,7 @@ namespace SimpleExcelGrep.Forms
         private void GrdResults_DoubleClick(object sender, EventArgs e)
         {
             if (grdResults.SelectedRows.Count <= 0) return;
-            
+
             var selectedRow = grdResults.SelectedRows[0];
             string filePath = selectedRow.Cells["colFilePath"].Value?.ToString();
 
@@ -42,16 +42,23 @@ namespace SimpleExcelGrep.Forms
                 return;
             }
 
-            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+            if (chkDblClickToOpen.Checked)
             {
-                OpenContainingFolder(filePath);
+                if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+                {
+                    OpenContainingFolder(filePath);
+                }
+                else
+                {
+                    string sheetName = selectedRow.Cells["colSheetName"].Value?.ToString();
+                    string cellPosition = selectedRow.Cells["colCellPosition"].Value?.ToString();
+                    bool isShape = cellPosition == "図形内" || cellPosition == "図形内 (GF)";
+                    OpenExcel(filePath, sheetName, isShape ? null : cellPosition);
+                }
             }
             else
             {
-                string sheetName = selectedRow.Cells["colSheetName"].Value?.ToString();
-                string cellPosition = selectedRow.Cells["colCellPosition"].Value?.ToString();
-                bool isShape = cellPosition == "図形内" || cellPosition == "図形内 (GF)";
-                OpenExcel(filePath, sheetName, isShape ? null : cellPosition);
+                OpenContainingFolder(filePath);
             }
         }
         

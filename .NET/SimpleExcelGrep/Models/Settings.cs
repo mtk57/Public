@@ -61,5 +61,8 @@ namespace SimpleExcelGrep.Models
 
         [DataMember]
         public bool SearchInvisibleSheets { get; set; } = true; // 非表示シートも検索対象にするか
+
+        [DataMember]
+        public bool DblClickToOpen { get; set; } = true; // ダブルクリックでファイルを開くか
     }
 }

@@ -98,7 +98,7 @@ namespace SimpleExcelGrep.Services
                     BindingFlags.InvokeMethod, null, workbooks, new object[] {
                         filePath,       // ファイルパス
                         Type.Missing,   // UpdateLinks
-                        true,           // ReadOnly
+                        false,          // ReadOnly
                         Type.Missing,   // Format
                         Type.Missing,   // Password
                         Type.Missing,   // WriteResPassword

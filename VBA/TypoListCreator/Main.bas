@@ -17,13 +17,13 @@ Sub CreateChecklistHelper()
     
     Set wsTarget = ActiveSheet
     
-    ' 単語リストシートの存在確認
+    ' 単語リストシートの存在確認（なければ作成）
     On Error Resume Next
     Set wsList = ThisWorkbook.Worksheets(LIST_SHEET_NAME)
     On Error GoTo 0
     If wsList Is Nothing Then
-        MsgBox "シート「" & LIST_SHEET_NAME & "」が見つかりません。", vbCritical
-        Exit Sub
+        Set wsList = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        wsList.Name = LIST_SHEET_NAME
     End If
     
     ' チェック対象シートが不適切な場合は中断

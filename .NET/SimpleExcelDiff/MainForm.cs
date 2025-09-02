@@ -242,6 +242,19 @@ namespace SimpleExcelDiff
                 {
                     var wbPartSrc = docSrc.WorkbookPart;
                     var wbPartDst = docDst.WorkbookPart;
+
+                    if (wbPartSrc?.Workbook == null || wbPartDst?.Workbook == null)
+                    {
+                        results.Add(new DiffResult { DiffType = DiffType.WriteError, ErrorMessage = "ファイル形式エラー: Excelファイルの内部構造が不正です（Workbookが見つかりません）。" });
+                        results.ForEach(r => {
+                            r.FolderPathSrc = Path.GetDirectoryName(fileSrc);
+                            r.FileNameSrc = Path.GetFileName(fileSrc);
+                            r.FolderPathDst = Path.GetDirectoryName(fileDst);
+                            r.FileNameDst = Path.GetFileName(fileDst);
+                        });
+                        return results;
+                    }
+
                     var sheetsSrc = wbPartSrc.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
                     var sheetsDst = wbPartDst.Workbook.GetFirstChild<Sheets>().Elements<Sheet>().ToDictionary(s => s.Name.Value, s => s.Id.Value);
 
@@ -256,9 +269,17 @@ namespace SimpleExcelDiff
                     }
                 }
             }
+            catch (IOException ex)
+            {
+                results.Add(new DiffResult { DiffType = DiffType.WriteError, ErrorMessage = $"ファイルアクセスエラー: ファイルが他のプロセスで使用中の可能性があります。({ex.Message})" });
+            }
+            catch (OpenXmlPackageException ex)
+            {
+                results.Add(new DiffResult { DiffType = DiffType.WriteError, ErrorMessage = $"ファイル形式エラー: ファイルが破損しているか、サポートされていない形式（パスワード付き、古いExcel形式等）の可能性があります。({ex.Message})" });
+            }
             catch (Exception ex)
             {
-                results.Add(new DiffResult { DiffType = DiffType.WriteError, ErrorMessage = $"ファイル読み込みエラー: {ex.Message}" });
+                results.Add(new DiffResult { DiffType = DiffType.WriteError, ErrorMessage = $"予期せぬエラー: {ex.Message}" });
             }
 
             results.ForEach(r => {

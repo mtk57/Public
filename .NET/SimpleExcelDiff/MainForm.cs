@@ -551,8 +551,17 @@ namespace SimpleExcelDiff
             );
 
             Fills fills = stylesheet.Elements<Fills>().First();
-            fills.Append(newFill);
-            uint fillIndex = (uint)fills.Count() - 1;
+            uint fillIndex = 0;
+            var existingFill = fills.Elements<Fill>().FirstOrDefault(f => f.OuterXml == newFill.OuterXml);
+            if (existingFill != null)
+            {
+                fillIndex = (uint)Array.IndexOf(fills.Elements<Fill>().ToArray(), existingFill);
+            }
+            else
+            {
+                fills.Append(newFill);
+                fillIndex = (uint)fills.Count() - 1;
+            }
 
             var newCellFormat = new CellFormat {
                 NumberFormatId = 0, FontId = 0, BorderId = 0, FormatId = 0,
@@ -561,8 +570,17 @@ namespace SimpleExcelDiff
             };
             
             CellFormats cellFormats = stylesheet.Elements<CellFormats>().First();
-            cellFormats.Append(newCellFormat);
-            uint styleIndex = (uint)cellFormats.Count() - 1;
+            uint styleIndex = 0;
+            var existingFormat = cellFormats.Elements<CellFormat>().FirstOrDefault(cf => cf.OuterXml == newCellFormat.OuterXml);
+            if (existingFormat != null)
+            {
+                styleIndex = (uint)Array.IndexOf(cellFormats.Elements<CellFormat>().ToArray(), existingFormat);
+            }
+            else
+            {
+                cellFormats.Append(newCellFormat);
+                styleIndex = (uint)cellFormats.Count() - 1;
+            }
             
             return styleIndex;
         }

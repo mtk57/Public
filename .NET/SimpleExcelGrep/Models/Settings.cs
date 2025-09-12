@@ -64,5 +64,8 @@ namespace SimpleExcelGrep.Models
 
         [DataMember]
         public bool DblClickToOpen { get; set; } = true; // ダブルクリックでファイルを開くか
+
+        [DataMember]
+        public bool CollectShapeTextMode { get; set; } = false; // 図形内文字列収集モード
     }
 }

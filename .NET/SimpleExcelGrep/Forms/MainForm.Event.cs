@@ -36,7 +36,7 @@ namespace SimpleExcelGrep.Forms
             var controls = new Control[] {
                 chkRealTimeDisplay, nudParallelism, chkFirstHitOnly, chkSearchShapes,
                 txtIgnoreFileSizeMB, chkCellMode, txtCellAddress,
-                chkSearchSubDir, chkEnableInvisibleSheet // chkEnableLogは別途処理
+                chkSearchSubDir, chkEnableInvisibleSheet, chkCollectStrInShape // chkEnableLogは別途処理
             };
             foreach (var control in controls)
             {

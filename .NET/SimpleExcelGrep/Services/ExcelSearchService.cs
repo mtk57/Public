@@ -344,6 +344,211 @@ namespace SimpleExcelGrep.Services
 
 
         /// <summary>
+        /// (図形内文字列収集モード) 指定されたフォルダ内のExcelファイルから図形内テキストを収集
+        /// </summary>
+        public async Task<List<SearchResult>> CollectShapeTextAsync(
+            string folderPath,
+            int maxParallelism,
+            double ignoreFileSizeMB,
+            bool searchSubDirectories,
+            bool searchInvisibleSheets,
+            ConcurrentQueue<SearchResult> resultQueue,
+            Action<string> statusUpdateCallback,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogMessage($"CollectShapeTextAsync 開始: フォルダ={folderPath}");
+            _logger.LogMessage($"図形内文字列収集開始: 無視ファイルサイズ(MB)={ignoreFileSizeMB}, サブフォルダ対象={searchSubDirectories}, 非表示シート対象={searchInvisibleSheets}");
+
+            List<SearchResult> results = new List<SearchResult>();
+
+            try
+            {
+                var searchOption = searchSubDirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                string[] excelFiles = Directory.GetFiles(folderPath, "*.xlsx", searchOption)
+                                          .Concat(Directory.GetFiles(folderPath, "*.xlsm", searchOption))
+                                          .ToArray();
+                _logger.LogMessage($"{excelFiles.Length} 個のExcelファイル(.xlsx, .xlsm)が見つかりました");
+
+                int totalFiles = excelFiles.Length;
+                int processedFiles = 0;
+
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = maxParallelism,
+                    CancellationToken = cancellationToken
+                };
+
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(excelFiles, parallelOptions, (filePath) =>
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        // ファイルサイズチェック
+                        if (ignoreFileSizeMB > 0)
+                        {
+                            try
+                            {
+                                FileInfo fileInfo = new FileInfo(filePath);
+                                double fileSizeMB = (double)fileInfo.Length / (1024 * 1024);
+                                if (fileSizeMB > ignoreFileSizeMB)
+                                {
+                                    _logger.LogMessage($"ファイルサイズ超過のためスキップ ({fileSizeMB:F2}MB > {ignoreFileSizeMB}MB): {filePath}");
+                                    Interlocked.Increment(ref processedFiles);
+                                    statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                                    return;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogMessage($"ファイルサイズ取得エラー: {filePath}, {ex.Message}");
+                            }
+                        }
+
+                        try
+                        {
+                            _logger.LogMessage($"ファイル処理開始: {filePath}");
+                            List<SearchResult> fileResults = CollectTextFromShapesInFile(
+                                filePath, searchInvisibleSheets, resultQueue, cancellationToken);
+
+                            _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(図形): {fileResults.Count}件");
+
+                            lock (results)
+                            {
+                                results.AddRange(fileResults);
+                            }
+
+                            Interlocked.Increment(ref processedFiles);
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            _logger.LogMessage($"ファイル処理がキャンセルされました: {filePath}");
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogMessage($"ファイル処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
+                            Interlocked.Increment(ref processedFiles);
+                            statusUpdateCallback($"処理中... {processedFiles}/{totalFiles} ファイル ({results.Count} 件見つかりました)");
+                        }
+                    });
+                }, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogMessage("CollectShapeTextAsync内のタスクがキャンセルされました。");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogMessage($"CollectShapeTextAsync内のタスクで予期せぬエラー: {ex.Message}");
+                throw;
+            }
+
+            _logger.LogMessage($"CollectShapeTextAsync 完了: {results.Count}件の結果");
+            return results;
+        }
+
+        /// <summary>
+        /// (図形内文字列収集モード) 単一のXLSX/XLSMファイルから図形内テキストを収集
+        /// </summary>
+        private List<SearchResult> CollectTextFromShapesInFile(
+            string filePath,
+            bool searchInvisibleSheets,
+            ConcurrentQueue<SearchResult> pendingResults,
+            CancellationToken cancellationToken)
+        {
+            List<SearchResult> localResults = new List<SearchResult>();
+
+            try
+            {
+                using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(filePath, false))
+                {
+                    WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
+                    if (workbookPart == null || workbookPart.Workbook == null) return localResults;
+
+                    foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        string sheetId = workbookPart.GetIdOfPart(worksheetPart);
+                        Sheet sheet = workbookPart.Workbook.Descendants<Sheet>().FirstOrDefault(s => s.Id?.Value == sheetId);
+
+                        if (!searchInvisibleSheets && sheet != null && sheet.State != null && sheet.State.Value != SheetStateValues.Visible)
+                        {
+                            _logger.LogMessage($"非表示シートのためスキップ: {sheet.Name?.Value} in {filePath}");
+                            continue;
+                        }
+
+                        string sheetName = sheet?.Name?.Value ?? "不明なシート";
+
+                        DrawingsPart drawingsPart = worksheetPart.DrawingsPart;
+                        if (drawingsPart == null || drawingsPart.WorksheetDrawing == null) continue;
+
+                        foreach (var twoCellAnchor in drawingsPart.WorksheetDrawing.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.TwoCellAnchor>())
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            // Shapeからテキスト抽出
+                            var shape = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().FirstOrDefault();
+                            if (shape != null && shape.TextBody != null)
+                            {
+                                string shapeText = _shapeTextExtractor.GetTextFromShapeTextBody(shape.TextBody);
+                                if (!string.IsNullOrEmpty(shapeText))
+                                {
+                                    SearchResult result = new SearchResult
+                                    {
+                                        FilePath = filePath,
+                                        SheetName = sheetName,
+                                        CellPosition = "図形内",
+                                        CellValue = TruncateString(shapeText)
+                                    };
+
+                                    pendingResults.Enqueue(result);
+                                    localResults.Add(result);
+                                    _logger.LogMessage($"図形内テキスト収集 (Shape): {filePath} - {sheetName} - '{result.CellValue}'");
+                                }
+                            }
+
+                            // GraphicFrameからテキスト抽出
+                            var graphicFrame = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GraphicFrame>().FirstOrDefault();
+                            if (graphicFrame != null)
+                            {
+                                string frameText = _shapeTextExtractor.GetTextFromGraphicFrame(graphicFrame);
+                                if (!string.IsNullOrEmpty(frameText))
+                                {
+                                    SearchResult result = new SearchResult
+                                    {
+                                        FilePath = filePath,
+                                        SheetName = sheetName,
+                                        CellPosition = "図形内 (GF)",
+                                        CellValue = TruncateString(frameText)
+                                    };
+
+                                    pendingResults.Enqueue(result);
+                                    localResults.Add(result);
+                                    _logger.LogMessage($"図形内テキスト収集 (GraphicFrame): {filePath} - {sheetName} - '{result.CellValue}'");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogMessage($"ファイル処理がキャンセルされました: {filePath}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogMessage($"Excel処理エラー: {filePath}, {ex.GetType().Name}: {ex.Message}");
+            }
+
+            return localResults;
+        }
+
+        /// <summary>
         /// (GREP検索モード) 単一のXLSX/XLSMファイルを検索
         /// </summary>
         private List<SearchResult> SearchInXlsxFile(

@@ -158,7 +158,7 @@ namespace SimpleExcelGrep.Forms
                 cmbFolderPath, btnSelectFolder, cmbKeyword, cmbIgnoreKeywords,
                 txtIgnoreFileSizeMB, chkRegex, chkSearchShapes, chkFirstHitOnly,
                 nudParallelism, btnStartSearch, btnLoadTsv, chkCellMode,
-                chkSearchSubDir, chkEnableLog, chkEnableInvisibleSheet
+                chkSearchSubDir, chkEnableLog, chkEnableInvisibleSheet, chkCollectStrInShape
             };
             foreach (var control in controlsToToggle)
             {

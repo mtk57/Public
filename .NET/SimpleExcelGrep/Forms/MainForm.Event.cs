@@ -63,7 +63,11 @@ namespace SimpleExcelGrep.Forms
             _settingsService.AddToComboBoxHistory(cmbIgnoreKeywords, cmbIgnoreKeywords.Text);
             SaveCurrentSettings();
 
-            if (chkCellMode.Checked && !string.IsNullOrWhiteSpace(txtCellAddress.Text))
+            if (chkCollectStrInShape.Checked)
+            {
+                await RunCollectShapeTextModeAsync();
+            }
+            else if (chkCellMode.Checked && !string.IsNullOrWhiteSpace(txtCellAddress.Text))
             {
                 await RunCellSearchModeAsync();
             }

@@ -57,6 +57,23 @@ namespace SimpleExcelGrep.Forms
                     pendingResults, UpdateStatus, token);
             });
         }
+
+        /// <summary>
+        /// 図形内文字列収集モードを実行
+        /// </summary>
+        private async Task RunCollectShapeTextModeAsync()
+        {
+            _logService.LogMessage("図形内文字列収集モードを開始します");
+
+            await ExecuteSearchAsync(async (pendingResults, token) =>
+            {
+                double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out var ignoreSize);
+
+                return await _excelSearchService.CollectShapeTextAsync(cmbFolderPath.Text,
+                    (int)nudParallelism.Value, ignoreSize, chkSearchSubDir.Checked, chkEnableInvisibleSheet.Checked,
+                    pendingResults, UpdateStatus, token);
+            });
+        }
         
         /// <summary>
         /// 検索処理の共通実行部分

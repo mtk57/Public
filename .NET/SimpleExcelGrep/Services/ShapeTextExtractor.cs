@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using DocumentFormat.OpenXml.Drawing;
@@ -74,6 +75,62 @@ namespace SimpleExcelGrep.Services
                 }
             }
             return sb.ToString().Trim();
+        }
+
+        /// <summary>
+        /// WorksheetPartから、グループ化された図形を含め、すべての図形内テキストを抽出する
+        /// </summary>
+        public IEnumerable<string> ExtractAllTextsFromWorksheetPart(DocumentFormat.OpenXml.Packaging.WorksheetPart worksheetPart)
+        {
+            var drawingsPart = worksheetPart.DrawingsPart;
+            if (drawingsPart == null || drawingsPart.WorksheetDrawing == null)
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            var texts = new List<string>();
+            // TwoCellAnchor は図形やグループのコンテナ
+            foreach (var anchor in drawingsPart.WorksheetDrawing.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.TwoCellAnchor>())
+            {
+                ExtractTextsRecursive(anchor, texts);
+            }
+            // OneCellAnchor や AbsoluteAnchor も必要に応じて追加
+            return texts;
+        }
+
+        /// <summary>
+        /// 図形コンテナ内を再帰的に探索してテキストを抽出する
+        /// </summary>
+        private void ExtractTextsRecursive(DocumentFormat.OpenXml.OpenXmlCompositeElement container, List<string> foundTexts)
+        {
+            // 1. 通常の図形 (Shape) からテキストを抽出
+            foreach (var shape in container.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>())
+            {
+                if (shape.TextBody != null)
+                {
+                    string text = GetTextFromShapeTextBody(shape.TextBody);
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        foundTexts.Add(text);
+                    }
+                }
+            }
+
+            // 2. グラフィックフレーム (GraphicFrame) からテキストを抽出 (SmartArtなど)
+            foreach (var graphicFrame in container.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GraphicFrame>())
+            {
+                string text = GetTextFromGraphicFrame(graphicFrame);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    foundTexts.Add(text);
+                }
+            }
+
+            // 3. グループ化図形 (GroupShape) の場合、再帰的に中身を探索
+            foreach (var groupShape in container.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GroupShape>())
+            {
+                ExtractTextsRecursive(groupShape, foundTexts);
+            }
         }
     }
 }

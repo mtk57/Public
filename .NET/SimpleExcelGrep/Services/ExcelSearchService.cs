@@ -483,54 +483,21 @@ namespace SimpleExcelGrep.Services
 
                         string sheetName = sheet?.Name?.Value ?? "不明なシート";
 
-                        DrawingsPart drawingsPart = worksheetPart.DrawingsPart;
-                        if (drawingsPart == null || drawingsPart.WorksheetDrawing == null) continue;
-
-                        foreach (var twoCellAnchor in drawingsPart.WorksheetDrawing.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.TwoCellAnchor>())
+                        var allShapeTexts = _shapeTextExtractor.ExtractAllTextsFromWorksheetPart(worksheetPart);
+                        foreach (var shapeText in allShapeTexts)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-
-                            // Shapeからテキスト抽出
-                            var shape = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().FirstOrDefault();
-                            if (shape != null && shape.TextBody != null)
+                            SearchResult result = new SearchResult
                             {
-                                string shapeText = _shapeTextExtractor.GetTextFromShapeTextBody(shape.TextBody);
-                                if (!string.IsNullOrEmpty(shapeText))
-                                {
-                                    SearchResult result = new SearchResult
-                                    {
-                                        FilePath = filePath,
-                                        SheetName = sheetName,
-                                        CellPosition = "図形内",
-                                        CellValue = TruncateString(shapeText)
-                                    };
+                                FilePath = filePath,
+                                SheetName = sheetName,
+                                CellPosition = "図形内",
+                                CellValue = TruncateString(shapeText)
+                            };
 
-                                    pendingResults.Enqueue(result);
-                                    localResults.Add(result);
-                                    _logger.LogMessage($"図形内テキスト収集 (Shape): {filePath} - {sheetName} - '{result.CellValue}'");
-                                }
-                            }
-
-                            // GraphicFrameからテキスト抽出
-                            var graphicFrame = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GraphicFrame>().FirstOrDefault();
-                            if (graphicFrame != null)
-                            {
-                                string frameText = _shapeTextExtractor.GetTextFromGraphicFrame(graphicFrame);
-                                if (!string.IsNullOrEmpty(frameText))
-                                {
-                                    SearchResult result = new SearchResult
-                                    {
-                                        FilePath = filePath,
-                                        SheetName = sheetName,
-                                        CellPosition = "図形内 (GF)",
-                                        CellValue = TruncateString(frameText)
-                                    };
-
-                                    pendingResults.Enqueue(result);
-                                    localResults.Add(result);
-                                    _logger.LogMessage($"図形内テキスト収集 (GraphicFrame): {filePath} - {sheetName} - '{result.CellValue}'");
-                                }
-                            }
+                            pendingResults.Enqueue(result);
+                            localResults.Add(result);
+                            _logger.LogMessage($"図形内テキスト収集: {filePath} - {sheetName} - '{result.CellValue}'");
                         }
                     }
                 }
@@ -692,79 +659,36 @@ namespace SimpleExcelGrep.Services
             ConcurrentQueue<SearchResult> pendingResults, List<SearchResult> localResults,
             bool firstHitOnly, bool foundHitInFile, CancellationToken cancellationToken)
         {
-            DrawingsPart drawingsPart = worksheetPart.DrawingsPart;
-            if (drawingsPart == null || drawingsPart.WorksheetDrawing == null) return foundHitInFile;
+            var allShapeTexts = _shapeTextExtractor.ExtractAllTextsFromWorksheetPart(worksheetPart);
 
-            foreach (var twoCellAnchor in drawingsPart.WorksheetDrawing.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.TwoCellAnchor>())
+            foreach (var shapeText in allShapeTexts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (firstHitOnly && foundHitInFile) break;
 
-                // Shapeからテキスト検索
-                var shape = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.Shape>().FirstOrDefault();
-                if (shape != null && shape.TextBody != null)
+                bool isMatch = useRegex && regex != null ?
+                              regex.IsMatch(shapeText) :
+                              shapeText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (isMatch)
                 {
-                    string shapeText = _shapeTextExtractor.GetTextFromShapeTextBody(shape.TextBody);
-                    if (!string.IsNullOrEmpty(shapeText))
+                    SearchResult result = new SearchResult
                     {
-                        bool isMatch = useRegex && regex != null ?
-                                      regex.IsMatch(shapeText) :
-                                      shapeText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
+                        FilePath = filePath,
+                        SheetName = sheetName,
+                        CellPosition = "図形内",
+                        CellValue = TruncateString(shapeText)
+                    };
 
-                        if (isMatch)
-                        {
-                            SearchResult result = new SearchResult
-                            {
-                                FilePath = filePath,
-                                SheetName = sheetName,
-                                CellPosition = "図形内",
-                                CellValue = TruncateString(shapeText)
-                            };
+                    pendingResults.Enqueue(result);
+                    localResults.Add(result);
+                    foundHitInFile = true;
 
-                            pendingResults.Enqueue(result);
-                            localResults.Add(result);
-                            foundHitInFile = true;
+                    _logger.LogMessage($"図形内一致: {filePath} - {sheetName} - '{result.CellValue}'");
 
-                            _logger.LogMessage($"図形内一致 (Shape): {filePath} - {sheetName} - '{result.CellValue}'");
-
-                            if (firstHitOnly) break;
-                        }
-                    }
-                }
-
-                // GraphicFrameからテキスト検索
-                var graphicFrame = twoCellAnchor.Elements<DocumentFormat.OpenXml.Drawing.Spreadsheet.GraphicFrame>().FirstOrDefault();
-                if (graphicFrame != null)
-                {
-                    string frameText = _shapeTextExtractor.GetTextFromGraphicFrame(graphicFrame);
-                    if (!string.IsNullOrEmpty(frameText))
-                    {
-                        bool isMatch = useRegex && regex != null ?
-                                      regex.IsMatch(frameText) :
-                                      frameText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-
-                        if (isMatch)
-                        {
-                            SearchResult result = new SearchResult
-                            {
-                                FilePath = filePath,
-                                SheetName = sheetName,
-                                CellPosition = "図形内 (GF)",
-                                CellValue = TruncateString(frameText)
-                            };
-
-                            pendingResults.Enqueue(result);
-                            localResults.Add(result);
-                            foundHitInFile = true;
-
-                            _logger.LogMessage($"図形内一致 (GraphicFrame): {filePath} - {sheetName} - '{result.CellValue}'");
-
-                            if (firstHitOnly) break;
-                        }
-                    }
+                    if (firstHitOnly) break;
                 }
             }
-
             return foundHitInFile;
         }
 

@@ -20,6 +20,8 @@ namespace SimpleExcelBookSelector
 
         private Timer _timer;
         private List<string> _lastDisplayedKeys = new List<string>();
+        private ToolTip _toolTip;
+
 
         private class ExcelSheetIdentifier
         {
@@ -32,6 +34,8 @@ namespace SimpleExcelBookSelector
             InitializeComponent();
             this.Load += MainForm_Load;
             this.FormClosing += MainForm_FormClosing;
+
+            _toolTip = new ToolTip();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -47,9 +51,13 @@ namespace SimpleExcelBookSelector
             dataGridViewResults.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText;
             dataGridViewResults.CellClick += DataGridViewResults_CellClick;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
+            dataGridViewResults.CellToolTipTextNeeded += DataGridViewResults_CellToolTipTextNeeded;
             chkEnableSheetSelectMode.CheckedChanged += ChkEnableSheetSelectMode_CheckedChanged;
             chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
             textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
+            cmbHistory.DrawMode = DrawMode.OwnerDrawFixed;
+            cmbHistory.DrawItem += CmbHistory_DrawItem;
+            cmbHistory.DropDownClosed += CmbHistory_DropDownClosed;
             cmbHistory.SelectedIndexChanged += CmbHistory_SelectedIndexChanged;
             btnForceUpdate.Click += BtnForceUpdate_Click;
 
@@ -402,6 +410,40 @@ namespace SimpleExcelBookSelector
 
             _timer?.Stop();
             _timer?.Dispose();
+        }
+
+        private void DataGridViewResults_CellToolTipTextNeeded(object sender, DataGridViewCellToolTipTextNeededEventArgs e)
+        {
+            if (e.RowIndex > -1 && e.ColumnIndex > -1)
+            {
+                var cell = dataGridViewResults.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                e.ToolTipText = cell.Value?.ToString();
+            }
+        }
+
+        private void CmbHistory_DrawItem(object sender, DrawItemEventArgs e)
+        {if (e.Index < 0) return;
+
+            // Draw the background
+            e.DrawBackground();
+
+            // Draw the item text
+            TextRenderer.DrawText(e.Graphics, cmbHistory.Items[e.Index].ToString(), e.Font, e.Bounds, e.ForeColor, TextFormatFlags.Left);
+
+            // Show tooltip if the mouse is over the item
+            if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+            {
+                _toolTip.Show(cmbHistory.Items[e.Index].ToString(), cmbHistory, e.Bounds.Right, e.Bounds.Bottom);
+            }
+
+            // Draw the focus rectangle if the mouse is not over the item
+            e.DrawFocusRectangle();
+
+        }
+
+        private void CmbHistory_DropDownClosed(object sender, EventArgs e)
+        {
+            _toolTip.Hide(cmbHistory);
         }
     }
 }

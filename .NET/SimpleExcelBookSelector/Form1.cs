@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Diagnostics;
+using System.Runtime.Serialization.Json;
 using System.Windows.Forms;
 
 
@@ -237,52 +235,38 @@ namespace SimpleExcelBookSelector
         private void CmbHistory_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cmbHistory.SelectedIndex == -1 || cmbHistory.SelectedItem == null) return;
-            string filePath = cmbHistory.SelectedItem.ToString();
 
-            dynamic excelApp = null;
-            bool alreadyOpen = false;
-            bool shouldRelease = false;
+            _timer?.Stop(); // タイマーを一時停止
+
+            string filePath = cmbHistory.SelectedItem.ToString();
 
             try
             {
-                try
+                // ファイルが存在するか確認
+                if (File.Exists(filePath))
                 {
-                    excelApp = Marshal.GetActiveObject("Excel.Application");
+                    // OSに関連付けられたアプリケーション（Excel）でファイルを開く
+                    // 既に開いている場合は、そのウィンドウがアクティブになる
+                    Process.Start(filePath);
                 }
-                catch (COMException)
+                else
                 {
-                    Type excelType = Type.GetTypeFromProgID("Excel.Application");
-                    excelApp = Activator.CreateInstance(excelType);
-                    excelApp.Visible = true;
-                    shouldRelease = true; // Release only if we created it
-                }
-
-                if (excelApp != null)
-                {
-                    foreach (dynamic wb in excelApp.Workbooks)
-                    {
-                        if (wb.FullName.Equals(filePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            alreadyOpen = true;
-                            break;
-                        }
-                    }
-
-                    if (!alreadyOpen)
-                    {
-                        excelApp.Workbooks.Open(filePath);
-                    }
+                    MessageBox.Show("ファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    // 履歴から見つからないファイルを削除
+                    _settings.FileHistory.Remove(filePath);
+                    UpdateHistoryComboBox();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open the file.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"ファイルを開けませんでした。\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                if (excelApp != null && shouldRelease)
+                // 自動更新が有効な場合のみタイマーを再開
+                if (_settings.IsAutoRefreshEnabled)
                 {
-                    Marshal.ReleaseComObject(excelApp);
+                    _timer?.Start();
                 }
             }
         }

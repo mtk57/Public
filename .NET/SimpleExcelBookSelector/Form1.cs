@@ -52,6 +52,7 @@ namespace SimpleExcelBookSelector
             chkEnableSheetSelectMode.CheckedChanged += ChkEnableSheetSelectMode_CheckedChanged;
             chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
             textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
+            cmbHistory.SelectedIndexChanged += CmbHistory_SelectedIndexChanged;
 
 
             RefreshExcelFileList();
@@ -80,6 +81,8 @@ namespace SimpleExcelBookSelector
 
                 foreach (dynamic wb in excelApp.Workbooks)
                 {
+                    AddToHistory(wb.FullName);
+
                     if (chkEnableSheetSelectMode.Checked)
                     {
                         foreach (dynamic ws in wb.Sheets)
@@ -102,8 +105,11 @@ namespace SimpleExcelBookSelector
                         });
                     }
                 }
+
+                UpdateHistoryComboBox();
             }
             catch (COMException) { }
+            catch (ArgumentException) { }
             finally
             {
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
@@ -136,9 +142,10 @@ namespace SimpleExcelBookSelector
 
         private AppSettings _settings;
         private readonly string _settingsFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "SimpleExcelBookSelector",
+            Application.StartupPath,
             "settings.json");
+
+        private const int MaxHistoryCount = 20;
 
         private void LoadSettings()
         {
@@ -167,6 +174,8 @@ namespace SimpleExcelBookSelector
             chkEnableSheetSelectMode.Checked = _settings.IsSheetSelectionEnabled;
             chkEnableAutoUpdateMode.Checked = _settings.IsAutoRefreshEnabled;
             textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
+
+            UpdateHistoryComboBox();
         }
 
         private void SaveSettings()
@@ -196,6 +205,84 @@ namespace SimpleExcelBookSelector
             {
                 // Error handling (e.g., notify with a MessageBox)
                 MessageBox.Show($"Failed to save settings.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void AddToHistory(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath)) return;
+
+            // Remove existing entry to move it to the top
+            _settings.FileHistory.RemoveAll(p => p.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            
+            // Add to the top
+            _settings.FileHistory.Insert(0, filePath);
+
+            // Trim the list to the maximum allowed count (20)
+            if (_settings.FileHistory.Count > MaxHistoryCount)
+            {
+                _settings.FileHistory = _settings.FileHistory.GetRange(0, MaxHistoryCount);
+            }
+        }
+
+        private void UpdateHistoryComboBox()
+        {
+            cmbHistory.BeginUpdate();
+            cmbHistory.Items.Clear();
+            cmbHistory.Items.AddRange(_settings.FileHistory.ToArray());
+            cmbHistory.EndUpdate();
+        }
+
+        private void CmbHistory_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbHistory.SelectedIndex == -1 || cmbHistory.SelectedItem == null) return;
+            string filePath = cmbHistory.SelectedItem.ToString();
+
+            dynamic excelApp = null;
+            bool alreadyOpen = false;
+            bool shouldRelease = false;
+
+            try
+            {
+                try
+                {
+                    excelApp = Marshal.GetActiveObject("Excel.Application");
+                }
+                catch (COMException)
+                {
+                    Type excelType = Type.GetTypeFromProgID("Excel.Application");
+                    excelApp = Activator.CreateInstance(excelType);
+                    excelApp.Visible = true;
+                    shouldRelease = true; // Release only if we created it
+                }
+
+                if (excelApp != null)
+                {
+                    foreach (dynamic wb in excelApp.Workbooks)
+                    {
+                        if (wb.FullName.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            alreadyOpen = true;
+                            break;
+                        }
+                    }
+
+                    if (!alreadyOpen)
+                    {
+                        excelApp.Workbooks.Open(filePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open the file.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (excelApp != null && shouldRelease)
+                {
+                    Marshal.ReleaseComObject(excelApp);
+                }
             }
         }
 

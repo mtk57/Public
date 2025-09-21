@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using System.Collections.Generic;
 
 namespace SimpleExcelBookSelector
 {
@@ -13,5 +14,8 @@ namespace SimpleExcelBookSelector
 
         [DataMember]
         public int RefreshInterval { get; set; } = 1;
+
+        [DataMember]
+        public List<string> FileHistory { get; set; } = new List<string>();
     }
 }

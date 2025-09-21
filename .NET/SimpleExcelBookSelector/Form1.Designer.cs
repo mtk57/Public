@@ -35,6 +35,7 @@
             this.chkEnableSheetSelectMode = new System.Windows.Forms.CheckBox();
             this.chkEnableAutoUpdateMode = new System.Windows.Forms.CheckBox();
             this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
+            this.cmbHistory = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -50,10 +51,10 @@
             this.clmDir,
             this.clmFile,
             this.clmSheet});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 34);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 65);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(743, 198);
+            this.dataGridViewResults.Size = new System.Drawing.Size(693, 151);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmDir
@@ -105,11 +106,23 @@
             this.textAutoUpdateSec.TabIndex = 9;
             this.textAutoUpdateSec.Text = "1";
             // 
+            // cmbHistory
+            // 
+            this.cmbHistory.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.cmbHistory.FormattingEnabled = true;
+            this.cmbHistory.Location = new System.Drawing.Point(12, 39);
+            this.cmbHistory.Name = "cmbHistory";
+            this.cmbHistory.Size = new System.Drawing.Size(693, 20);
+            this.cmbHistory.TabIndex = 10;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(767, 244);
+            this.ClientSize = new System.Drawing.Size(717, 228);
+            this.Controls.Add(this.cmbHistory);
             this.Controls.Add(this.textAutoUpdateSec);
             this.Controls.Add(this.chkEnableAutoUpdateMode);
             this.Controls.Add(this.chkEnableSheetSelectMode);
@@ -130,6 +143,7 @@
         private System.Windows.Forms.CheckBox chkEnableSheetSelectMode;
         private System.Windows.Forms.CheckBox chkEnableAutoUpdateMode;
         private System.Windows.Forms.TextBox textAutoUpdateSec;
+        private System.Windows.Forms.ComboBox cmbHistory;
     }
 }
 

@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Windows.Forms;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using Excel = Microsoft.Office.Interop.Excel;
+using System.Windows.Forms;
+
 
 namespace SimpleExcelBookSelector
 {
@@ -33,6 +34,9 @@ namespace SimpleExcelBookSelector
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
+
             dataGridViewResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridViewResults.MultiSelect = false;
             dataGridViewResults.CellClick += DataGridViewResults_CellClick;
@@ -47,17 +51,17 @@ namespace SimpleExcelBookSelector
 
         private void RefreshExcelFileList()
         {
-            Excel.Application excelApp = null;
+            dynamic excelApp = null;
             var newIdentifiers = new List<ExcelSheetIdentifier>();
             var newKeys = new List<string>();
 
             try
             {
-                excelApp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+                excelApp = Marshal.GetActiveObject("Excel.Application");
 
-                foreach (Excel.Workbook wb in excelApp.Workbooks)
+                foreach (dynamic wb in excelApp.Workbooks)
                 {
-                    foreach (Excel.Worksheet ws in wb.Sheets)
+                    foreach (dynamic ws in wb.Sheets)
                     {
                         newKeys.Add($"{wb.FullName}|{ws.Name}");
                         newIdentifiers.Add(new ExcelSheetIdentifier
@@ -68,7 +72,7 @@ namespace SimpleExcelBookSelector
                     }
                 }
             }
-            catch (COMException){}
+            catch (COMException) { }
             finally
             {
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
@@ -106,16 +110,16 @@ namespace SimpleExcelBookSelector
             var row = dataGridViewResults.Rows[e.RowIndex];
             if (!(row.Tag is ExcelSheetIdentifier id)) return;
 
-            Excel.Application excelApp = null;
-            Excel.Workbook wb = null;
-            Excel.Worksheet ws = null;
+            dynamic excelApp = null;
+            dynamic wb = null;
+            dynamic ws = null;
 
             try
             {
-                excelApp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+                excelApp = Marshal.GetActiveObject("Excel.Application");
                 
                 // フルパスで目的のワークブックを検索（堅牢性を向上）
-                foreach (Excel.Workbook book in excelApp.Workbooks)
+                foreach (dynamic book in excelApp.Workbooks)
                 {
                     if (book.FullName == id.WorkbookFullName)
                     {

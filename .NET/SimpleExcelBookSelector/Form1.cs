@@ -45,7 +45,7 @@ namespace SimpleExcelBookSelector
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
 
             dataGridViewResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridViewResults.MultiSelect = false;
+            dataGridViewResults.MultiSelect = true;
             dataGridViewResults.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText;
             dataGridViewResults.CellClick += DataGridViewResults_CellClick;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;

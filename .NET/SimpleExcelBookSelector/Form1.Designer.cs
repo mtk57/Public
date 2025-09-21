@@ -36,6 +36,7 @@
             this.chkEnableAutoUpdateMode = new System.Windows.Forms.CheckBox();
             this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
             this.cmbHistory = new System.Windows.Forms.ComboBox();
+            this.btnForceUpdate = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -117,11 +118,21 @@
             this.cmbHistory.Size = new System.Drawing.Size(693, 20);
             this.cmbHistory.TabIndex = 10;
             // 
+            // btnForceUpdate
+            // 
+            this.btnForceUpdate.Location = new System.Drawing.Point(428, 7);
+            this.btnForceUpdate.Name = "btnForceUpdate";
+            this.btnForceUpdate.Size = new System.Drawing.Size(75, 23);
+            this.btnForceUpdate.TabIndex = 11;
+            this.btnForceUpdate.Text = "強制更新";
+            this.btnForceUpdate.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(717, 228);
+            this.Controls.Add(this.btnForceUpdate);
             this.Controls.Add(this.cmbHistory);
             this.Controls.Add(this.textAutoUpdateSec);
             this.Controls.Add(this.chkEnableAutoUpdateMode);
@@ -144,6 +155,7 @@
         private System.Windows.Forms.CheckBox chkEnableAutoUpdateMode;
         private System.Windows.Forms.TextBox textAutoUpdateSec;
         private System.Windows.Forms.ComboBox cmbHistory;
+        private System.Windows.Forms.Button btnForceUpdate;
     }
 }
 

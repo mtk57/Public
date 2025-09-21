@@ -53,6 +53,7 @@ namespace SimpleExcelBookSelector
             chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
             textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
             cmbHistory.SelectedIndexChanged += CmbHistory_SelectedIndexChanged;
+            btnForceUpdate.Click += BtnForceUpdate_Click;
 
 
             RefreshExcelFileList();
@@ -284,6 +285,11 @@ namespace SimpleExcelBookSelector
                     Marshal.ReleaseComObject(excelApp);
                 }
             }
+        }
+
+        private void BtnForceUpdate_Click(object sender, EventArgs e)
+        {
+            RefreshExcelFileList();
         }
 
         private void DataGridViewResults_CellClick(object sender, DataGridViewCellEventArgs e)

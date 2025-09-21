@@ -10,10 +10,14 @@ namespace SimpleExcelBookSelector
 {
     public partial class MainForm : Form
     {
+        // Windows APIのインポート
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
         private Timer _timer;
         private List<string> _lastDisplayedKeys = new List<string>();
 
-        // DataGridViewの行に格納する識別情報用のクラス
         private class ExcelSheetIdentifier
         {
             public string WorkbookFullName { get; set; }
@@ -36,7 +40,7 @@ namespace SimpleExcelBookSelector
             RefreshExcelFileList();
 
             _timer = new Timer();
-            _timer.Interval = 1000; // 1秒
+            _timer.Interval = 1000;
             _timer.Tick += (s, args) => RefreshExcelFileList();
             _timer.Start();
         }
@@ -64,19 +68,13 @@ namespace SimpleExcelBookSelector
                     }
                 }
             }
-            catch (COMException)
-            {
-                // Excelが実行されていない場合
-            }
+            catch (COMException){}
             finally
             {
-                // このメソッドで取得したCOMオブジェクトはここで解放
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
             }
 
-            bool hasChanges = !_lastDisplayedKeys.SequenceEqual(newKeys);
-
-            if (hasChanges)
+            if (!_lastDisplayedKeys.SequenceEqual(newKeys))
             {
                 UpdateDataGridView(newIdentifiers);
                 _lastDisplayedKeys = newKeys;
@@ -95,7 +93,7 @@ namespace SimpleExcelBookSelector
                 row.Cells["clmDir"].Value = Path.GetDirectoryName(id.WorkbookFullName);
                 row.Cells["clmFile"].Value = Path.GetFileName(id.WorkbookFullName);
                 row.Cells["clmSheet"].Value = id.WorksheetName;
-                row.Tag = id; // 行のTagプロパティに識別情報を格納
+                row.Tag = id;
             }
 
             dataGridViewResults.ResumeLayout();
@@ -114,15 +112,28 @@ namespace SimpleExcelBookSelector
 
             try
             {
-                // クリック時に改めてExcelオブジェクトを取得
                 excelApp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-                wb = excelApp.Workbooks[Path.GetFileName(id.WorkbookFullName)];
-                ws = wb.Sheets[id.WorksheetName];
+                
+                // フルパスで目的のワークブックを検索（堅牢性を向上）
+                foreach (Excel.Workbook book in excelApp.Workbooks)
+                {
+                    if (book.FullName == id.WorkbookFullName)
+                    {
+                        wb = book;
+                        break;
+                    }
+                }
 
-                // ウィンドウをアクティブ化
-                excelApp.Visible = true;
-                ((Excel.Window)wb.Windows[1]).Activate();
-                ws.Activate();
+                if (wb != null)
+                {
+                    ws = wb.Sheets[id.WorksheetName];
+
+                    // シートをアクティブ化
+                    ws.Activate();
+
+                    // Excelアプリケーションのウィンドウを最前面に表示
+                    SetForegroundWindow((IntPtr)excelApp.Hwnd);
+                }
             }
             catch (Exception ex)
             {
@@ -130,7 +141,6 @@ namespace SimpleExcelBookSelector
             }
             finally
             {
-                // このメソッドで取得したCOMオブジェクトをすべて解放
                 if (ws != null) Marshal.ReleaseComObject(ws);
                 if (wb != null) Marshal.ReleaseComObject(wb);
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);

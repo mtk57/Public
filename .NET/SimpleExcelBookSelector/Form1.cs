@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 
@@ -45,7 +46,9 @@ namespace SimpleExcelBookSelector
 
             dataGridViewResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridViewResults.MultiSelect = false;
+            dataGridViewResults.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText;
             dataGridViewResults.CellClick += DataGridViewResults_CellClick;
+            dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
             chkEnableSheetSelectMode.CheckedChanged += ChkEnableSheetSelectMode_CheckedChanged;
             chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
             textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
@@ -198,6 +201,13 @@ namespace SimpleExcelBookSelector
 
         private void DataGridViewResults_CellClick(object sender, DataGridViewCellEventArgs e)
         {
+            // Handle top-left header cell click for select-all
+            if (e.RowIndex == -1 && e.ColumnIndex == -1)
+            {
+                dataGridViewResults.SelectAll();
+                return;
+            }
+
             if (e.RowIndex < 0) return;
 
             var row = dataGridViewResults.Rows[e.RowIndex];
@@ -249,6 +259,27 @@ namespace SimpleExcelBookSelector
                 if (ws != null) Marshal.ReleaseComObject(ws);
                 if (wb != null) Marshal.ReleaseComObject(wb);
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
+            }
+        }
+
+        private void DataGridViewResults_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            var row = dataGridViewResults.Rows[e.RowIndex];
+            if (!(row.Tag is ExcelSheetIdentifier id)) return;
+
+            try
+            {
+                string folderPath = Path.GetDirectoryName(id.WorkbookFullName);
+                if (Directory.Exists(folderPath))
+                {
+                    Process.Start(folderPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open folder.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

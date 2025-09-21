@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -34,19 +37,31 @@ namespace SimpleExcelBookSelector
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            LoadSettings(); // Load settings first
+
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
 
             dataGridViewResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridViewResults.MultiSelect = false;
             dataGridViewResults.CellClick += DataGridViewResults_CellClick;
+            chkEnableSheetSelectMode.CheckedChanged += ChkEnableSheetSelectMode_CheckedChanged;
+            chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
+            textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
+
 
             RefreshExcelFileList();
 
             _timer = new Timer();
-            _timer.Interval = 1000;
             _timer.Tick += (s, args) => RefreshExcelFileList();
-            _timer.Start();
+            // Apply settings for the timer
+            textAutoUpdateSec.Enabled = _settings.IsAutoRefreshEnabled;
+            TextAutoUpdateSec_TextChanged(null, null); // Set interval and validate
+
+            if (_settings.IsAutoRefreshEnabled)
+            {
+                _timer.Start();
+            }
         }
 
         private void RefreshExcelFileList()
@@ -61,13 +76,25 @@ namespace SimpleExcelBookSelector
 
                 foreach (dynamic wb in excelApp.Workbooks)
                 {
-                    foreach (dynamic ws in wb.Sheets)
+                    if (chkEnableSheetSelectMode.Checked)
                     {
-                        newKeys.Add($"{wb.FullName}|{ws.Name}");
+                        foreach (dynamic ws in wb.Sheets)
+                        {
+                            newKeys.Add($"{wb.FullName}|{ws.Name}");
+                            newIdentifiers.Add(new ExcelSheetIdentifier
+                            {
+                                WorkbookFullName = wb.FullName,
+                                WorksheetName = ws.Name
+                            });
+                        }
+                    }
+                    else
+                    {
+                        newKeys.Add(wb.FullName);
                         newIdentifiers.Add(new ExcelSheetIdentifier
                         {
                             WorkbookFullName = wb.FullName,
-                            WorksheetName = ws.Name
+                            WorksheetName = string.Empty
                         });
                     }
                 }
@@ -103,6 +130,71 @@ namespace SimpleExcelBookSelector
             dataGridViewResults.ResumeLayout();
         }
 
+        private AppSettings _settings;
+        private readonly string _settingsFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "SimpleExcelBookSelector",
+            "settings.json");
+
+        private void LoadSettings()
+        {
+            if (File.Exists(_settingsFilePath))
+            {
+                try
+                {
+                    using (var stream = File.OpenRead(_settingsFilePath))
+                    {
+                        var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                        _settings = (AppSettings)serializer.ReadObject(stream);
+                    }
+                }
+                catch
+                {
+                    // If the file is corrupted, overwrite with default settings
+                    _settings = new AppSettings();
+                }
+            }
+            else
+            {
+                _settings = new AppSettings();
+            }
+
+            // Reflect settings on the UI
+            chkEnableSheetSelectMode.Checked = _settings.IsSheetSelectionEnabled;
+            chkEnableAutoUpdateMode.Checked = _settings.IsAutoRefreshEnabled;
+            textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
+        }
+
+        private void SaveSettings()
+        {
+            // Get settings from the UI
+            _settings.IsSheetSelectionEnabled = chkEnableSheetSelectMode.Checked;
+            _settings.IsAutoRefreshEnabled = chkEnableAutoUpdateMode.Checked;
+            if (int.TryParse(textAutoUpdateSec.Text, out int interval) && interval > 0)
+            {
+                _settings.RefreshInterval = interval;
+            }
+            else
+            {
+                _settings.RefreshInterval = 1; // Use default for invalid values
+            }
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_settingsFilePath));
+                using (var stream = File.Create(_settingsFilePath))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    serializer.WriteObject(stream, _settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Error handling (e.g., notify with a MessageBox)
+                MessageBox.Show($"Failed to save settings.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void DataGridViewResults_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
@@ -130,12 +222,20 @@ namespace SimpleExcelBookSelector
 
                 if (wb != null)
                 {
-                    ws = wb.Sheets[id.WorksheetName];
+                    if (chkEnableSheetSelectMode.Checked)
+                    {
+                        ws = wb.Sheets[id.WorksheetName];
 
-                    // シートをアクティブ化
-                    ws.Activate();
+                        // Activate the sheet
+                        ws.Activate();
+                    }
+                    else
+                    {
+                        // Activate the workbook without changing the sheet
+                        wb.Activate();
+                    }
 
-                    // Excelアプリケーションのウィンドウを最前面に表示
+                    // Bring the Excel application window to the foreground
                     SetForegroundWindow((IntPtr)excelApp.Hwnd);
                 }
             }
@@ -151,8 +251,46 @@ namespace SimpleExcelBookSelector
             }
         }
 
+        private void ChkEnableSheetSelectMode_CheckedChanged(object sender, EventArgs e)
+        {
+            dataGridViewResults.Columns["clmSheet"].Visible = chkEnableSheetSelectMode.Checked;
+            RefreshExcelFileList();
+        }
+
+        private void ChkEnableAutoUpdateMode_CheckedChanged(object sender, EventArgs e)
+        {
+            textAutoUpdateSec.Enabled = chkEnableAutoUpdateMode.Checked;
+            if (chkEnableAutoUpdateMode.Checked)
+            {
+                _timer.Start();
+            }
+            else
+            {
+                _timer.Stop();
+            }
+        }
+
+        private void TextAutoUpdateSec_TextChanged(object sender, EventArgs e)
+        {
+            if (int.TryParse(textAutoUpdateSec.Text, out int interval) && interval > 0)
+            {
+                _timer.Interval = interval * 1000;
+            }
+            else
+            {
+                // A handler is attached to TextChanged, so changing the text here will cause a recursive call.
+                // To avoid this, we detach the handler, change the text, and then reattach it.
+                textAutoUpdateSec.TextChanged -= TextAutoUpdateSec_TextChanged;
+                textAutoUpdateSec.Text = "1";
+                _timer.Interval = 1000;
+                textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
+            }
+        }
+
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SaveSettings(); // Save settings
+
             _timer?.Stop();
             _timer?.Dispose();
         }

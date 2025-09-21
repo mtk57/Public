@@ -445,5 +445,10 @@ namespace SimpleExcelBookSelector
         {
             _toolTip.Hide(cmbHistory);
         }
+
+        private void btnHistory_Click ( object sender, EventArgs e )
+        {
+
+        }
     }
 }

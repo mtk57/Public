@@ -37,7 +37,7 @@
             this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
             this.cmbHistory = new System.Windows.Forms.ComboBox();
             this.btnForceUpdate = new System.Windows.Forms.Button();
-            this.btnAllOpen = new System.Windows.Forms.Button();
+            this.btnHistory = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -116,7 +116,7 @@
             this.cmbHistory.FormattingEnabled = true;
             this.cmbHistory.Location = new System.Drawing.Point(12, 39);
             this.cmbHistory.Name = "cmbHistory";
-            this.cmbHistory.Size = new System.Drawing.Size(616, 20);
+            this.cmbHistory.Size = new System.Drawing.Size(693, 20);
             this.cmbHistory.TabIndex = 10;
             // 
             // btnForceUpdate
@@ -128,21 +128,22 @@
             this.btnForceUpdate.Text = "強制更新";
             this.btnForceUpdate.UseVisualStyleBackColor = true;
             // 
-            // btnAllOpen
+            // btnHistory
             // 
-            this.btnAllOpen.Location = new System.Drawing.Point(634, 37);
-            this.btnAllOpen.Name = "btnAllOpen";
-            this.btnAllOpen.Size = new System.Drawing.Size(71, 23);
-            this.btnAllOpen.TabIndex = 12;
-            this.btnAllOpen.Text = "全て開く";
-            this.btnAllOpen.UseVisualStyleBackColor = true;
+            this.btnHistory.Location = new System.Drawing.Point(634, 4);
+            this.btnHistory.Name = "btnHistory";
+            this.btnHistory.Size = new System.Drawing.Size(71, 23);
+            this.btnHistory.TabIndex = 12;
+            this.btnHistory.Text = "履歴管理";
+            this.btnHistory.UseVisualStyleBackColor = true;
+            this.btnHistory.Click += new System.EventHandler(this.btnHistory_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(717, 228);
-            this.Controls.Add(this.btnAllOpen);
+            this.Controls.Add(this.btnHistory);
             this.Controls.Add(this.btnForceUpdate);
             this.Controls.Add(this.cmbHistory);
             this.Controls.Add(this.textAutoUpdateSec);
@@ -167,7 +168,7 @@
         private System.Windows.Forms.TextBox textAutoUpdateSec;
         private System.Windows.Forms.ComboBox cmbHistory;
         private System.Windows.Forms.Button btnForceUpdate;
-        private System.Windows.Forms.Button btnAllOpen;
+        private System.Windows.Forms.Button btnHistory;
     }
 }
 

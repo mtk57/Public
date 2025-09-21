@@ -38,6 +38,7 @@ namespace SimpleExcelBookSelector
         private void MainForm_Load(object sender, EventArgs e)
         {
             LoadSettings(); // Load settings first
+            dataGridViewResults.Columns["clmSheet"].Visible = _settings.IsSheetSelectionEnabled;
 
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";

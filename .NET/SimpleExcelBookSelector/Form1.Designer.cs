@@ -32,6 +32,9 @@
             this.clmDir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmSheet = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.chkEnableSheetSelectMode = new System.Windows.Forms.CheckBox();
+            this.chkEnableAutoUpdateMode = new System.Windows.Forms.CheckBox();
+            this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -47,10 +50,10 @@
             this.clmDir,
             this.clmFile,
             this.clmSheet});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 12);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 34);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(743, 220);
+            this.dataGridViewResults.Size = new System.Drawing.Size(743, 198);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmDir
@@ -74,16 +77,48 @@
             this.clmSheet.Name = "clmSheet";
             this.clmSheet.ReadOnly = true;
             // 
+            // chkEnableSheetSelectMode
+            // 
+            this.chkEnableSheetSelectMode.AutoSize = true;
+            this.chkEnableSheetSelectMode.Location = new System.Drawing.Point(12, 12);
+            this.chkEnableSheetSelectMode.Name = "chkEnableSheetSelectMode";
+            this.chkEnableSheetSelectMode.Size = new System.Drawing.Size(104, 16);
+            this.chkEnableSheetSelectMode.TabIndex = 7;
+            this.chkEnableSheetSelectMode.Text = "シート選択モード";
+            this.chkEnableSheetSelectMode.UseVisualStyleBackColor = true;
+            // 
+            // chkEnableAutoUpdateMode
+            // 
+            this.chkEnableAutoUpdateMode.AutoSize = true;
+            this.chkEnableAutoUpdateMode.Location = new System.Drawing.Point(215, 11);
+            this.chkEnableAutoUpdateMode.Name = "chkEnableAutoUpdateMode";
+            this.chkEnableAutoUpdateMode.Size = new System.Drawing.Size(196, 16);
+            this.chkEnableAutoUpdateMode.TabIndex = 8;
+            this.chkEnableAutoUpdateMode.Text = "自動更新間隔(秒単位。最小値=1)";
+            this.chkEnableAutoUpdateMode.UseVisualStyleBackColor = true;
+            // 
+            // textAutoUpdateSec
+            // 
+            this.textAutoUpdateSec.Location = new System.Drawing.Point(159, 9);
+            this.textAutoUpdateSec.Name = "textAutoUpdateSec";
+            this.textAutoUpdateSec.Size = new System.Drawing.Size(50, 19);
+            this.textAutoUpdateSec.TabIndex = 9;
+            this.textAutoUpdateSec.Text = "1";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 244);
+            this.Controls.Add(this.textAutoUpdateSec);
+            this.Controls.Add(this.chkEnableAutoUpdateMode);
+            this.Controls.Add(this.chkEnableSheetSelectMode);
             this.Controls.Add(this.dataGridViewResults);
             this.Name = "MainForm";
             this.Text = "Simple Excel Book Selector";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -92,6 +127,9 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmDir;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFile;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmSheet;
+        private System.Windows.Forms.CheckBox chkEnableSheetSelectMode;
+        private System.Windows.Forms.CheckBox chkEnableAutoUpdateMode;
+        private System.Windows.Forms.TextBox textAutoUpdateSec;
     }
 }
 

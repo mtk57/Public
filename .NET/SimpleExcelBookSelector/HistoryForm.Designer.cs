@@ -32,6 +32,10 @@ namespace SimpleExcelBookSelector
             this.btnAllOpen = new System.Windows.Forms.Button();
             this.btnAllClear = new System.Windows.Forms.Button();
             this.btnSelectOpen = new System.Windows.Forms.Button();
+            this.btnDeleteSelectedFiles = new System.Windows.Forms.Button();
+            this.btnUnselectedAll = new System.Windows.Forms.Button();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -41,10 +45,10 @@ namespace SimpleExcelBookSelector
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(21, 42);
+            this.dataGridView1.Location = new System.Drawing.Point(21, 66);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(621, 199);
+            this.dataGridView1.Size = new System.Drawing.Size(621, 249);
             this.dataGridView1.TabIndex = 0;
             // 
             // btnAllOpen
@@ -59,7 +63,7 @@ namespace SimpleExcelBookSelector
             // 
             // btnAllClear
             // 
-            this.btnAllClear.Location = new System.Drawing.Point(273, 12);
+            this.btnAllClear.Location = new System.Drawing.Point(391, 12);
             this.btnAllClear.Name = "btnAllClear";
             this.btnAllClear.Size = new System.Drawing.Size(119, 23);
             this.btnAllClear.TabIndex = 2;
@@ -77,11 +81,49 @@ namespace SimpleExcelBookSelector
             this.btnSelectOpen.UseVisualStyleBackColor = true;
             this.btnSelectOpen.Click += new System.EventHandler(this.btnSelectOpen_Click);
             // 
+            // btnDeleteSelectedFiles
+            // 
+            this.btnDeleteSelectedFiles.Location = new System.Drawing.Point(516, 12);
+            this.btnDeleteSelectedFiles.Name = "btnDeleteSelectedFiles";
+            this.btnDeleteSelectedFiles.Size = new System.Drawing.Size(121, 23);
+            this.btnDeleteSelectedFiles.TabIndex = 4;
+            this.btnDeleteSelectedFiles.Text = "選択ファイルのみ削除";
+            this.btnDeleteSelectedFiles.UseVisualStyleBackColor = true;
+            // 
+            // btnUnselectedAll
+            // 
+            this.btnUnselectedAll.Location = new System.Drawing.Point(229, 12);
+            this.btnUnselectedAll.Name = "btnUnselectedAll";
+            this.btnUnselectedAll.Size = new System.Drawing.Size(99, 23);
+            this.btnUnselectedAll.TabIndex = 5;
+            this.btnUnselectedAll.Text = "全てチェックOFF";
+            this.btnUnselectedAll.UseVisualStyleBackColor = true;
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(63, 41);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(265, 19);
+            this.textBox1.TabIndex = 6;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(19, 44);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(38, 12);
+            this.label1.TabIndex = 7;
+            this.label1.Text = "フィルタ";
+            // 
             // HistoryForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(666, 266);
+            this.ClientSize = new System.Drawing.Size(666, 327);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.textBox1);
+            this.Controls.Add(this.btnUnselectedAll);
+            this.Controls.Add(this.btnDeleteSelectedFiles);
             this.Controls.Add(this.btnSelectOpen);
             this.Controls.Add(this.btnAllClear);
             this.Controls.Add(this.btnAllOpen);
@@ -91,6 +133,7 @@ namespace SimpleExcelBookSelector
             this.Load += new System.EventHandler(this.HistoryForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -100,5 +143,9 @@ namespace SimpleExcelBookSelector
         private System.Windows.Forms.Button btnAllOpen;
         private System.Windows.Forms.Button btnAllClear;
         private System.Windows.Forms.Button btnSelectOpen;
+        private System.Windows.Forms.Button btnDeleteSelectedFiles;
+        private System.Windows.Forms.Button btnUnselectedAll;
+        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.Label label1;
     }
 }

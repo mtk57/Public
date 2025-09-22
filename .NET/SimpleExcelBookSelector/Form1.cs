@@ -446,9 +446,18 @@ namespace SimpleExcelBookSelector
             _toolTip.Hide(cmbHistory);
         }
 
-        private void btnHistory_Click ( object sender, EventArgs e )
+        private void btnHistory_Click(object sender, EventArgs e)
         {
-
+            using (var historyForm = new HistoryForm(_settings.FileHistory))
+            {
+                if (historyForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    // History was cleared in the dialog
+                    _settings.FileHistory = new List<string>(historyForm.FileHistory);
+                    UpdateHistoryComboBox();
+                    SaveSettings();
+                }
+            }
         }
     }
 }

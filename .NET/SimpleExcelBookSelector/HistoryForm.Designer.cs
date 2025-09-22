@@ -36,6 +36,8 @@ namespace SimpleExcelBookSelector
             this.btnUnselectedAll = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.btnClearFilter = new System.Windows.Forms.Button();
+            this.btnPinnedSelectedFiles = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -119,11 +121,31 @@ namespace SimpleExcelBookSelector
             this.label1.TabIndex = 7;
             this.label1.Text = "フィルタ";
             // 
+            // btnClearFilter
+            // 
+            this.btnClearFilter.Location = new System.Drawing.Point(335, 37);
+            this.btnClearFilter.Name = "btnClearFilter";
+            this.btnClearFilter.Size = new System.Drawing.Size(48, 23);
+            this.btnClearFilter.TabIndex = 8;
+            this.btnClearFilter.Text = "クリア";
+            this.btnClearFilter.UseVisualStyleBackColor = true;
+            // 
+            // btnPinnedSelectedFiles
+            // 
+            this.btnPinnedSelectedFiles.Location = new System.Drawing.Point(500, 37);
+            this.btnPinnedSelectedFiles.Name = "btnPinnedSelectedFiles";
+            this.btnPinnedSelectedFiles.Size = new System.Drawing.Size(137, 23);
+            this.btnPinnedSelectedFiles.TabIndex = 9;
+            this.btnPinnedSelectedFiles.Text = "選択ファイルのみピン止め";
+            this.btnPinnedSelectedFiles.UseVisualStyleBackColor = true;
+            // 
             // HistoryForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(666, 327);
+            this.Controls.Add(this.btnPinnedSelectedFiles);
+            this.Controls.Add(this.btnClearFilter);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.btnUnselectedAll);
@@ -151,5 +173,7 @@ namespace SimpleExcelBookSelector
         private System.Windows.Forms.Button btnUnselectedAll;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button btnClearFilter;
+        private System.Windows.Forms.Button btnPinnedSelectedFiles;
     }
 }

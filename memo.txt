@@ -3,11 +3,25 @@
 https://github.com/google-gemini/gemini-cli
 npm install -g @google/gemini-cli@latest
 
+
+
 ■Codex CLI
 npm install -g @openai/codex
+npm install -g codexcli@latest
+
+wsl
+codex --version
+codex
+
+→リポジトリにAGENTS.mdを入れておくとよいらしい。
+  そんでもって、指示する前に以下を指示する。
+  このディレクトリの AGENTS.md を読んで、記載のルールに従ってください。以後は日本語で説明して。
 
 
-PowerShell or WindowsTerminalでgeminiコマンドが失敗する場合：
+
+
+
+■PowerShell or WindowsTerminalでgeminiコマンドが失敗する場合：
 -----
 ### 原因
 

@@ -10,14 +10,16 @@ namespace SimpleExcelBookSelector
     public partial class HistoryForm : Form
     {
         public List<HistoryItem> FileHistory { get; private set; }
+        private readonly AppSettings _settings;
         private const string PinnedColumnName = "colPinned";
         private const string CheckBoxColumnName = "colCheck";
         private const string FilePathColumnName = "colFilePath";
 
-        public HistoryForm(List<HistoryItem> fileHistory)
+        public HistoryForm(AppSettings settings)
         {
             InitializeComponent();
-            FileHistory = new List<HistoryItem>(fileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned }));
+            _settings = settings;
+            FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned }));
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)
@@ -176,10 +178,31 @@ namespace SimpleExcelBookSelector
 
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0)
+            if (e.RowIndex < 0) return;
+
+            var filePath = dataGridView1.Rows[e.RowIndex].Cells[FilePathColumnName].Value.ToString();
+
+            try
             {
-                var filePath = dataGridView1.Rows[e.RowIndex].Cells[FilePathColumnName].Value.ToString();
-                OpenFiles(new[] { filePath });
+                if (_settings.IsOpenFolderOnDoubleClickEnabled)
+                {
+                    string folderPath = Path.GetDirectoryName(filePath);
+                    if (Directory.Exists(folderPath))
+                    {
+                        Process.Start(folderPath);
+                    }
+                }
+                else
+                {
+                    if (File.Exists(filePath))
+                    {
+                        Process.Start(filePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open folder or file.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

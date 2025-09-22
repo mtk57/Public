@@ -27,5 +27,8 @@ namespace SimpleExcelBookSelector
 
         [DataMember]
         public List<HistoryItem> FileHistory { get; set; } = new List<HistoryItem>();
+
+        [DataMember]
+        public bool IsOpenFolderOnDoubleClickEnabled { get; set; } = true;
     }
 }

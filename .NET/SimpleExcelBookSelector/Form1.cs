@@ -224,6 +224,7 @@ namespace SimpleExcelBookSelector
             chkEnableSheetSelectMode.Checked = _settings.IsSheetSelectionEnabled;
             chkEnableAutoUpdateMode.Checked = _settings.IsAutoRefreshEnabled;
             textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
+            chkIsOpenDir.Checked = _settings.IsOpenFolderOnDoubleClickEnabled;
 
             UpdateHistoryComboBox();
         }
@@ -242,6 +243,7 @@ namespace SimpleExcelBookSelector
             {
                 _settings.RefreshInterval = 1; // Use default for invalid values
             }
+            _settings.IsOpenFolderOnDoubleClickEnabled = chkIsOpenDir.Checked;
 
             try
             {
@@ -419,15 +421,25 @@ namespace SimpleExcelBookSelector
 
             try
             {
-                string folderPath = Path.GetDirectoryName(id.WorkbookFullName);
-                if (Directory.Exists(folderPath))
+                if (chkIsOpenDir.Checked)
                 {
-                    Process.Start(folderPath);
+                    string folderPath = Path.GetDirectoryName(id.WorkbookFullName);
+                    if (Directory.Exists(folderPath))
+                    {
+                        Process.Start(folderPath);
+                    }
+                }
+                else
+                {
+                    if (File.Exists(id.WorkbookFullName))
+                    {
+                        Process.Start(id.WorkbookFullName);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open folder.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Failed to open folder or file.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -504,7 +516,8 @@ namespace SimpleExcelBookSelector
 
         private void btnHistory_Click(object sender, EventArgs e)
         {
-            using (var historyForm = new HistoryForm(_settings.FileHistory))
+            _settings.IsOpenFolderOnDoubleClickEnabled = chkIsOpenDir.Checked;
+            using (var historyForm = new HistoryForm(_settings))
             {
                 if (historyForm.ShowDialog(this) == DialogResult.OK)
                 {

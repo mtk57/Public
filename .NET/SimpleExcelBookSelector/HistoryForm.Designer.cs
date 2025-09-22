@@ -38,6 +38,7 @@ namespace SimpleExcelBookSelector
             this.label1 = new System.Windows.Forms.Label();
             this.btnClearFilter = new System.Windows.Forms.Button();
             this.btnPinnedSelectedFiles = new System.Windows.Forms.Button();
+            this.btnUnPinnedSelectedFiles = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -50,7 +51,7 @@ namespace SimpleExcelBookSelector
             this.dataGridView1.Location = new System.Drawing.Point(21, 66);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(621, 249);
+            this.dataGridView1.Size = new System.Drawing.Size(671, 249);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             // 
@@ -133,7 +134,7 @@ namespace SimpleExcelBookSelector
             // 
             // btnPinnedSelectedFiles
             // 
-            this.btnPinnedSelectedFiles.Location = new System.Drawing.Point(500, 37);
+            this.btnPinnedSelectedFiles.Location = new System.Drawing.Point(391, 37);
             this.btnPinnedSelectedFiles.Name = "btnPinnedSelectedFiles";
             this.btnPinnedSelectedFiles.Size = new System.Drawing.Size(137, 23);
             this.btnPinnedSelectedFiles.TabIndex = 9;
@@ -141,11 +142,21 @@ namespace SimpleExcelBookSelector
             this.btnPinnedSelectedFiles.UseVisualStyleBackColor = true;
             this.btnPinnedSelectedFiles.Click += new System.EventHandler(this.btnPinnedSelectedFiles_Click);
             // 
+            // btnUnPinnedSelectedFiles
+            // 
+            this.btnUnPinnedSelectedFiles.Location = new System.Drawing.Point(534, 37);
+            this.btnUnPinnedSelectedFiles.Name = "btnUnPinnedSelectedFiles";
+            this.btnUnPinnedSelectedFiles.Size = new System.Drawing.Size(158, 23);
+            this.btnUnPinnedSelectedFiles.TabIndex = 10;
+            this.btnUnPinnedSelectedFiles.Text = "選択ファイルのみピン止め解除";
+            this.btnUnPinnedSelectedFiles.UseVisualStyleBackColor = true;
+            // 
             // HistoryForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(666, 327);
+            this.ClientSize = new System.Drawing.Size(704, 327);
+            this.Controls.Add(this.btnUnPinnedSelectedFiles);
             this.Controls.Add(this.btnPinnedSelectedFiles);
             this.Controls.Add(this.btnClearFilter);
             this.Controls.Add(this.label1);
@@ -177,5 +188,6 @@ namespace SimpleExcelBookSelector
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnClearFilter;
         private System.Windows.Forms.Button btnPinnedSelectedFiles;
+        private System.Windows.Forms.Button btnUnPinnedSelectedFiles;
     }
 }

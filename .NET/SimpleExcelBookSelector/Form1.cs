@@ -518,7 +518,8 @@ namespace SimpleExcelBookSelector
             {
                 if (historyForm.ShowDialog(this) == DialogResult.OK)
                 {
-                    _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory);
+                    // History was changed in the dialog, perform a deep copy of the results
+                    _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned }));
                     UpdateHistoryComboBox();
                     SaveSettings();
                 }

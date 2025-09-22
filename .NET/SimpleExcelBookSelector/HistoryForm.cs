@@ -60,6 +60,8 @@ namespace SimpleExcelBookSelector
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             };
             dataGridView1.Columns.Add(filePathColumn);
+
+            dataGridView1.CellClick += DataGridView1_CellClick;
         }
 
         private void PopulateDataGridView(List<HistoryItem> history)
@@ -243,6 +245,34 @@ namespace SimpleExcelBookSelector
         private void btnUnPinnedSelectedFiles_Click(object sender, EventArgs e)
         {
             ChangePinnedState(false); // Unpin
+        }
+
+        private void DataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+            {
+                return;
+            }
+
+            if (!string.Equals(dataGridView1.Columns[e.ColumnIndex].Name, PinnedColumnName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var filePath = dataGridView1.Rows[e.RowIndex].Cells[FilePathColumnName].Value?.ToString();
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return;
+            }
+
+            var historyItem = FileHistory.FirstOrDefault(i => string.Equals(i.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+            if (historyItem == null)
+            {
+                return;
+            }
+
+            historyItem.IsPinned = !historyItem.IsPinned;
+            ApplyFilterAndSort();
         }
     }
 }

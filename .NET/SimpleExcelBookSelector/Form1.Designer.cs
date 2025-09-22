@@ -38,6 +38,7 @@
             this.cmbHistory = new System.Windows.Forms.ComboBox();
             this.btnForceUpdate = new System.Windows.Forms.Button();
             this.btnHistory = new System.Windows.Forms.Button();
+            this.chkIsOpenDir = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -53,10 +54,10 @@
             this.clmDir,
             this.clmFile,
             this.clmSheet});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 65);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 90);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(693, 151);
+            this.dataGridViewResults.Size = new System.Drawing.Size(693, 165);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmDir
@@ -115,7 +116,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbHistory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbHistory.FormattingEnabled = true;
-            this.cmbHistory.Location = new System.Drawing.Point(12, 39);
+            this.cmbHistory.Location = new System.Drawing.Point(12, 64);
             this.cmbHistory.Name = "cmbHistory";
             this.cmbHistory.Size = new System.Drawing.Size(693, 20);
             this.cmbHistory.TabIndex = 10;
@@ -139,11 +140,22 @@
             this.btnHistory.UseVisualStyleBackColor = true;
             this.btnHistory.Click += new System.EventHandler(this.btnHistory_Click);
             // 
+            // chkIsOpenDir
+            // 
+            this.chkIsOpenDir.AutoSize = true;
+            this.chkIsOpenDir.Location = new System.Drawing.Point(12, 34);
+            this.chkIsOpenDir.Name = "chkIsOpenDir";
+            this.chkIsOpenDir.Size = new System.Drawing.Size(154, 16);
+            this.chkIsOpenDir.TabIndex = 13;
+            this.chkIsOpenDir.Text = "ダブルクリックでフォルダを開く";
+            this.chkIsOpenDir.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(717, 228);
+            this.ClientSize = new System.Drawing.Size(717, 267);
+            this.Controls.Add(this.chkIsOpenDir);
             this.Controls.Add(this.btnHistory);
             this.Controls.Add(this.btnForceUpdate);
             this.Controls.Add(this.cmbHistory);
@@ -170,6 +182,7 @@
         private System.Windows.Forms.ComboBox cmbHistory;
         private System.Windows.Forms.Button btnForceUpdate;
         private System.Windows.Forms.Button btnHistory;
+        private System.Windows.Forms.CheckBox chkIsOpenDir;
     }
 }
 

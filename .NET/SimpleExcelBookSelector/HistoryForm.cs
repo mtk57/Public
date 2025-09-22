@@ -161,11 +161,7 @@ namespace SimpleExcelBookSelector
                 }
             }
 
-            if (filesToRemove.Count == 0)
-            {
-                MessageBox.Show("削除するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            if (filesToRemove.Count == 0) return;
 
             if (MessageBox.Show($"{filesToRemove.Count}件の履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
@@ -225,12 +221,7 @@ namespace SimpleExcelBookSelector
                 }
             }
 
-            if (selectedPaths.Count == 0)
-            {
-                var action = shouldBePinned ? "ピン留め" : "ピン留め解除";
-                MessageBox.Show($"{action}するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            if (selectedPaths.Count == 0) return;
 
             foreach (var path in selectedPaths)
             {

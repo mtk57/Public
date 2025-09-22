@@ -206,7 +206,7 @@ namespace SimpleExcelBookSelector
                         };
                     }
                     // Immediately save the settings in the new format
-                    SaveSettings();
+                    // SaveSettings(); // BUG: This overwrites migrated settings with default UI values.
                 }
                 catch
                 {

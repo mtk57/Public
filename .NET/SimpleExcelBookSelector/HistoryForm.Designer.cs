@@ -150,6 +150,7 @@ namespace SimpleExcelBookSelector
             this.btnUnPinnedSelectedFiles.TabIndex = 10;
             this.btnUnPinnedSelectedFiles.Text = "選択ファイルのみピン止め解除";
             this.btnUnPinnedSelectedFiles.UseVisualStyleBackColor = true;
+            this.btnUnPinnedSelectedFiles.Click += new System.EventHandler(this.btnUnPinnedSelectedFiles_Click);
             // 
             // HistoryForm
             // 

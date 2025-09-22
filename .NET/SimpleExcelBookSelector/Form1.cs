@@ -245,22 +245,11 @@ namespace SimpleExcelBookSelector
 
             try
             {
-                using (var memoryStream = new MemoryStream())
+                Directory.CreateDirectory(Path.GetDirectoryName(_settingsFilePath));
+                using (var stream = File.Create(_settingsFilePath))
                 {
                     var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                    serializer.WriteObject(memoryStream, _settings);
-                    var json = Encoding.UTF8.GetString(memoryStream.ToArray());
-
-                    // Use a temporary file to prevent data loss on write error
-                    var tempFilePath = _settingsFilePath + ".tmp";
-                    File.WriteAllText(tempFilePath, json, Encoding.UTF8);
-
-                    // Replace the original file with the new one
-                    if (File.Exists(_settingsFilePath))
-                    {
-                        File.Delete(_settingsFilePath);
-                    }
-                    File.Move(tempFilePath, _settingsFilePath);
+                    serializer.WriteObject(stream, _settings);
                 }
             }
             catch (Exception ex)
@@ -351,7 +340,8 @@ namespace SimpleExcelBookSelector
             }
             finally
             {
-                if (_settings.IsAutoRefreshEnabled)
+                // 自動更新が有効な場合のみタイマーを再開
+                if (chkEnableAutoUpdateMode.Checked)
                 {
                     _timer?.Start();
                 }

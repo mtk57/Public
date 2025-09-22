@@ -191,10 +191,9 @@ namespace SimpleExcelBookSelector
         private void btnClearFilter_Click(object sender, EventArgs e)
         {
             textBox1.Clear();
-            // The TextChanged event will handle the update
         }
 
-        private void btnPinnedSelectedFiles_Click(object sender, EventArgs e)
+        private void ChangePinnedState(bool shouldBePinned)
         {
             var selectedPaths = new List<string>();
             foreach (DataGridViewRow row in dataGridView1.Rows)
@@ -207,7 +206,8 @@ namespace SimpleExcelBookSelector
 
             if (selectedPaths.Count == 0)
             {
-                MessageBox.Show("ピン留め/解除するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var action = shouldBePinned ? "ピン留め" : "ピン留め解除";
+                MessageBox.Show($"{action}するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -216,12 +216,22 @@ namespace SimpleExcelBookSelector
                 var item = FileHistory.FirstOrDefault(i => i.FilePath == path);
                 if (item != null)
                 {
-                    item.IsPinned = !item.IsPinned; // Toggle pinned state
+                    item.IsPinned = shouldBePinned;
                 }
             }
 
             ApplyFilterAndSort();
             this.DialogResult = DialogResult.OK;
+        }
+
+        private void btnPinnedSelectedFiles_Click(object sender, EventArgs e)
+        {
+            ChangePinnedState(true); // Pin
+        }
+
+        private void btnUnPinnedSelectedFiles_Click(object sender, EventArgs e)
+        {
+            ChangePinnedState(false); // Unpin
         }
     }
 }

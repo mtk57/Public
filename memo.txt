@@ -18,6 +18,14 @@ codex
   このディレクトリの AGENTS.md を読んで、記載のルールに従ってください。以後は日本語で説明して。
 
 
+■WSL2
+# pwdの結果をクリップボードにコピーする
+
+pwd | clip.exe                           Linuxのパス形式でコピー
+wslpath -w "$(pwd)" | clip.exe           Windowsのパス形式でコピー
+
+
+
 
 
 

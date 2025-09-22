@@ -7,7 +7,7 @@ npm install -g @google/gemini-cli@latest
 
 ■Codex CLI
 npm install -g @openai/codex
-npm install -g codexcli@latest
+npm install -g @openai/codex@latest
 
 wsl
 codex --version

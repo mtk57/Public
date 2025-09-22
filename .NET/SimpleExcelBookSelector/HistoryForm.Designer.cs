@@ -39,6 +39,8 @@ namespace SimpleExcelBookSelector
             this.btnClearFilter = new System.Windows.Forms.Button();
             this.btnPinnedSelectedFiles = new System.Windows.Forms.Button();
             this.btnUnPinnedSelectedFiles = new System.Windows.Forms.Button();
+            this.btnApply = new System.Windows.Forms.Button();
+            this.btnCancel = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -51,7 +53,7 @@ namespace SimpleExcelBookSelector
             this.dataGridView1.Location = new System.Drawing.Point(21, 66);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(671, 249);
+            this.dataGridView1.Size = new System.Drawing.Size(691, 127);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             // 
@@ -152,11 +154,35 @@ namespace SimpleExcelBookSelector
             this.btnUnPinnedSelectedFiles.UseVisualStyleBackColor = true;
             this.btnUnPinnedSelectedFiles.Click += new System.EventHandler(this.btnUnPinnedSelectedFiles_Click);
             // 
+            // btnApply
+            // 
+            this.btnApply.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnApply.DialogResult = System.Windows.Forms.DialogResult.OK;
+            this.btnApply.Location = new System.Drawing.Point(608, 207);
+            this.btnApply.Name = "btnApply";
+            this.btnApply.Size = new System.Drawing.Size(49, 23);
+            this.btnApply.TabIndex = 11;
+            this.btnApply.Text = "Apply";
+            this.btnApply.UseVisualStyleBackColor = true;
+            // 
+            // btnCancel
+            // 
+            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            this.btnCancel.Location = new System.Drawing.Point(663, 207);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(49, 23);
+            this.btnCancel.TabIndex = 12;
+            this.btnCancel.Text = "Cancel";
+            this.btnCancel.UseVisualStyleBackColor = true;
+            // 
             // HistoryForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(704, 327);
+            this.ClientSize = new System.Drawing.Size(724, 242);
+            this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.btnApply);
             this.Controls.Add(this.btnUnPinnedSelectedFiles);
             this.Controls.Add(this.btnPinnedSelectedFiles);
             this.Controls.Add(this.btnClearFilter);
@@ -190,5 +216,7 @@ namespace SimpleExcelBookSelector
         private System.Windows.Forms.Button btnClearFilter;
         private System.Windows.Forms.Button btnPinnedSelectedFiles;
         private System.Windows.Forms.Button btnUnPinnedSelectedFiles;
+        private System.Windows.Forms.Button btnApply;
+        private System.Windows.Forms.Button btnCancel;
     }
 }

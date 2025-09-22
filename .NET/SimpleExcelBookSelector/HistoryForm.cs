@@ -117,7 +117,6 @@ namespace SimpleExcelBookSelector
             {
                 FileHistory.Clear();
                 ApplyFilterAndSort();
-                this.DialogResult = DialogResult.OK;
             }
         }
 
@@ -172,7 +171,6 @@ namespace SimpleExcelBookSelector
             {
                 FileHistory.RemoveAll(item => filesToRemove.Contains(item.FilePath));
                 ApplyFilterAndSort();
-                this.DialogResult = DialogResult.OK;
             }
         }
 
@@ -244,7 +242,6 @@ namespace SimpleExcelBookSelector
             }
 
             ApplyFilterAndSort();
-            this.DialogResult = DialogResult.OK;
         }
 
         private void btnPinnedSelectedFiles_Click(object sender, EventArgs e)

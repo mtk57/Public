@@ -22,7 +22,7 @@ namespace SimpleExcelBookSelector
         private void HistoryForm_Load(object sender, EventArgs e)
         {
             SetupDataGridView();
-            PopulateDataGridView();
+            PopulateDataGridView(FileHistory);
         }
 
         private void SetupDataGridView()
@@ -49,10 +49,10 @@ namespace SimpleExcelBookSelector
             dataGridView1.Columns.Add(filePathColumn);
         }
 
-        private void PopulateDataGridView()
+        private void PopulateDataGridView(List<string> history)
         {
             dataGridView1.Rows.Clear();
-            foreach (var path in FileHistory)
+            foreach (var path in history)
             {
                 dataGridView1.Rows.Add(false, path);
             }
@@ -60,7 +60,12 @@ namespace SimpleExcelBookSelector
 
         private void btnAllOpen_Click(object sender, EventArgs e)
         {
-            OpenFiles(FileHistory);
+            var filesToOpen = dataGridView1.Rows
+                .Cast<DataGridViewRow>()
+                .Select(row => row.Cells[FilePathColumnName].Value.ToString())
+                .ToList();
+
+            OpenFiles(filesToOpen);
         }
 
         private void btnSelectOpen_Click(object sender, EventArgs e)
@@ -81,7 +86,8 @@ namespace SimpleExcelBookSelector
             if (MessageBox.Show("全ての履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 FileHistory.Clear();
-                PopulateDataGridView();
+                PopulateDataGridView(FileHistory);
+                textBox1.Clear();
                 this.DialogResult = DialogResult.OK; // Notify MainForm to update
             }
         }
@@ -136,7 +142,7 @@ namespace SimpleExcelBookSelector
             if (MessageBox.Show($"{filesToRemove.Count}件の履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 FileHistory.RemoveAll(f => filesToRemove.Contains(f));
-                PopulateDataGridView();
+                textBox1_TextChanged(sender, e); // Re-apply filter
                 this.DialogResult = DialogResult.OK; // Notify MainForm to update
             }
         }
@@ -147,6 +153,23 @@ namespace SimpleExcelBookSelector
             {
                 var filePath = dataGridView1.Rows[e.RowIndex].Cells[FilePathColumnName].Value.ToString();
                 OpenFiles(new[] { filePath });
+            }
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            var filterText = textBox1.Text;
+
+            if (string.IsNullOrWhiteSpace(filterText))
+            {
+                PopulateDataGridView(FileHistory);
+            }
+            else
+            {
+                var filteredHistory = FileHistory
+                    .Where(path => path.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    .ToList();
+                PopulateDataGridView(filteredHistory);
             }
         }
     }

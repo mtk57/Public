@@ -9,20 +9,21 @@ namespace SimpleExcelBookSelector
 {
     public partial class HistoryForm : Form
     {
-        public List<string> FileHistory { get; private set; }
+        public List<HistoryItem> FileHistory { get; private set; }
+        private const string PinnedColumnName = "colPinned";
         private const string CheckBoxColumnName = "colCheck";
         private const string FilePathColumnName = "colFilePath";
 
-        public HistoryForm(List<string> fileHistory)
+        public HistoryForm(List<HistoryItem> fileHistory)
         {
             InitializeComponent();
-            FileHistory = new List<string>(fileHistory); // Create a copy
+            FileHistory = new List<HistoryItem>(fileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned }));
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)
         {
             SetupDataGridView();
-            PopulateDataGridView(FileHistory);
+            ApplyFilterAndSort();
         }
 
         private void SetupDataGridView()
@@ -30,6 +31,16 @@ namespace SimpleExcelBookSelector
             dataGridView1.AllowUserToAddRows = false;
             dataGridView1.RowHeadersVisible = false;
             dataGridView1.AutoGenerateColumns = false;
+
+            var pinnedColumn = new DataGridViewTextBoxColumn
+            {
+                Name = PinnedColumnName,
+                HeaderText = "ピン",
+                Width = 35,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+            dataGridView1.Columns.Add(pinnedColumn);
 
             var checkBoxColumn = new DataGridViewCheckBoxColumn
             {
@@ -49,13 +60,30 @@ namespace SimpleExcelBookSelector
             dataGridView1.Columns.Add(filePathColumn);
         }
 
-        private void PopulateDataGridView(List<string> history)
+        private void PopulateDataGridView(List<HistoryItem> history)
         {
             dataGridView1.Rows.Clear();
-            foreach (var path in history)
+            foreach (var item in history)
             {
-                dataGridView1.Rows.Add(false, path);
+                dataGridView1.Rows.Add(item.IsPinned ? "★" : "", false, item.FilePath);
             }
+        }
+
+        private void ApplyFilterAndSort()
+        {
+            var filterText = textBox1.Text;
+            
+            IEnumerable<HistoryItem> filteredHistory = FileHistory;
+
+            if (!string.IsNullOrWhiteSpace(filterText))
+            {
+                filteredHistory = filteredHistory
+                    .Where(item => item.FilePath.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            var sortedHistory = filteredHistory.OrderByDescending(item => item.IsPinned).ToList();
+            
+            PopulateDataGridView(sortedHistory);
         }
 
         private void btnAllOpen_Click(object sender, EventArgs e)
@@ -86,9 +114,8 @@ namespace SimpleExcelBookSelector
             if (MessageBox.Show("全ての履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 FileHistory.Clear();
-                PopulateDataGridView(FileHistory);
-                textBox1.Clear();
-                this.DialogResult = DialogResult.OK; // Notify MainForm to update
+                ApplyFilterAndSort();
+                this.DialogResult = DialogResult.OK;
             }
         }
 
@@ -141,9 +168,9 @@ namespace SimpleExcelBookSelector
 
             if (MessageBox.Show($"{filesToRemove.Count}件の履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
-                FileHistory.RemoveAll(f => filesToRemove.Contains(f));
-                textBox1_TextChanged(sender, e); // Re-apply filter
-                this.DialogResult = DialogResult.OK; // Notify MainForm to update
+                FileHistory.RemoveAll(item => filesToRemove.Contains(item.FilePath));
+                ApplyFilterAndSort();
+                this.DialogResult = DialogResult.OK;
             }
         }
 
@@ -158,19 +185,43 @@ namespace SimpleExcelBookSelector
 
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            var filterText = textBox1.Text;
+            ApplyFilterAndSort();
+        }
 
-            if (string.IsNullOrWhiteSpace(filterText))
+        private void btnClearFilter_Click(object sender, EventArgs e)
+        {
+            textBox1.Clear();
+            // The TextChanged event will handle the update
+        }
+
+        private void btnPinnedSelectedFiles_Click(object sender, EventArgs e)
+        {
+            var selectedPaths = new List<string>();
+            foreach (DataGridViewRow row in dataGridView1.Rows)
             {
-                PopulateDataGridView(FileHistory);
+                if (Convert.ToBoolean(row.Cells[CheckBoxColumnName].Value))
+                {
+                    selectedPaths.Add(row.Cells[FilePathColumnName].Value.ToString());
+                }
             }
-            else
+
+            if (selectedPaths.Count == 0)
             {
-                var filteredHistory = FileHistory
-                    .Where(path => path.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0)
-                    .ToList();
-                PopulateDataGridView(filteredHistory);
+                MessageBox.Show("ピン留め/解除するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
+
+            foreach (var path in selectedPaths)
+            {
+                var item = FileHistory.FirstOrDefault(i => i.FilePath == path);
+                if (item != null)
+                {
+                    item.IsPinned = !item.IsPinned; // Toggle pinned state
+                }
+            }
+
+            ApplyFilterAndSort();
+            this.DialogResult = DialogResult.OK;
         }
     }
 }

@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Windows.Forms;
 
 
@@ -154,26 +156,67 @@ namespace SimpleExcelBookSelector
             dataGridViewResults.ResumeLayout();
         }
 
+        // For migration from old settings format
+        [DataContract]
+        private class AppSettings_Old
+        {
+            [DataMember]
+            public bool IsSheetSelectionEnabled { get; set; }
+            [DataMember]
+            public bool IsAutoRefreshEnabled { get; set; }
+            [DataMember]
+            public int RefreshInterval { get; set; }
+            [DataMember]
+            public List<string> FileHistory { get; set; }
+        }
+
         private void LoadSettings()
         {
-            if (File.Exists(_settingsFilePath))
+            if (!File.Exists(_settingsFilePath))
             {
+                _settings = new AppSettings();
+                return;
+            }
+
+            try
+            {
+                // Try to load the new format first
+                using (var stream = File.OpenRead(_settingsFilePath))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    _settings = (AppSettings)serializer.ReadObject(stream);
+                }
+            }
+            catch (SerializationException)
+            {
+                // If it fails, try to load the old format and migrate
                 try
                 {
                     using (var stream = File.OpenRead(_settingsFilePath))
                     {
-                        var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                        _settings = (AppSettings)serializer.ReadObject(stream);
+                        var serializer = new DataContractJsonSerializer(typeof(AppSettings_Old));
+                        var oldSettings = (AppSettings_Old)serializer.ReadObject(stream);
+
+                        _settings = new AppSettings
+                        {
+                            IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
+                            IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
+                            RefreshInterval = oldSettings.RefreshInterval,
+                            FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false }).ToList()
+                        };
                     }
+                    // Immediately save the settings in the new format
+                    SaveSettings();
                 }
                 catch
                 {
-                    // If the file is corrupted, overwrite with default settings
+                    // If migration also fails, create default settings
                     _settings = new AppSettings();
                 }
             }
-            else
+            catch
             {
+                // For any other error, create default settings
                 _settings = new AppSettings();
             }
 
@@ -184,6 +227,7 @@ namespace SimpleExcelBookSelector
 
             UpdateHistoryComboBox();
         }
+
 
         private void SaveSettings()
         {
@@ -201,16 +245,26 @@ namespace SimpleExcelBookSelector
 
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_settingsFilePath));
-                using (var stream = File.Create(_settingsFilePath))
+                using (var memoryStream = new MemoryStream())
                 {
                     var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                    serializer.WriteObject(stream, _settings);
+                    serializer.WriteObject(memoryStream, _settings);
+                    var json = Encoding.UTF8.GetString(memoryStream.ToArray());
+
+                    // Use a temporary file to prevent data loss on write error
+                    var tempFilePath = _settingsFilePath + ".tmp";
+                    File.WriteAllText(tempFilePath, json, Encoding.UTF8);
+
+                    // Replace the original file with the new one
+                    if (File.Exists(_settingsFilePath))
+                    {
+                        File.Delete(_settingsFilePath);
+                    }
+                    File.Move(tempFilePath, _settingsFilePath);
                 }
             }
             catch (Exception ex)
             {
-                // Error handling (e.g., notify with a MessageBox)
                 MessageBox.Show($"Failed to save settings.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -219,16 +273,38 @@ namespace SimpleExcelBookSelector
         {
             if (string.IsNullOrEmpty(filePath)) return;
 
-            // Remove existing entry to move it to the top
-            _settings.FileHistory.RemoveAll(p => p.Equals(filePath, StringComparison.OrdinalIgnoreCase));
-            
-            // Add to the top
-            _settings.FileHistory.Insert(0, filePath);
+            var existingItem = _settings.FileHistory.FirstOrDefault(p => p.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
 
-            // Trim the list to the maximum allowed count (20)
-            if (_settings.FileHistory.Count > MaxHistoryCount)
+            if (existingItem != null)
             {
-                _settings.FileHistory = _settings.FileHistory.GetRange(0, MaxHistoryCount);
+                // If item exists, move it to the top of its group (pinned or not pinned)
+                _settings.FileHistory.Remove(existingItem);
+                int insertIndex = _settings.FileHistory.TakeWhile(i => i.IsPinned).Count();
+                _settings.FileHistory.Insert(existingItem.IsPinned ? 0 : insertIndex, existingItem);
+            }
+            else
+            {
+                // If new, add as not pinned
+                var newItem = new HistoryItem { FilePath = filePath, IsPinned = false };
+                int insertIndex = _settings.FileHistory.TakeWhile(i => i.IsPinned).Count();
+                _settings.FileHistory.Insert(insertIndex, newItem);
+            }
+
+            // Trim non-pinned items if history exceeds max count
+            var pinnedCount = _settings.FileHistory.Count(i => i.IsPinned);
+            var notPinnedCount = _settings.FileHistory.Count(i => !i.IsPinned);
+
+            if (pinnedCount + notPinnedCount > MaxHistoryCount)
+            {
+                var itemsToRemove = _settings.FileHistory
+                    .Where(i => !i.IsPinned)
+                    .Skip(MaxHistoryCount - pinnedCount)
+                    .ToList();
+
+                foreach (var item in itemsToRemove)
+                {
+                    _settings.FileHistory.Remove(item);
+                }
             }
         }
 
@@ -236,7 +312,13 @@ namespace SimpleExcelBookSelector
         {
             cmbHistory.BeginUpdate();
             cmbHistory.Items.Clear();
-            cmbHistory.Items.AddRange(_settings.FileHistory.ToArray());
+            // Sort by Pinned status then by original order (which is most recent)
+            var sortedHistory = _settings.FileHistory
+                .OrderByDescending(i => i.IsPinned)
+                .Select(i => i.FilePath)
+                .ToArray();
+
+            cmbHistory.Items.AddRange(sortedHistory);
             cmbHistory.EndUpdate();
         }
 
@@ -250,19 +332,17 @@ namespace SimpleExcelBookSelector
 
             try
             {
-                // ファイルが存在するか確認
                 if (File.Exists(filePath))
                 {
-                    // OSに関連付けられたアプリケーション（Excel）でファイルを開く
-                    // 既に開いている場合は、そのウィンドウがアクティブになる
                     Process.Start(filePath);
                 }
                 else
                 {
                     MessageBox.Show("ファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     // 履歴から見つからないファイルを削除
-                    _settings.FileHistory.Remove(filePath);
+                    _settings.FileHistory.RemoveAll(item => item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
                     UpdateHistoryComboBox();
+                    SaveSettings();
                 }
             }
             catch (Exception ex)
@@ -271,7 +351,6 @@ namespace SimpleExcelBookSelector
             }
             finally
             {
-                // 自動更新が有効な場合のみタイマーを再開
                 if (_settings.IsAutoRefreshEnabled)
                 {
                     _timer?.Start();
@@ -286,7 +365,6 @@ namespace SimpleExcelBookSelector
 
         private void DataGridViewResults_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            // Handle top-left header cell click for select-all
             if (e.RowIndex == -1 && e.ColumnIndex == -1)
             {
                 dataGridViewResults.SelectAll();
@@ -306,7 +384,6 @@ namespace SimpleExcelBookSelector
             {
                 excelApp = Marshal.GetActiveObject("Excel.Application");
                 
-                // フルパスで目的のワークブックを検索（堅牢性を向上）
                 foreach (dynamic book in excelApp.Workbooks)
                 {
                     if (book.FullName == id.WorkbookFullName)
@@ -321,17 +398,13 @@ namespace SimpleExcelBookSelector
                     if (chkEnableSheetSelectMode.Checked)
                     {
                         ws = wb.Sheets[id.WorksheetName];
-
-                        // Activate the sheet
                         ws.Activate();
                     }
                     else
                     {
-                        // Activate the workbook without changing the sheet
                         wb.Activate();
                     }
 
-                    // Bring the Excel application window to the foreground
                     SetForegroundWindow((IntPtr)excelApp.Hwnd);
                 }
             }
@@ -395,8 +468,6 @@ namespace SimpleExcelBookSelector
             }
             else
             {
-                // A handler is attached to TextChanged, so changing the text here will cause a recursive call.
-                // To avoid this, we detach the handler, change the text, and then reattach it.
                 textAutoUpdateSec.TextChanged -= TextAutoUpdateSec_TextChanged;
                 textAutoUpdateSec.Text = "1";
                 _timer.Interval = 1000;
@@ -406,8 +477,7 @@ namespace SimpleExcelBookSelector
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            SaveSettings(); // Save settings
-
+            SaveSettings();
             _timer?.Stop();
             _timer?.Dispose();
         }
@@ -424,19 +494,15 @@ namespace SimpleExcelBookSelector
         private void CmbHistory_DrawItem(object sender, DrawItemEventArgs e)
         {if (e.Index < 0) return;
 
-            // Draw the background
             e.DrawBackground();
 
-            // Draw the item text
             TextRenderer.DrawText(e.Graphics, cmbHistory.Items[e.Index].ToString(), e.Font, e.Bounds, e.ForeColor, TextFormatFlags.Left);
 
-            // Show tooltip if the mouse is over the item
             if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
             {
                 _toolTip.Show(cmbHistory.Items[e.Index].ToString(), cmbHistory, e.Bounds.Right, e.Bounds.Bottom);
             }
 
-            // Draw the focus rectangle if the mouse is not over the item
             e.DrawFocusRectangle();
 
         }
@@ -452,8 +518,7 @@ namespace SimpleExcelBookSelector
             {
                 if (historyForm.ShowDialog(this) == DialogResult.OK)
                 {
-                    // History was cleared in the dialog
-                    _settings.FileHistory = new List<string>(historyForm.FileHistory);
+                    _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory);
                     UpdateHistoryComboBox();
                     SaveSettings();
                 }

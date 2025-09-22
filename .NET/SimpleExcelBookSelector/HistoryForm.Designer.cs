@@ -129,6 +129,7 @@ namespace SimpleExcelBookSelector
             this.btnClearFilter.TabIndex = 8;
             this.btnClearFilter.Text = "クリア";
             this.btnClearFilter.UseVisualStyleBackColor = true;
+            this.btnClearFilter.Click += new System.EventHandler(this.btnClearFilter_Click);
             // 
             // btnPinnedSelectedFiles
             // 
@@ -138,6 +139,7 @@ namespace SimpleExcelBookSelector
             this.btnPinnedSelectedFiles.TabIndex = 9;
             this.btnPinnedSelectedFiles.Text = "選択ファイルのみピン止め";
             this.btnPinnedSelectedFiles.UseVisualStyleBackColor = true;
+            this.btnPinnedSelectedFiles.Click += new System.EventHandler(this.btnPinnedSelectedFiles_Click);
             // 
             // HistoryForm
             // 

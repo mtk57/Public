@@ -29,6 +29,7 @@
         private void InitializeComponent ()
         {
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
+            this.clmPinned = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmDir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmSheet = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -51,6 +52,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.dataGridViewResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.clmPinned,
             this.clmDir,
             this.clmFile,
             this.clmSheet});
@@ -60,12 +62,21 @@
             this.dataGridViewResults.Size = new System.Drawing.Size(693, 165);
             this.dataGridViewResults.TabIndex = 6;
             // 
+            // clmPinned
+            // 
+            this.clmPinned.HeaderText = "ピン留め";
+            this.clmPinned.Name = "clmPinned";
+            this.clmPinned.ReadOnly = true;
+            this.clmPinned.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            this.clmPinned.Width = 70;
+            // 
             // clmDir
             // 
             this.clmDir.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.clmDir.HeaderText = "フォルダ";
             this.clmDir.Name = "clmDir";
             this.clmDir.ReadOnly = true;
+            this.clmDir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             // 
             // clmFile
             // 
@@ -73,6 +84,7 @@
             this.clmFile.HeaderText = "ファイル";
             this.clmFile.Name = "clmFile";
             this.clmFile.ReadOnly = true;
+            this.clmFile.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             // 
             // clmSheet
             // 
@@ -80,6 +92,7 @@
             this.clmSheet.HeaderText = "シート";
             this.clmSheet.Name = "clmSheet";
             this.clmSheet.ReadOnly = true;
+            this.clmSheet.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             // 
             // chkEnableSheetSelectMode
             // 
@@ -173,6 +186,7 @@
 
         #endregion
         private System.Windows.Forms.DataGridView dataGridViewResults;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmPinned;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmDir;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFile;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmSheet;

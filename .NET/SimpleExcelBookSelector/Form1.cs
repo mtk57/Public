@@ -30,12 +30,20 @@ namespace SimpleExcelBookSelector
         private Timer _timer;
         private List<string> _lastDisplayedKeys = new List<string>();
         private ToolTip _toolTip;
+        private string _currentSortColumnName;
+        private bool _isSortAscending = true;
+        private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
 
 
         private class ExcelSheetIdentifier
         {
             public string WorkbookFullName { get; set; }
             public string WorksheetName { get; set; }
+            public string DirectoryName { get; set; }
+            public string FileName { get; set; }
+            public bool IsPinned { get; set; }
+            public int OriginalIndex { get; set; }
+            public string Key => $"{WorkbookFullName}|{WorksheetName}";
         }
 
         public MainForm()
@@ -61,6 +69,7 @@ namespace SimpleExcelBookSelector
             dataGridViewResults.CellClick += DataGridViewResults_CellClick;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
             dataGridViewResults.CellToolTipTextNeeded += DataGridViewResults_CellToolTipTextNeeded;
+            dataGridViewResults.ColumnHeaderMouseClick += DataGridViewResults_ColumnHeaderMouseClick;
             chkEnableSheetSelectMode.CheckedChanged += ChkEnableSheetSelectMode_CheckedChanged;
             chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
             textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
@@ -85,39 +94,49 @@ namespace SimpleExcelBookSelector
             }
         }
 
-        private void RefreshExcelFileList()
+        private void RefreshExcelFileList(bool forceUpdate = false)
         {
             dynamic excelApp = null;
             var newIdentifiers = new List<ExcelSheetIdentifier>();
-            var newKeys = new List<string>();
 
             try
             {
                 excelApp = Marshal.GetActiveObject("Excel.Application");
 
+                int index = 0;
                 foreach (dynamic wb in excelApp.Workbooks)
                 {
                     AddToHistory(wb.FullName);
+
+                    bool isPinned = IsPinned(wb.FullName);
+                    string directoryName = Path.GetDirectoryName(wb.FullName);
+                    string fileName = Path.GetFileName(wb.FullName);
 
                     if (chkEnableSheetSelectMode.Checked)
                     {
                         foreach (dynamic ws in wb.Sheets)
                         {
-                            newKeys.Add($"{wb.FullName}|{ws.Name}");
                             newIdentifiers.Add(new ExcelSheetIdentifier
                             {
                                 WorkbookFullName = wb.FullName,
-                                WorksheetName = ws.Name
+                                WorksheetName = ws.Name,
+                                DirectoryName = directoryName,
+                                FileName = fileName,
+                                IsPinned = isPinned,
+                                OriginalIndex = index++
                             });
                         }
                     }
                     else
                     {
-                        newKeys.Add(wb.FullName);
                         newIdentifiers.Add(new ExcelSheetIdentifier
                         {
                             WorkbookFullName = wb.FullName,
-                            WorksheetName = string.Empty
+                            WorksheetName = string.Empty,
+                            DirectoryName = directoryName,
+                            FileName = fileName,
+                            IsPinned = isPinned,
+                            OriginalIndex = index++
                         });
                     }
                 }
@@ -131,10 +150,17 @@ namespace SimpleExcelBookSelector
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
             }
 
-            if (!_lastDisplayedKeys.SequenceEqual(newKeys))
+            var sortedIdentifiers = ApplyCurrentSort(newIdentifiers);
+            var sortedKeys = sortedIdentifiers.Select(id => id.Key).ToList();
+
+            if (forceUpdate || !_lastDisplayedKeys.SequenceEqual(sortedKeys))
             {
-                UpdateDataGridView(newIdentifiers);
-                _lastDisplayedKeys = newKeys;
+                UpdateDataGridView(sortedIdentifiers);
+                _lastDisplayedKeys = sortedKeys;
+            }
+            else
+            {
+                UpdateSortGlyph();
             }
         }
 
@@ -147,13 +173,85 @@ namespace SimpleExcelBookSelector
             {
                 var rowIndex = dataGridViewResults.Rows.Add();
                 var row = dataGridViewResults.Rows[rowIndex];
-                row.Cells["clmDir"].Value = Path.GetDirectoryName(id.WorkbookFullName);
-                row.Cells["clmFile"].Value = Path.GetFileName(id.WorkbookFullName);
+                row.Cells["clmPinned"].Value = id.IsPinned ? "★" : string.Empty;
+                row.Cells["clmDir"].Value = id.DirectoryName;
+                row.Cells["clmFile"].Value = id.FileName;
                 row.Cells["clmSheet"].Value = id.WorksheetName;
                 row.Tag = id;
             }
 
             dataGridViewResults.ResumeLayout();
+            UpdateSortGlyph();
+        }
+
+        private List<ExcelSheetIdentifier> ApplyCurrentSort(List<ExcelSheetIdentifier> identifiers)
+        {
+            if (identifiers == null || identifiers.Count == 0)
+            {
+                return new List<ExcelSheetIdentifier>();
+            }
+
+            IOrderedEnumerable<ExcelSheetIdentifier> ordered;
+
+            switch (_currentSortColumnName)
+            {
+                case "clmPinned":
+                    ordered = _isSortAscending
+                        ? identifiers.OrderBy(id => id.IsPinned)
+                        : identifiers.OrderByDescending(id => id.IsPinned);
+                    break;
+                case "clmDir":
+                    ordered = _isSortAscending
+                        ? identifiers.OrderBy(id => id.DirectoryName, SortComparer)
+                        : identifiers.OrderByDescending(id => id.DirectoryName, SortComparer);
+                    break;
+                case "clmFile":
+                    ordered = _isSortAscending
+                        ? identifiers.OrderBy(id => id.FileName, SortComparer)
+                        : identifiers.OrderByDescending(id => id.FileName, SortComparer);
+                    break;
+                case "clmSheet":
+                    ordered = _isSortAscending
+                        ? identifiers.OrderBy(id => id.WorksheetName, SortComparer)
+                        : identifiers.OrderByDescending(id => id.WorksheetName, SortComparer);
+                    break;
+                default:
+                    ordered = identifiers.OrderBy(id => id.OriginalIndex);
+                    break;
+            }
+
+            ordered = ordered
+                .ThenBy(id => id.DirectoryName, SortComparer)
+                .ThenBy(id => id.FileName, SortComparer)
+                .ThenBy(id => id.WorksheetName, SortComparer)
+                .ThenBy(id => id.OriginalIndex);
+
+            return ordered.ToList();
+        }
+
+        private void UpdateSortGlyph()
+        {
+            foreach (DataGridViewColumn column in dataGridViewResults.Columns)
+            {
+                if (column.Name == _currentSortColumnName)
+                {
+                    column.HeaderCell.SortGlyphDirection = _isSortAscending ? SortOrder.Ascending : SortOrder.Descending;
+                }
+                else
+                {
+                    column.HeaderCell.SortGlyphDirection = SortOrder.None;
+                }
+            }
+        }
+
+        private bool IsPinned(string filePath)
+        {
+            if (_settings?.FileHistory == null)
+            {
+                return false;
+            }
+
+            return _settings.FileHistory.Any(item => item.IsPinned && item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
         }
 
         // For migration from old settings format
@@ -352,7 +450,35 @@ namespace SimpleExcelBookSelector
 
         private void BtnForceUpdate_Click(object sender, EventArgs e)
         {
-            RefreshExcelFileList();
+            RefreshExcelFileList(forceUpdate: true);
+        }
+
+        private void DataGridViewResults_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.ColumnIndex < 0)
+            {
+                return;
+            }
+
+            var column = dataGridViewResults.Columns[e.ColumnIndex];
+            if (column == null)
+            {
+                return;
+            }
+
+            var columnName = column.Name;
+
+            if (_currentSortColumnName == columnName)
+            {
+                _isSortAscending = !_isSortAscending;
+            }
+            else
+            {
+                _currentSortColumnName = columnName;
+                _isSortAscending = true;
+            }
+
+            RefreshExcelFileList(forceUpdate: true);
         }
 
         private void DataGridViewResults_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -525,6 +651,7 @@ namespace SimpleExcelBookSelector
                     _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned }));
                     UpdateHistoryComboBox();
                     SaveSettings();
+                    RefreshExcelFileList(forceUpdate: true);
                 }
             }
         }

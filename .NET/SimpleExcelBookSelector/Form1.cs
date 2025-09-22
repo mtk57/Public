@@ -13,6 +13,13 @@ namespace SimpleExcelBookSelector
 {
     public partial class MainForm : Form
     {
+        private const int MaxHistoryCount = 50;
+
+        private AppSettings _settings;
+        private readonly string _settingsFilePath = Path.Combine(
+            Application.StartupPath,
+            "settings.json");
+
         // Windows APIのインポート
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -146,13 +153,6 @@ namespace SimpleExcelBookSelector
 
             dataGridViewResults.ResumeLayout();
         }
-
-        private AppSettings _settings;
-        private readonly string _settingsFilePath = Path.Combine(
-            Application.StartupPath,
-            "settings.json");
-
-        private const int MaxHistoryCount = 20;
 
         private void LoadSettings()
         {

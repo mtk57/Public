@@ -107,5 +107,47 @@ namespace SimpleExcelBookSelector
                 }
             }
         }
+
+        private void btnUnselectedAll_Click(object sender, EventArgs e)
+        {
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                row.Cells[CheckBoxColumnName].Value = false;
+            }
+        }
+
+        private void btnDeleteSelectedFiles_Click(object sender, EventArgs e)
+        {
+            var filesToRemove = new List<string>();
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells[CheckBoxColumnName].Value))
+                {
+                    filesToRemove.Add(row.Cells[FilePathColumnName].Value.ToString());
+                }
+            }
+
+            if (filesToRemove.Count == 0)
+            {
+                MessageBox.Show("削除するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show($"{filesToRemove.Count}件の履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                FileHistory.RemoveAll(f => filesToRemove.Contains(f));
+                PopulateDataGridView();
+                this.DialogResult = DialogResult.OK; // Notify MainForm to update
+            }
+        }
+
+        private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                var filePath = dataGridView1.Rows[e.RowIndex].Cells[FilePathColumnName].Value.ToString();
+                OpenFiles(new[] { filePath });
+            }
+        }
     }
 }

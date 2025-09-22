@@ -113,6 +113,7 @@
             this.cmbHistory.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.cmbHistory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbHistory.FormattingEnabled = true;
             this.cmbHistory.Location = new System.Drawing.Point(12, 39);
             this.cmbHistory.Name = "cmbHistory";

@@ -50,6 +50,7 @@ namespace SimpleExcelBookSelector
             this.dataGridView1.RowTemplate.Height = 21;
             this.dataGridView1.Size = new System.Drawing.Size(621, 249);
             this.dataGridView1.TabIndex = 0;
+            this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             // 
             // btnAllOpen
             // 
@@ -89,6 +90,7 @@ namespace SimpleExcelBookSelector
             this.btnDeleteSelectedFiles.TabIndex = 4;
             this.btnDeleteSelectedFiles.Text = "選択ファイルのみ削除";
             this.btnDeleteSelectedFiles.UseVisualStyleBackColor = true;
+            this.btnDeleteSelectedFiles.Click += new System.EventHandler(this.btnDeleteSelectedFiles_Click);
             // 
             // btnUnselectedAll
             // 
@@ -98,6 +100,7 @@ namespace SimpleExcelBookSelector
             this.btnUnselectedAll.TabIndex = 5;
             this.btnUnselectedAll.Text = "全てチェックOFF";
             this.btnUnselectedAll.UseVisualStyleBackColor = true;
+            this.btnUnselectedAll.Click += new System.EventHandler(this.btnUnselectedAll_Click);
             // 
             // textBox1
             // 

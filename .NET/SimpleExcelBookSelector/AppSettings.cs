@@ -18,19 +18,6 @@ namespace SimpleExcelBookSelector
     }
 
     [DataContract]
-    public class DataGridColumnLayout
-    {
-        [DataMember]
-        public int Width { get; set; }
-
-        [DataMember]
-        public double FillWeight { get; set; }
-
-        [DataMember]
-        public string AutoSizeMode { get; set; }
-    }
-
-    [DataContract]
     public class FormLayoutSettings
     {
         [DataMember]
@@ -41,9 +28,6 @@ namespace SimpleExcelBookSelector
 
         [DataMember]
         public string WindowState { get; set; }
-
-        [DataMember]
-        public Dictionary<string, DataGridColumnLayout> ColumnLayouts { get; set; } = new Dictionary<string, DataGridColumnLayout>(StringComparer.Ordinal);
     }
 
     [DataContract]

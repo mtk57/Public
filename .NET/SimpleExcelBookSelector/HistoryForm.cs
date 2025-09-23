@@ -21,8 +21,6 @@ namespace SimpleExcelBookSelector
         private string _currentSortColumnName = PinnedColumnName;
         private bool _isSortAscending = false;
         private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
-        private readonly Dictionary<string, int> _historyColumnWidthSnapshot = new Dictionary<string, int>(StringComparer.Ordinal);
-        private bool _isAdjustingHistoryColumnWidth;
 
         public HistoryForm(AppSettings settings)
         {
@@ -108,7 +106,6 @@ namespace SimpleExcelBookSelector
             dataGridView1.Columns.Add(updatedAtColumn);
 
             dataGridView1.CellClick += DataGridView1_CellClick;
-            dataGridView1.ColumnWidthChanged += DataGridView1_ColumnWidthChanged;
         }
 
         private void EnsureHistoryLayoutSettings()
@@ -116,11 +113,6 @@ namespace SimpleExcelBookSelector
             if (_settings.HistoryFormLayout == null)
             {
                 _settings.HistoryFormLayout = new FormLayoutSettings();
-            }
-
-            if (_settings.HistoryFormLayout.ColumnLayouts == null)
-            {
-                _settings.HistoryFormLayout.ColumnLayouts = new Dictionary<string, DataGridColumnLayout>(StringComparer.Ordinal);
             }
         }
 
@@ -146,63 +138,7 @@ namespace SimpleExcelBookSelector
                 WindowState = savedState;
             }
 
-            _isAdjustingHistoryColumnWidth = true;
-            try
-            {
-                ApplyDataGridLayout(dataGridView1, layout);
-            }
-            finally
-            {
-                _isAdjustingHistoryColumnWidth = false;
-            }
-            UpdateColumnWidthSnapshot(dataGridView1, _historyColumnWidthSnapshot);
-        }
-
-        private static void ApplyDataGridLayout(DataGridView grid, FormLayoutSettings layout)
-        {
-            if (grid == null || layout?.ColumnLayouts == null)
-            {
-                return;
-            }
-
-            foreach (DataGridViewColumn column in grid.Columns)
-            {
-                if (!layout.ColumnLayouts.TryGetValue(column.Name, out var columnLayout) || columnLayout == null)
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(columnLayout.AutoSizeMode) && Enum.TryParse(columnLayout.AutoSizeMode, true, out DataGridViewAutoSizeColumnMode mode))
-                {
-                    if (ShouldUseManualSizing(column.Name))
-                    {
-                        mode = DataGridViewAutoSizeColumnMode.NotSet;
-                    }
-
-                    column.AutoSizeMode = mode;
-                }
-                else if (ShouldUseManualSizing(column.Name))
-                {
-                    column.AutoSizeMode = DataGridViewAutoSizeColumnMode.NotSet;
-                }
-
-                if (column.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
-                {
-                    if (columnLayout.FillWeight > 0)
-                    {
-                        column.FillWeight = (float)columnLayout.FillWeight;
-                    }
-                }
-                else if (columnLayout.Width > 0)
-                {
-                    column.Width = columnLayout.Width;
-                }
-            }
-        }
-
-        private static bool ShouldUseManualSizing(string columnName)
-        {
-            return string.Equals(columnName, UpdatedAtColumnName, StringComparison.Ordinal);
+            // 列幅は保存せず、標準の挙動に任せる
         }
 
         private void PopulateDataGridView(List<HistoryItem> history)
@@ -609,146 +545,7 @@ namespace SimpleExcelBookSelector
             layout.Width = bounds.Width;
             layout.Height = bounds.Height;
             layout.WindowState = WindowState.ToString();
-
-            layout.ColumnLayouts.Clear();
-            foreach (DataGridViewColumn column in dataGridView1.Columns)
-            {
-                layout.ColumnLayouts[column.Name] = new DataGridColumnLayout
-                {
-                    Width = column.Width,
-                    FillWeight = column.FillWeight,
-                    AutoSizeMode = column.AutoSizeMode.ToString()
-                };
-            }
         }
 
-        private void DataGridView1_ColumnWidthChanged(object sender, DataGridViewColumnEventArgs e)
-        {
-            HandleManualColumnResize(
-                dataGridView1,
-                _historyColumnWidthSnapshot,
-                UpdatedAtColumnName,
-                () => _isAdjustingHistoryColumnWidth,
-                value => _isAdjustingHistoryColumnWidth = value,
-                e.Column);
-        }
-
-        private void HandleManualColumnResize(
-            DataGridView grid,
-            Dictionary<string, int> snapshot,
-            string targetColumnName,
-            Func<bool> getAdjusting,
-            Action<bool> setAdjusting,
-            DataGridViewColumn changedColumn)
-        {
-            if (grid == null || snapshot == null || string.IsNullOrEmpty(targetColumnName) || changedColumn == null)
-            {
-                return;
-            }
-
-            if (getAdjusting())
-            {
-                return;
-            }
-
-            var targetColumn = grid.Columns[targetColumnName];
-            if (targetColumn == null)
-            {
-                return;
-            }
-
-            var leftColumn = FindLeftNeighborColumn(grid, targetColumn);
-            if (!ReferenceEquals(changedColumn, targetColumn) && (leftColumn == null || !ReferenceEquals(changedColumn, leftColumn)))
-            {
-                snapshot[changedColumn.Name] = changedColumn.Width;
-                return;
-            }
-
-            if (!snapshot.TryGetValue(targetColumn.Name, out var previousTargetWidth))
-            {
-                previousTargetWidth = targetColumn.Width;
-            }
-
-            int previousLeftWidth = 0;
-            if (leftColumn != null && !snapshot.TryGetValue(leftColumn.Name, out previousLeftWidth))
-            {
-                previousLeftWidth = leftColumn.Width;
-            }
-
-            int delta = 0;
-            if (leftColumn != null)
-            {
-                delta = leftColumn.Width - previousLeftWidth;
-            }
-
-            var adjustmentScheduled = false;
-
-            if (delta != 0)
-            {
-                var desiredWidth = previousTargetWidth - delta;
-                var minimumWidth = Math.Max(targetColumn.MinimumWidth, 10);
-                if (desiredWidth < minimumWidth)
-                {
-                    desiredWidth = minimumWidth;
-                }
-
-                if (desiredWidth != targetColumn.Width)
-                {
-                    adjustmentScheduled = true;
-                    setAdjusting(true);
-                    grid.BeginInvoke((MethodInvoker)(() =>
-                    {
-                        try
-                        {
-                            targetColumn.Width = desiredWidth;
-                        }
-                        finally
-                        {
-                            setAdjusting(false);
-                            UpdateColumnWidthSnapshot(grid, snapshot);
-                        }
-                    }));
-                }
-            }
-
-            if (!adjustmentScheduled)
-            {
-                UpdateColumnWidthSnapshot(grid, snapshot);
-            }
-        }
-
-        private static DataGridViewColumn FindLeftNeighborColumn(DataGridView grid, DataGridViewColumn targetColumn)
-        {
-            if (grid == null || targetColumn == null)
-            {
-                return null;
-            }
-
-            DataGridViewColumn leftNeighbor = null;
-            foreach (var column in grid.Columns.Cast<DataGridViewColumn>()
-                .Where(c => c.Visible)
-                .OrderBy(c => c.DisplayIndex))
-            {
-                if (column.DisplayIndex < targetColumn.DisplayIndex)
-                {
-                    leftNeighbor = column;
-                }
-            }
-
-            return leftNeighbor;
-        }
-
-        private static void UpdateColumnWidthSnapshot(DataGridView grid, Dictionary<string, int> snapshot)
-        {
-            if (grid == null || snapshot == null)
-            {
-                return;
-            }
-
-            foreach (DataGridViewColumn column in grid.Columns)
-            {
-                snapshot[column.Name] = column.Width;
-            }
-        }
     }
 }

@@ -219,9 +219,13 @@ namespace SimpleExcelBookSelector
 
         private void btnUnselectedAll_Click(object sender, EventArgs e)
         {
+            bool shouldCheckAll = dataGridView1.Rows
+                .Cast<DataGridViewRow>()
+                .Any(row => !(row.Cells[CheckBoxColumnName].Value is bool checkedValue && checkedValue));
+
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
-                row.Cells[CheckBoxColumnName].Value = false;
+                row.Cells[CheckBoxColumnName].Value = shouldCheckAll;
             }
         }
 

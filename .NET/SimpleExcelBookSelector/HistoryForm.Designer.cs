@@ -33,7 +33,7 @@
             this.btnAllClear = new System.Windows.Forms.Button();
             this.btnSelectOpen = new System.Windows.Forms.Button();
             this.btnDeleteSelectedFiles = new System.Windows.Forms.Button();
-            this.btnUnselectedAll = new System.Windows.Forms.Button();
+            this.btnAllCheckOnOff = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnClearFilter = new System.Windows.Forms.Button();
@@ -99,15 +99,15 @@
             this.btnDeleteSelectedFiles.UseVisualStyleBackColor = true;
             this.btnDeleteSelectedFiles.Click += new System.EventHandler(this.btnDeleteSelectedFiles_Click);
             // 
-            // btnUnselectedAll
+            // btnAllCheckOnOff
             // 
-            this.btnUnselectedAll.Location = new System.Drawing.Point(332, 12);
-            this.btnUnselectedAll.Name = "btnUnselectedAll";
-            this.btnUnselectedAll.Size = new System.Drawing.Size(99, 23);
-            this.btnUnselectedAll.TabIndex = 5;
-            this.btnUnselectedAll.Text = "全てチェックOFF";
-            this.btnUnselectedAll.UseVisualStyleBackColor = true;
-            this.btnUnselectedAll.Click += new System.EventHandler(this.btnUnselectedAll_Click);
+            this.btnAllCheckOnOff.Location = new System.Drawing.Point(332, 12);
+            this.btnAllCheckOnOff.Name = "btnAllCheckOnOff";
+            this.btnAllCheckOnOff.Size = new System.Drawing.Size(74, 23);
+            this.btnAllCheckOnOff.TabIndex = 5;
+            this.btnAllCheckOnOff.Text = "全てチェック";
+            this.btnAllCheckOnOff.UseVisualStyleBackColor = true;
+            this.btnAllCheckOnOff.Click += new System.EventHandler(this.btnUnselectedAll_Click);
             // 
             // textBox1
             // 
@@ -201,7 +201,7 @@
             this.Controls.Add(this.btnClearFilter);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.textBox1);
-            this.Controls.Add(this.btnUnselectedAll);
+            this.Controls.Add(this.btnAllCheckOnOff);
             this.Controls.Add(this.btnDeleteSelectedFiles);
             this.Controls.Add(this.btnSelectOpen);
             this.Controls.Add(this.btnAllClear);
@@ -223,7 +223,7 @@
         private System.Windows.Forms.Button btnAllClear;
         private System.Windows.Forms.Button btnSelectOpen;
         private System.Windows.Forms.Button btnDeleteSelectedFiles;
-        private System.Windows.Forms.Button btnUnselectedAll;
+        private System.Windows.Forms.Button btnAllCheckOnOff;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnClearFilter;

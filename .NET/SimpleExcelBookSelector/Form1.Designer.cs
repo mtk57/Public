@@ -97,11 +97,11 @@
             // 
             // clmUpdated
             // 
-            this.clmUpdated.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.clmUpdated.HeaderText = "更新日時";
             this.clmUpdated.Name = "clmUpdated";
             this.clmUpdated.ReadOnly = true;
             this.clmUpdated.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            this.clmUpdated.Width = 140;
             // 
             // chkEnableSheetSelectMode
             // 
@@ -195,4 +195,3 @@
         private System.Windows.Forms.CheckBox chkIsOpenDir;
     }
 }
-

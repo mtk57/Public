@@ -585,16 +585,17 @@ namespace SimpleExcelBookSelector
             ActivateExcelEntry(id);
         }
 
-        private void ActivateExcelEntry(ExcelSheetIdentifier id)
+        private bool ActivateExcelEntry(ExcelSheetIdentifier id, bool restoreMainFormFocus = true)
         {
             if (id == null)
             {
-                return;
+                return false;
             }
 
             dynamic excelApp = null;
             dynamic wb = null;
             dynamic ws = null;
+            bool activated = false;
 
             try
             {
@@ -622,6 +623,7 @@ namespace SimpleExcelBookSelector
                     }
 
                     SetForegroundWindow((IntPtr)excelApp.Hwnd);
+                    activated = true;
                 }
             }
             catch (Exception ex)
@@ -635,7 +637,12 @@ namespace SimpleExcelBookSelector
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
             }
 
-            BringMainFormToFront();
+            if (restoreMainFormFocus)
+            {
+                BringMainFormToFront();
+            }
+
+            return activated;
         }
 
         private void BringMainFormToFront()
@@ -687,6 +694,17 @@ namespace SimpleExcelBookSelector
                 return true;
             }
 
+            if ((keyData & Keys.Control) == Keys.Control && (keyData & Keys.KeyCode) == Keys.W)
+            {
+                if (!(dataGridViewResults.Focused || dataGridViewResults.ContainsFocus))
+                {
+                    return base.ProcessCmdKey(ref msg, keyData);
+                }
+
+                CloseSelectedExcelEntries();
+                return true;
+            }
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
@@ -731,6 +749,57 @@ namespace SimpleExcelBookSelector
             }
 
             ActivateExcelForRowIndex(targetIndex);
+        }
+
+        private void CloseSelectedExcelEntries()
+        {
+            var targetRows = dataGridViewResults.SelectedRows
+                .Cast<DataGridViewRow>()
+                .ToList();
+
+            if (targetRows.Count == 0)
+            {
+                if (dataGridViewResults.CurrentCell?.RowIndex is int currentIndex && currentIndex >= 0)
+                {
+                    targetRows.Add(dataGridViewResults.Rows[currentIndex]);
+                }
+            }
+
+            var targets = targetRows
+                .Select(row => row.Tag as ExcelSheetIdentifier)
+                .Where(id => id != null)
+                .GroupBy(id => id.WorkbookFullName, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+
+            if (targets.Count == 0)
+            {
+                return;
+            }
+
+            bool wasTimerRunning = _timer != null && _timer.Enabled;
+            if (wasTimerRunning)
+            {
+                _timer.Stop();
+            }
+
+            foreach (var target in targets)
+            {
+                if (ActivateExcelEntry(target, restoreMainFormFocus: false))
+                {
+                    SendKeys.SendWait("^w");
+                    Application.DoEvents();
+                }
+            }
+
+            RefreshExcelFileList(forceUpdate: true);
+
+            BringMainFormToFront();
+
+            if (wasTimerRunning)
+            {
+                _timer.Start();
+            }
         }
     }
 }

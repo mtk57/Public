@@ -9,11 +9,20 @@ npm install -g @google/gemini-cli@latest
 npm install -g @openai/codex
 npm install -g @openai/codex@latest
 
-wsl
-codex --version
-codex
+<環境構築>
+1.WSL2を入れる
+2.WSLからnode.js、codexを入れる
 
-→リポジトリにAGENTS.mdを入れておくとよいらしい。
+<起動方法>
+1.PowerShellを管理者権限で開く
+2.wsl
+3.codex
+
+<バージョン確認>
+codex --version
+
+<Tips>
+- リポジトリにAGENTS.mdを入れておくとよいらしい。
   そんでもって、指示する前に以下を指示する。
   このディレクトリの AGENTS.md を読んで、記載のルールに従ってください。以後は日本語で説明して。
 

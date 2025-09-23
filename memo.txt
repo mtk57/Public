@@ -26,7 +26,9 @@ wslpath -w "$(pwd)" | clip.exe           Windowsのパス形式でコピー
 
 
 
-
+■VS Code
+#mdファイルをプレビュー  (拡張入れなくもOK)
+CTRL + SHIFT + V
 
 
 ■PowerShell or WindowsTerminalでgeminiコマンドが失敗する場合：

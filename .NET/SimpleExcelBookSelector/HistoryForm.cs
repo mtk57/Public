@@ -13,6 +13,8 @@ namespace SimpleExcelBookSelector
         private readonly AppSettings _settings;
         private const string PinnedColumnName = "colPinned";
         private const string CheckBoxColumnName = "colCheck";
+        private const string DirectoryColumnName = "colDirectory";
+        private const string FileNameColumnName = "colFileName";
         private const string FilePathColumnName = "colFilePath";
         private const string UpdatedAtColumnName = "colUpdatedAt";
         private string _currentSortColumnName = PinnedColumnName;
@@ -58,13 +60,34 @@ namespace SimpleExcelBookSelector
             };
             dataGridView1.Columns.Add(checkBoxColumn);
 
+            var directoryColumn = new DataGridViewTextBoxColumn
+            {
+                Name = DirectoryColumnName,
+                HeaderText = "フォルダ",
+                ReadOnly = true,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                SortMode = DataGridViewColumnSortMode.Programmatic
+            };
+            dataGridView1.Columns.Add(directoryColumn);
+
+            var fileNameColumn = new DataGridViewTextBoxColumn
+            {
+                Name = FileNameColumnName,
+                HeaderText = "ファイル",
+                ReadOnly = true,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                SortMode = DataGridViewColumnSortMode.Programmatic
+            };
+            dataGridView1.Columns.Add(fileNameColumn);
+
             var filePathColumn = new DataGridViewTextBoxColumn
             {
                 Name = FilePathColumnName,
                 HeaderText = "ファイルパス",
                 ReadOnly = true,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-                SortMode = DataGridViewColumnSortMode.Programmatic
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells,
+                SortMode = DataGridViewColumnSortMode.Programmatic,
+                Visible = false
             };
             dataGridView1.Columns.Add(filePathColumn);
 
@@ -86,13 +109,29 @@ namespace SimpleExcelBookSelector
             dataGridView1.Rows.Clear();
             foreach (var item in history)
             {
-                dataGridView1.Rows.Add(item.IsPinned ? "★" : "", false, item.FilePath, FormatTimestamp(item.LastUpdated));
+                var directoryName = GetDirectoryName(item.FilePath);
+                var fileName = GetFileName(item.FilePath);
+                dataGridView1.Rows.Add(item.IsPinned ? "★" : "", false, directoryName, fileName, item.FilePath, FormatTimestamp(item.LastUpdated));
             }
         }
 
         private static string FormatTimestamp(DateTime? value)
         {
             return value.HasValue ? value.Value.ToString("yyyy/MM/dd HH:mm:ss") : string.Empty;
+        }
+
+        private static string GetDirectoryName(string path)
+        {
+            return string.IsNullOrWhiteSpace(path)
+                ? string.Empty
+                : Path.GetDirectoryName(path) ?? string.Empty;
+        }
+
+        private static string GetFileName(string path)
+        {
+            return string.IsNullOrWhiteSpace(path)
+                ? string.Empty
+                : Path.GetFileName(path) ?? string.Empty;
         }
 
         private List<HistoryItem> SortHistory(IEnumerable<HistoryItem> history)
@@ -118,6 +157,24 @@ namespace SimpleExcelBookSelector
                         ? history.OrderBy(item => item.FilePath, SortComparer)
                         : history.OrderByDescending(item => item.FilePath, SortComparer);
                     ordered = ordered
+                        .ThenByDescending(item => item.IsPinned)
+                        .ThenByDescending(item => item.LastUpdated ?? DateTime.MinValue);
+                    break;
+                case DirectoryColumnName:
+                    ordered = _isSortAscending
+                        ? history.OrderBy(item => GetDirectoryName(item.FilePath), SortComparer)
+                        : history.OrderByDescending(item => GetDirectoryName(item.FilePath), SortComparer);
+                    ordered = ordered
+                        .ThenBy(item => GetFileName(item.FilePath), SortComparer)
+                        .ThenByDescending(item => item.IsPinned)
+                        .ThenByDescending(item => item.LastUpdated ?? DateTime.MinValue);
+                    break;
+                case FileNameColumnName:
+                    ordered = _isSortAscending
+                        ? history.OrderBy(item => GetFileName(item.FilePath), SortComparer)
+                        : history.OrderByDescending(item => GetFileName(item.FilePath), SortComparer);
+                    ordered = ordered
+                        .ThenBy(item => GetDirectoryName(item.FilePath), SortComparer)
                         .ThenByDescending(item => item.IsPinned)
                         .ThenByDescending(item => item.LastUpdated ?? DateTime.MinValue);
                     break;

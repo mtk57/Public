@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.Serialization;
 using System.Collections.Generic;
 
@@ -11,6 +12,9 @@ namespace SimpleExcelBookSelector
 
         [DataMember]
         public bool IsPinned { get; set; }
+
+        [DataMember]
+        public DateTime? LastUpdated { get; set; }
     }
 
     [DataContract]

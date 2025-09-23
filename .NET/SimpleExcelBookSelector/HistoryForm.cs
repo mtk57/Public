@@ -14,6 +14,7 @@ namespace SimpleExcelBookSelector
         private const string PinnedColumnName = "colPinned";
         private const string CheckBoxColumnName = "colCheck";
         private const string FilePathColumnName = "colFilePath";
+        private const string UpdatedAtColumnName = "colUpdatedAt";
         private string _currentSortColumnName = PinnedColumnName;
         private bool _isSortAscending = false;
         private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
@@ -22,7 +23,7 @@ namespace SimpleExcelBookSelector
         {
             InitializeComponent();
             _settings = settings;
-            FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned }));
+            FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned, LastUpdated = item.LastUpdated }));
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)
@@ -67,6 +68,16 @@ namespace SimpleExcelBookSelector
             };
             dataGridView1.Columns.Add(filePathColumn);
 
+            var updatedAtColumn = new DataGridViewTextBoxColumn
+            {
+                Name = UpdatedAtColumnName,
+                HeaderText = "更新日時",
+                ReadOnly = true,
+                Width = 140,
+                SortMode = DataGridViewColumnSortMode.Programmatic
+            };
+            dataGridView1.Columns.Add(updatedAtColumn);
+
             dataGridView1.CellClick += DataGridView1_CellClick;
         }
 
@@ -75,12 +86,22 @@ namespace SimpleExcelBookSelector
             dataGridView1.Rows.Clear();
             foreach (var item in history)
             {
-                dataGridView1.Rows.Add(item.IsPinned ? "★" : "", false, item.FilePath);
+                dataGridView1.Rows.Add(item.IsPinned ? "★" : "", false, item.FilePath, FormatTimestamp(item.LastUpdated));
             }
+        }
+
+        private static string FormatTimestamp(DateTime? value)
+        {
+            return value.HasValue ? value.Value.ToString("yyyy/MM/dd HH:mm:ss") : string.Empty;
         }
 
         private List<HistoryItem> SortHistory(IEnumerable<HistoryItem> history)
         {
+            if (history == null)
+            {
+                return new List<HistoryItem>();
+            }
+
             IOrderedEnumerable<HistoryItem> ordered;
 
             switch (_currentSortColumnName)
@@ -89,21 +110,54 @@ namespace SimpleExcelBookSelector
                     ordered = (_isSortAscending
                         ? history.OrderBy(item => item.IsPinned)
                         : history.OrderByDescending(item => item.IsPinned))
+                        .ThenByDescending(item => item.LastUpdated ?? DateTime.MinValue)
                         .ThenBy(item => item.FilePath, SortComparer);
                     break;
                 case FilePathColumnName:
                     ordered = _isSortAscending
                         ? history.OrderBy(item => item.FilePath, SortComparer)
                         : history.OrderByDescending(item => item.FilePath, SortComparer);
-                    ordered = ordered.ThenByDescending(item => item.IsPinned);
+                    ordered = ordered
+                        .ThenByDescending(item => item.IsPinned)
+                        .ThenByDescending(item => item.LastUpdated ?? DateTime.MinValue);
+                    break;
+                case UpdatedAtColumnName:
+                    ordered = _isSortAscending
+                        ? history.OrderBy(item => item.LastUpdated ?? DateTime.MinValue)
+                        : history.OrderByDescending(item => item.LastUpdated ?? DateTime.MinValue);
+                    ordered = ordered
+                        .ThenByDescending(item => item.IsPinned)
+                        .ThenBy(item => item.FilePath, SortComparer);
                     break;
                 default:
-                    ordered = history.OrderByDescending(item => item.IsPinned)
+                    ordered = history
+                        .OrderByDescending(item => item.IsPinned)
+                        .ThenByDescending(item => item.LastUpdated ?? DateTime.MinValue)
                         .ThenBy(item => item.FilePath, SortComparer);
                     break;
             }
 
             return ordered.ToList();
+        }
+
+        private void UpdateCheckToggleButtonText()
+        {
+            if (btnAllCheckOnOff == null)
+            {
+                return;
+            }
+
+            bool allChecked = true;
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                if (!(row.Cells[CheckBoxColumnName].Value is bool checkedValue && checkedValue))
+                {
+                    allChecked = false;
+                    break;
+                }
+            }
+
+            btnAllCheckOnOff.Text = allChecked && dataGridView1.Rows.Count > 0 ? "全てチェック解除" : "全てチェック";
         }
 
         private void UpdateSortGlyphs()
@@ -142,6 +196,7 @@ namespace SimpleExcelBookSelector
             var sortedHistory = SortHistory(filteredHistory);
 
             PopulateDataGridView(sortedHistory);
+            UpdateCheckToggleButtonText();
             UpdateSortGlyphs();
         }
 
@@ -217,7 +272,7 @@ namespace SimpleExcelBookSelector
             }
         }
 
-        private void btnUnselectedAll_Click(object sender, EventArgs e)
+        private void btnAllCheckOnOff_Click(object sender, EventArgs e)
         {
             bool shouldCheckAll = dataGridView1.Rows
                 .Cast<DataGridViewRow>()
@@ -227,6 +282,8 @@ namespace SimpleExcelBookSelector
             {
                 row.Cells[CheckBoxColumnName].Value = shouldCheckAll;
             }
+
+            UpdateCheckToggleButtonText();
         }
 
         private void btnDeleteSelectedFiles_Click(object sender, EventArgs e)

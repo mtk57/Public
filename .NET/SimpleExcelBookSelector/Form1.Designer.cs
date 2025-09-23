@@ -33,6 +33,7 @@
             this.clmDir = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmSheet = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmUpdated = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.chkEnableSheetSelectMode = new System.Windows.Forms.CheckBox();
             this.chkEnableAutoUpdateMode = new System.Windows.Forms.CheckBox();
             this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
@@ -54,7 +55,8 @@
             this.clmPinned,
             this.clmDir,
             this.clmFile,
-            this.clmSheet});
+            this.clmSheet,
+            this.clmUpdated});
             this.dataGridViewResults.Location = new System.Drawing.Point(12, 64);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
@@ -92,6 +94,14 @@
             this.clmSheet.Name = "clmSheet";
             this.clmSheet.ReadOnly = true;
             this.clmSheet.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            // 
+            // clmUpdated
+            // 
+            this.clmUpdated.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.clmUpdated.HeaderText = "更新日時";
+            this.clmUpdated.Name = "clmUpdated";
+            this.clmUpdated.ReadOnly = true;
+            this.clmUpdated.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             // 
             // chkEnableSheetSelectMode
             // 
@@ -176,6 +186,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmDir;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFile;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmSheet;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmUpdated;
         private System.Windows.Forms.CheckBox chkEnableSheetSelectMode;
         private System.Windows.Forms.CheckBox chkEnableAutoUpdateMode;
         private System.Windows.Forms.TextBox textAutoUpdateSec;

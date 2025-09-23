@@ -40,6 +40,7 @@ namespace SimpleExcelBookSelector
             public string DirectoryName { get; set; }
             public string FileName { get; set; }
             public bool IsPinned { get; set; }
+            public DateTime? LastUpdated { get; set; }
             public int OriginalIndex { get; set; }
             public string Key => $"{WorkbookFullName}|{WorksheetName}";
         }
@@ -101,7 +102,9 @@ namespace SimpleExcelBookSelector
                 {
                     AddToHistory(wb.FullName);
 
-                    bool isPinned = IsPinned(wb.FullName);
+                    var historyItem = FindHistoryItem(wb.FullName);
+                    bool isPinned = historyItem?.IsPinned ?? false;
+                    DateTime? lastUpdated = historyItem?.LastUpdated;
                     string directoryName = Path.GetDirectoryName(wb.FullName);
                     string fileName = Path.GetFileName(wb.FullName);
 
@@ -116,6 +119,7 @@ namespace SimpleExcelBookSelector
                                 DirectoryName = directoryName,
                                 FileName = fileName,
                                 IsPinned = isPinned,
+                                LastUpdated = lastUpdated,
                                 OriginalIndex = index++
                             });
                         }
@@ -129,6 +133,7 @@ namespace SimpleExcelBookSelector
                             DirectoryName = directoryName,
                             FileName = fileName,
                             IsPinned = isPinned,
+                            LastUpdated = lastUpdated,
                             OriginalIndex = index++
                         });
                     }
@@ -169,6 +174,7 @@ namespace SimpleExcelBookSelector
                 row.Cells["clmDir"].Value = id.DirectoryName;
                 row.Cells["clmFile"].Value = id.FileName;
                 row.Cells["clmSheet"].Value = id.WorksheetName;
+                row.Cells["clmUpdated"].Value = FormatTimestamp(id.LastUpdated);
                 row.Tag = id;
             }
 
@@ -207,6 +213,11 @@ namespace SimpleExcelBookSelector
                         ? identifiers.OrderBy(id => id.WorksheetName, SortComparer)
                         : identifiers.OrderByDescending(id => id.WorksheetName, SortComparer);
                     break;
+                case "clmUpdated":
+                    ordered = _isSortAscending
+                        ? identifiers.OrderBy(id => id.LastUpdated ?? DateTime.MinValue)
+                        : identifiers.OrderByDescending(id => id.LastUpdated ?? DateTime.MinValue);
+                    break;
                 default:
                     ordered = identifiers.OrderBy(id => id.OriginalIndex);
                     break;
@@ -236,14 +247,25 @@ namespace SimpleExcelBookSelector
             }
         }
 
-        private bool IsPinned(string filePath)
+        private static string FormatTimestamp(DateTime? value)
         {
-            if (_settings?.FileHistory == null)
+            return value.HasValue ? value.Value.ToString("yyyy/MM/dd HH:mm:ss") : string.Empty;
+        }
+
+        private HistoryItem FindHistoryItem(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || _settings?.FileHistory == null)
             {
-                return false;
+                return null;
             }
 
-            return _settings.FileHistory.Any(item => item.IsPinned && item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            return _settings.FileHistory.FirstOrDefault(item => item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private bool IsPinned(string filePath)
+        {
+            var item = FindHistoryItem(filePath);
+            return item?.IsPinned ?? false;
         }
 
         // For migration from old settings format
@@ -292,7 +314,7 @@ namespace SimpleExcelBookSelector
                             IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
                             IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
                             RefreshInterval = oldSettings.RefreshInterval,
-                            FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false }).ToList()
+                            FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList()
                         };
                     }
                     // Immediately save the settings in the new format
@@ -353,19 +375,36 @@ namespace SimpleExcelBookSelector
         {
             if (string.IsNullOrEmpty(filePath)) return;
 
+            DateTime? lastModified = null;
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    lastModified = File.GetLastWriteTime(filePath);
+                }
+            }
+            catch
+            {
+                lastModified = DateTime.Now;
+            }
+
             var existingItem = _settings.FileHistory.FirstOrDefault(p => p.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
 
             if (existingItem != null)
             {
                 // If item exists, move it to the top of its group (pinned or not pinned)
                 _settings.FileHistory.Remove(existingItem);
+                if (lastModified.HasValue)
+                {
+                    existingItem.LastUpdated = lastModified;
+                }
                 int insertIndex = _settings.FileHistory.TakeWhile(i => i.IsPinned).Count();
                 _settings.FileHistory.Insert(existingItem.IsPinned ? 0 : insertIndex, existingItem);
             }
             else
             {
                 // If new, add as not pinned
-                var newItem = new HistoryItem { FilePath = filePath, IsPinned = false };
+                var newItem = new HistoryItem { FilePath = filePath, IsPinned = false, LastUpdated = lastModified ?? DateTime.Now };
                 int insertIndex = _settings.FileHistory.TakeWhile(i => i.IsPinned).Count();
                 _settings.FileHistory.Insert(insertIndex, newItem);
             }
@@ -567,7 +606,7 @@ namespace SimpleExcelBookSelector
                 if (historyForm.ShowDialog(this) == DialogResult.OK)
                 {
                     // History was changed in the dialog, perform a deep copy of the results
-                    _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned }));
+                    _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned, LastUpdated = i.LastUpdated }));
                     SaveSettings();
                     RefreshExcelFileList(forceUpdate: true);
                 }

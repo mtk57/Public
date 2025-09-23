@@ -107,7 +107,7 @@
             this.btnAllCheckOnOff.TabIndex = 5;
             this.btnAllCheckOnOff.Text = "全てチェック";
             this.btnAllCheckOnOff.UseVisualStyleBackColor = true;
-            this.btnAllCheckOnOff.Click += new System.EventHandler(this.btnUnselectedAll_Click);
+            this.btnAllCheckOnOff.Click += new System.EventHandler(this.btnAllCheckOnOff_Click);
             // 
             // textBox1
             // 

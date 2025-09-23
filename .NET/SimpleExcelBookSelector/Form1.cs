@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
-using System.Text;
 using System.Windows.Forms;
 
 
@@ -29,7 +28,6 @@ namespace SimpleExcelBookSelector
 
         private Timer _timer;
         private List<string> _lastDisplayedKeys = new List<string>();
-        private ToolTip _toolTip;
         private string _currentSortColumnName;
         private bool _isSortAscending = true;
         private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
@@ -52,7 +50,6 @@ namespace SimpleExcelBookSelector
             this.Load += MainForm_Load;
             this.FormClosing += MainForm_FormClosing;
 
-            _toolTip = new ToolTip();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -73,10 +70,6 @@ namespace SimpleExcelBookSelector
             chkEnableSheetSelectMode.CheckedChanged += ChkEnableSheetSelectMode_CheckedChanged;
             chkEnableAutoUpdateMode.CheckedChanged += ChkEnableAutoUpdateMode_CheckedChanged;
             textAutoUpdateSec.TextChanged += TextAutoUpdateSec_TextChanged;
-            cmbHistory.DrawMode = DrawMode.OwnerDrawFixed;
-            cmbHistory.DrawItem += CmbHistory_DrawItem;
-            cmbHistory.DropDownClosed += CmbHistory_DropDownClosed;
-            cmbHistory.SelectedIndexChanged += CmbHistory_SelectedIndexChanged;
             btnForceUpdate.Click += BtnForceUpdate_Click;
 
 
@@ -141,7 +134,6 @@ namespace SimpleExcelBookSelector
                     }
                 }
 
-                UpdateHistoryComboBox();
             }
             catch (COMException) { }
             catch (ArgumentException) { }
@@ -324,7 +316,6 @@ namespace SimpleExcelBookSelector
             textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
             chkIsOpenDir.Checked = _settings.IsOpenFolderOnDoubleClickEnabled;
 
-            UpdateHistoryComboBox();
         }
 
 
@@ -393,57 +384,6 @@ namespace SimpleExcelBookSelector
                 foreach (var item in itemsToRemove)
                 {
                     _settings.FileHistory.Remove(item);
-                }
-            }
-        }
-
-        private void UpdateHistoryComboBox()
-        {
-            cmbHistory.BeginUpdate();
-            cmbHistory.Items.Clear();
-            // Sort by Pinned status then by original order (which is most recent)
-            var sortedHistory = _settings.FileHistory
-                .OrderByDescending(i => i.IsPinned)
-                .Select(i => i.FilePath)
-                .ToArray();
-
-            cmbHistory.Items.AddRange(sortedHistory);
-            cmbHistory.EndUpdate();
-        }
-
-        private void CmbHistory_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cmbHistory.SelectedIndex == -1 || cmbHistory.SelectedItem == null) return;
-
-            _timer?.Stop(); // タイマーを一時停止
-
-            string filePath = cmbHistory.SelectedItem.ToString();
-
-            try
-            {
-                if (File.Exists(filePath))
-                {
-                    Process.Start(filePath);
-                }
-                else
-                {
-                    MessageBox.Show("ファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    // 履歴から見つからないファイルを削除
-                    _settings.FileHistory.RemoveAll(item => item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
-                    UpdateHistoryComboBox();
-                    SaveSettings();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ファイルを開けませんでした。\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                // 自動更新が有効な場合のみタイマーを再開
-                if (chkEnableAutoUpdateMode.Checked)
-                {
-                    _timer?.Start();
                 }
             }
         }
@@ -619,27 +559,6 @@ namespace SimpleExcelBookSelector
             }
         }
 
-        private void CmbHistory_DrawItem(object sender, DrawItemEventArgs e)
-        {if (e.Index < 0) return;
-
-            e.DrawBackground();
-
-            TextRenderer.DrawText(e.Graphics, cmbHistory.Items[e.Index].ToString(), e.Font, e.Bounds, e.ForeColor, TextFormatFlags.Left);
-
-            if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
-            {
-                _toolTip.Show(cmbHistory.Items[e.Index].ToString(), cmbHistory, e.Bounds.Right, e.Bounds.Bottom);
-            }
-
-            e.DrawFocusRectangle();
-
-        }
-
-        private void CmbHistory_DropDownClosed(object sender, EventArgs e)
-        {
-            _toolTip.Hide(cmbHistory);
-        }
-
         private void btnHistory_Click(object sender, EventArgs e)
         {
             _settings.IsOpenFolderOnDoubleClickEnabled = chkIsOpenDir.Checked;
@@ -649,7 +568,6 @@ namespace SimpleExcelBookSelector
                 {
                     // History was changed in the dialog, perform a deep copy of the results
                     _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned }));
-                    UpdateHistoryComboBox();
                     SaveSettings();
                     RefreshExcelFileList(forceUpdate: true);
                 }

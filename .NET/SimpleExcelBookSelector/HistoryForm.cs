@@ -14,6 +14,9 @@ namespace SimpleExcelBookSelector
         private const string PinnedColumnName = "colPinned";
         private const string CheckBoxColumnName = "colCheck";
         private const string FilePathColumnName = "colFilePath";
+        private string _currentSortColumnName = PinnedColumnName;
+        private bool _isSortAscending = false;
+        private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
 
         public HistoryForm(AppSettings settings)
         {
@@ -40,7 +43,8 @@ namespace SimpleExcelBookSelector
                 HeaderText = "ピン",
                 Width = 35,
                 ReadOnly = true,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter },
+                SortMode = DataGridViewColumnSortMode.Programmatic
             };
             dataGridView1.Columns.Add(pinnedColumn);
 
@@ -48,7 +52,8 @@ namespace SimpleExcelBookSelector
             {
                 Name = CheckBoxColumnName,
                 HeaderText = "",
-                Width = 30
+                Width = 30,
+                SortMode = DataGridViewColumnSortMode.NotSortable
             };
             dataGridView1.Columns.Add(checkBoxColumn);
 
@@ -57,7 +62,8 @@ namespace SimpleExcelBookSelector
                 Name = FilePathColumnName,
                 HeaderText = "ファイルパス",
                 ReadOnly = true,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                SortMode = DataGridViewColumnSortMode.Programmatic
             };
             dataGridView1.Columns.Add(filePathColumn);
 
@@ -73,10 +79,58 @@ namespace SimpleExcelBookSelector
             }
         }
 
+        private List<HistoryItem> SortHistory(IEnumerable<HistoryItem> history)
+        {
+            IOrderedEnumerable<HistoryItem> ordered;
+
+            switch (_currentSortColumnName)
+            {
+                case PinnedColumnName:
+                    ordered = (_isSortAscending
+                        ? history.OrderBy(item => item.IsPinned)
+                        : history.OrderByDescending(item => item.IsPinned))
+                        .ThenBy(item => item.FilePath, SortComparer);
+                    break;
+                case FilePathColumnName:
+                    ordered = _isSortAscending
+                        ? history.OrderBy(item => item.FilePath, SortComparer)
+                        : history.OrderByDescending(item => item.FilePath, SortComparer);
+                    ordered = ordered.ThenByDescending(item => item.IsPinned);
+                    break;
+                default:
+                    ordered = history.OrderByDescending(item => item.IsPinned)
+                        .ThenBy(item => item.FilePath, SortComparer);
+                    break;
+            }
+
+            return ordered.ToList();
+        }
+
+        private void UpdateSortGlyphs()
+        {
+            foreach (DataGridViewColumn column in dataGridView1.Columns)
+            {
+                if (column.SortMode == DataGridViewColumnSortMode.NotSortable)
+                {
+                    column.HeaderCell.SortGlyphDirection = SortOrder.None;
+                    continue;
+                }
+
+                if (column.Name == _currentSortColumnName)
+                {
+                    column.HeaderCell.SortGlyphDirection = _isSortAscending ? SortOrder.Ascending : SortOrder.Descending;
+                }
+                else
+                {
+                    column.HeaderCell.SortGlyphDirection = SortOrder.None;
+                }
+            }
+        }
+
         private void ApplyFilterAndSort()
         {
             var filterText = textBox1.Text;
-            
+
             IEnumerable<HistoryItem> filteredHistory = FileHistory;
 
             if (!string.IsNullOrWhiteSpace(filterText))
@@ -85,9 +139,10 @@ namespace SimpleExcelBookSelector
                     .Where(item => item.FilePath.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0);
             }
 
-            var sortedHistory = filteredHistory.OrderByDescending(item => item.IsPinned).ToList();
-            
+            var sortedHistory = SortHistory(filteredHistory);
+
             PopulateDataGridView(sortedHistory);
+            UpdateSortGlyphs();
         }
 
         private void btnAllOpen_Click(object sender, EventArgs e)
@@ -200,6 +255,34 @@ namespace SimpleExcelBookSelector
             {
                 MessageBox.Show($"Failed to open folder or file.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void dataGridView1_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.ColumnIndex < 0)
+            {
+                return;
+            }
+
+            var column = dataGridView1.Columns[e.ColumnIndex];
+            if (column == null || column.SortMode == DataGridViewColumnSortMode.NotSortable)
+            {
+                return;
+            }
+
+            var columnName = column.Name;
+
+            if (_currentSortColumnName == columnName)
+            {
+                _isSortAscending = !_isSortAscending;
+            }
+            else
+            {
+                _currentSortColumnName = columnName;
+                _isSortAscending = true;
+            }
+
+            ApplyFilterAndSort();
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)

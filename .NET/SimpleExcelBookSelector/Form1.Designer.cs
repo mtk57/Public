@@ -1,4 +1,4 @@
-﻿namespace SimpleExcelBookSelector
+﻿﻿namespace SimpleExcelBookSelector
 {
     partial class MainForm
     {
@@ -36,7 +36,6 @@
             this.chkEnableSheetSelectMode = new System.Windows.Forms.CheckBox();
             this.chkEnableAutoUpdateMode = new System.Windows.Forms.CheckBox();
             this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
-            this.cmbHistory = new System.Windows.Forms.ComboBox();
             this.btnForceUpdate = new System.Windows.Forms.Button();
             this.btnHistory = new System.Windows.Forms.Button();
             this.chkIsOpenDir = new System.Windows.Forms.CheckBox();
@@ -56,10 +55,10 @@
             this.clmDir,
             this.clmFile,
             this.clmSheet});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 90);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 64);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(693, 165);
+            this.dataGridViewResults.Size = new System.Drawing.Size(693, 191);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmPinned
@@ -122,18 +121,6 @@
             this.textAutoUpdateSec.TabIndex = 9;
             this.textAutoUpdateSec.Text = "1";
             // 
-            // cmbHistory
-            // 
-            this.cmbHistory.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.cmbHistory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbHistory.FormattingEnabled = true;
-            this.cmbHistory.Location = new System.Drawing.Point(12, 64);
-            this.cmbHistory.Name = "cmbHistory";
-            this.cmbHistory.Size = new System.Drawing.Size(693, 20);
-            this.cmbHistory.TabIndex = 10;
-            // 
             // btnForceUpdate
             // 
             this.btnForceUpdate.Location = new System.Drawing.Point(428, 7);
@@ -171,7 +158,6 @@
             this.Controls.Add(this.chkIsOpenDir);
             this.Controls.Add(this.btnHistory);
             this.Controls.Add(this.btnForceUpdate);
-            this.Controls.Add(this.cmbHistory);
             this.Controls.Add(this.textAutoUpdateSec);
             this.Controls.Add(this.chkEnableAutoUpdateMode);
             this.Controls.Add(this.chkEnableSheetSelectMode);
@@ -193,7 +179,6 @@
         private System.Windows.Forms.CheckBox chkEnableSheetSelectMode;
         private System.Windows.Forms.CheckBox chkEnableAutoUpdateMode;
         private System.Windows.Forms.TextBox textAutoUpdateSec;
-        private System.Windows.Forms.ComboBox cmbHistory;
         private System.Windows.Forms.Button btnForceUpdate;
         private System.Windows.Forms.Button btnHistory;
         private System.Windows.Forms.CheckBox chkIsOpenDir;

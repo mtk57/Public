@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
@@ -287,50 +288,53 @@ namespace SimpleExcelBookSelector
             if (!File.Exists(_settingsFilePath))
             {
                 _settings = new AppSettings();
-                return;
             }
-
-            try
+            else
             {
-                // Try to load the new format first
-                using (var stream = File.OpenRead(_settingsFilePath))
-                {
-                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                    _settings = (AppSettings)serializer.ReadObject(stream);
-                }
-            }
-            catch (SerializationException)
-            {
-                // If it fails, try to load the old format and migrate
                 try
                 {
+                    // Try to load the new format first
                     using (var stream = File.OpenRead(_settingsFilePath))
                     {
-                        var serializer = new DataContractJsonSerializer(typeof(AppSettings_Old));
-                        var oldSettings = (AppSettings_Old)serializer.ReadObject(stream);
-
-                        _settings = new AppSettings
-                        {
-                            IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
-                            IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
-                            RefreshInterval = oldSettings.RefreshInterval,
-                            FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList()
-                        };
+                        var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                        _settings = (AppSettings)serializer.ReadObject(stream);
                     }
-                    // Immediately save the settings in the new format
-                    // SaveSettings(); // BUG: This overwrites migrated settings with default UI values.
+                }
+                catch (SerializationException)
+                {
+                    // If it fails, try to load the old format and migrate
+                    try
+                    {
+                        using (var stream = File.OpenRead(_settingsFilePath))
+                        {
+                            var serializer = new DataContractJsonSerializer(typeof(AppSettings_Old));
+                            var oldSettings = (AppSettings_Old)serializer.ReadObject(stream);
+
+                            _settings = new AppSettings
+                            {
+                                IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
+                                IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
+                                RefreshInterval = oldSettings.RefreshInterval,
+                                FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList()
+                            };
+                        }
+                        // Immediately save the settings in the new format
+                        // SaveSettings(); // BUG: This overwrites migrated settings with default UI values.
+                    }
+                    catch
+                    {
+                        // If migration also fails, create default settings
+                        _settings = new AppSettings();
+                    }
                 }
                 catch
                 {
-                    // If migration also fails, create default settings
+                    // For any other error, create default settings
                     _settings = new AppSettings();
                 }
             }
-            catch
-            {
-                // For any other error, create default settings
-                _settings = new AppSettings();
-            }
+
+            EnsureLayoutSettings();
 
             // Reflect settings on the UI
             chkEnableSheetSelectMode.Checked = _settings.IsSheetSelectionEnabled;
@@ -338,11 +342,13 @@ namespace SimpleExcelBookSelector
             textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
             chkIsOpenDir.Checked = _settings.IsOpenFolderOnDoubleClickEnabled;
 
+            ApplyMainFormLayout();
         }
 
 
         private void SaveSettings()
         {
+            CaptureMainFormLayout();
             // Get settings from the UI
             _settings.IsSheetSelectionEnabled = chkEnableSheetSelectMode.Checked;
             _settings.IsAutoRefreshEnabled = chkEnableAutoUpdateMode.Checked;
@@ -368,6 +374,118 @@ namespace SimpleExcelBookSelector
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save settings.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void EnsureLayoutSettings()
+        {
+            if (_settings.MainFormLayout == null)
+            {
+                _settings.MainFormLayout = new FormLayoutSettings();
+            }
+
+            if (_settings.MainFormLayout.ColumnLayouts == null)
+            {
+                _settings.MainFormLayout.ColumnLayouts = new Dictionary<string, DataGridColumnLayout>(StringComparer.Ordinal);
+            }
+
+            if (_settings.HistoryFormLayout == null)
+            {
+                _settings.HistoryFormLayout = new FormLayoutSettings();
+            }
+
+            if (_settings.HistoryFormLayout.ColumnLayouts == null)
+            {
+                _settings.HistoryFormLayout.ColumnLayouts = new Dictionary<string, DataGridColumnLayout>(StringComparer.Ordinal);
+            }
+        }
+
+        private void ApplyMainFormLayout()
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            var layout = _settings.MainFormLayout;
+            if (layout != null)
+            {
+                if (layout.Width > 0 && layout.Height > 0)
+                {
+                    var newSize = new Size(layout.Width, layout.Height);
+                    if (this.WindowState == FormWindowState.Minimized)
+                    {
+                        this.WindowState = FormWindowState.Normal;
+                    }
+                    this.Size = newSize;
+                }
+
+                if (!string.IsNullOrWhiteSpace(layout.WindowState) && Enum.TryParse(layout.WindowState, true, out FormWindowState savedState))
+                {
+                    this.WindowState = savedState;
+                }
+
+                ApplyDataGridLayout(dataGridViewResults, layout);
+            }
+        }
+
+        private static void ApplyDataGridLayout(DataGridView grid, FormLayoutSettings layout)
+        {
+            if (grid == null || layout?.ColumnLayouts == null)
+            {
+                return;
+            }
+
+            foreach (DataGridViewColumn column in grid.Columns)
+            {
+                if (!layout.ColumnLayouts.TryGetValue(column.Name, out var columnLayout) || columnLayout == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(columnLayout.AutoSizeMode) && Enum.TryParse(columnLayout.AutoSizeMode, true, out DataGridViewAutoSizeColumnMode mode))
+                {
+                    column.AutoSizeMode = mode;
+                }
+
+                if (column.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
+                {
+                    if (columnLayout.FillWeight > 0)
+                    {
+                        column.FillWeight = (float)columnLayout.FillWeight;
+                    }
+                }
+                else if (columnLayout.Width > 0)
+                {
+                    column.Width = columnLayout.Width;
+                }
+            }
+        }
+
+        private void CaptureMainFormLayout()
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            EnsureLayoutSettings();
+
+            var targetLayout = _settings.MainFormLayout;
+            var bounds = this.WindowState == FormWindowState.Normal ? this.Bounds : this.RestoreBounds;
+            targetLayout.Width = bounds.Width;
+            targetLayout.Height = bounds.Height;
+            targetLayout.WindowState = this.WindowState.ToString();
+
+            targetLayout.ColumnLayouts.Clear();
+            foreach (DataGridViewColumn column in dataGridViewResults.Columns)
+            {
+                targetLayout.ColumnLayouts[column.Name] = new DataGridColumnLayout
+                {
+                    Width = column.Width,
+                    FillWeight = column.FillWeight,
+                    AutoSizeMode = column.AutoSizeMode.ToString()
+                };
             }
         }
 

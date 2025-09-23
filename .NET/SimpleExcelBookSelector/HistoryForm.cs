@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -25,12 +26,15 @@ namespace SimpleExcelBookSelector
         {
             InitializeComponent();
             _settings = settings;
+            EnsureHistoryLayoutSettings();
+            this.FormClosing += HistoryForm_FormClosing;
             FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned, LastUpdated = item.LastUpdated }));
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)
         {
             SetupDataGridView();
+            ApplyHistoryLayout();
             ApplyFilterAndSort();
         }
 
@@ -102,6 +106,77 @@ namespace SimpleExcelBookSelector
             dataGridView1.Columns.Add(updatedAtColumn);
 
             dataGridView1.CellClick += DataGridView1_CellClick;
+        }
+
+        private void EnsureHistoryLayoutSettings()
+        {
+            if (_settings.HistoryFormLayout == null)
+            {
+                _settings.HistoryFormLayout = new FormLayoutSettings();
+            }
+
+            if (_settings.HistoryFormLayout.ColumnLayouts == null)
+            {
+                _settings.HistoryFormLayout.ColumnLayouts = new Dictionary<string, DataGridColumnLayout>(StringComparer.Ordinal);
+            }
+        }
+
+        private void ApplyHistoryLayout()
+        {
+            var layout = _settings.HistoryFormLayout;
+            if (layout == null)
+            {
+                return;
+            }
+
+            if (layout.Width > 0 && layout.Height > 0)
+            {
+                if (WindowState == FormWindowState.Minimized)
+                {
+                    WindowState = FormWindowState.Normal;
+                }
+                Size = new Size(layout.Width, layout.Height);
+            }
+
+            if (!string.IsNullOrWhiteSpace(layout.WindowState) && Enum.TryParse(layout.WindowState, true, out FormWindowState savedState))
+            {
+                WindowState = savedState;
+            }
+
+            ApplyDataGridLayout(dataGridView1, layout);
+        }
+
+        private static void ApplyDataGridLayout(DataGridView grid, FormLayoutSettings layout)
+        {
+            if (grid == null || layout?.ColumnLayouts == null)
+            {
+                return;
+            }
+
+            foreach (DataGridViewColumn column in grid.Columns)
+            {
+                if (!layout.ColumnLayouts.TryGetValue(column.Name, out var columnLayout) || columnLayout == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(columnLayout.AutoSizeMode) && Enum.TryParse(columnLayout.AutoSizeMode, true, out DataGridViewAutoSizeColumnMode mode))
+                {
+                    column.AutoSizeMode = mode;
+                }
+
+                if (column.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
+                {
+                    if (columnLayout.FillWeight > 0)
+                    {
+                        column.FillWeight = (float)columnLayout.FillWeight;
+                    }
+                }
+                else if (columnLayout.Width > 0)
+                {
+                    column.Width = columnLayout.Width;
+                }
+            }
         }
 
         private void PopulateDataGridView(List<HistoryItem> history)
@@ -492,6 +567,33 @@ namespace SimpleExcelBookSelector
 
             historyItem.IsPinned = !historyItem.IsPinned;
             ApplyFilterAndSort();
+        }
+
+        private void HistoryForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            CaptureHistoryLayout();
+        }
+
+        private void CaptureHistoryLayout()
+        {
+            EnsureHistoryLayoutSettings();
+
+            var layout = _settings.HistoryFormLayout;
+            var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+            layout.Width = bounds.Width;
+            layout.Height = bounds.Height;
+            layout.WindowState = WindowState.ToString();
+
+            layout.ColumnLayouts.Clear();
+            foreach (DataGridViewColumn column in dataGridView1.Columns)
+            {
+                layout.ColumnLayouts[column.Name] = new DataGridColumnLayout
+                {
+                    Width = column.Width,
+                    FillWeight = column.FillWeight,
+                    AutoSizeMode = column.AutoSizeMode.ToString()
+                };
+            }
         }
     }
 }

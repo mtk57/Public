@@ -1,6 +1,6 @@
 using System;
-using System.Runtime.Serialization;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace SimpleExcelBookSelector
 {
@@ -15,6 +15,35 @@ namespace SimpleExcelBookSelector
 
         [DataMember]
         public DateTime? LastUpdated { get; set; }
+    }
+
+    [DataContract]
+    public class DataGridColumnLayout
+    {
+        [DataMember]
+        public int Width { get; set; }
+
+        [DataMember]
+        public double FillWeight { get; set; }
+
+        [DataMember]
+        public string AutoSizeMode { get; set; }
+    }
+
+    [DataContract]
+    public class FormLayoutSettings
+    {
+        [DataMember]
+        public int Width { get; set; }
+
+        [DataMember]
+        public int Height { get; set; }
+
+        [DataMember]
+        public string WindowState { get; set; }
+
+        [DataMember]
+        public Dictionary<string, DataGridColumnLayout> ColumnLayouts { get; set; } = new Dictionary<string, DataGridColumnLayout>(StringComparer.Ordinal);
     }
 
     [DataContract]
@@ -34,5 +63,11 @@ namespace SimpleExcelBookSelector
 
         [DataMember]
         public bool IsOpenFolderOnDoubleClickEnabled { get; set; } = true;
+
+        [DataMember]
+        public FormLayoutSettings MainFormLayout { get; set; } = new FormLayoutSettings();
+
+        [DataMember]
+        public FormLayoutSettings HistoryFormLayout { get; set; } = new FormLayoutSettings();
     }
 }

@@ -168,6 +168,24 @@ namespace SimpleExcelBookSelector
             OpenFiles(selectedFiles);
         }
 
+
+        private void btnOpenAllPin_Click(object sender, EventArgs e)
+        {
+            var pinnedPaths = FileHistory
+                .Where(item => item.IsPinned)
+                .Select(item => item.FilePath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (pinnedPaths.Count == 0)
+            {
+                MessageBox.Show("ピン留めされた履歴がありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            OpenFiles(pinnedPaths);
+        }
+
         private void btnAllClear_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show("全ての履歴を削除します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)

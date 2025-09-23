@@ -186,6 +186,7 @@
             this.btnOpenAllPin.TabIndex = 13;
             this.btnOpenAllPin.Text = "ピン止めを全て開く";
             this.btnOpenAllPin.UseVisualStyleBackColor = true;
+            this.btnOpenAllPin.Click += new System.EventHandler(this.btnOpenAllPin_Click);
             // 
             // HistoryForm
             // 

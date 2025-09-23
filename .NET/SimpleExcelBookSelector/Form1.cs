@@ -470,51 +470,7 @@ namespace SimpleExcelBookSelector
 
             if (e.RowIndex < 0) return;
 
-            var row = dataGridViewResults.Rows[e.RowIndex];
-            if (!(row.Tag is ExcelSheetIdentifier id)) return;
-
-            dynamic excelApp = null;
-            dynamic wb = null;
-            dynamic ws = null;
-
-            try
-            {
-                excelApp = Marshal.GetActiveObject("Excel.Application");
-                
-                foreach (dynamic book in excelApp.Workbooks)
-                {
-                    if (book.FullName == id.WorkbookFullName)
-                    {
-                        wb = book;
-                        break;
-                    }
-                }
-
-                if (wb != null)
-                {
-                    if (chkEnableSheetSelectMode.Checked)
-                    {
-                        ws = wb.Sheets[id.WorksheetName];
-                        ws.Activate();
-                    }
-                    else
-                    {
-                        wb.Activate();
-                    }
-
-                    SetForegroundWindow((IntPtr)excelApp.Hwnd);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Excelの操作に失敗しました。\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (ws != null) Marshal.ReleaseComObject(ws);
-                if (wb != null) Marshal.ReleaseComObject(wb);
-                if (excelApp != null) Marshal.ReleaseComObject(excelApp);
-            }
+            ActivateExcelForRowIndex(e.RowIndex);
         }
 
         private void DataGridViewResults_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -611,6 +567,170 @@ namespace SimpleExcelBookSelector
                     RefreshExcelFileList(forceUpdate: true);
                 }
             }
+        }
+
+        private void ActivateExcelForRowIndex(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dataGridViewResults.Rows.Count)
+            {
+                return;
+            }
+
+            var row = dataGridViewResults.Rows[rowIndex];
+            if (!(row.Tag is ExcelSheetIdentifier id))
+            {
+                return;
+            }
+
+            ActivateExcelEntry(id);
+        }
+
+        private void ActivateExcelEntry(ExcelSheetIdentifier id)
+        {
+            if (id == null)
+            {
+                return;
+            }
+
+            dynamic excelApp = null;
+            dynamic wb = null;
+            dynamic ws = null;
+
+            try
+            {
+                excelApp = Marshal.GetActiveObject("Excel.Application");
+
+                foreach (dynamic book in excelApp.Workbooks)
+                {
+                    if (book.FullName == id.WorkbookFullName)
+                    {
+                        wb = book;
+                        break;
+                    }
+                }
+
+                if (wb != null)
+                {
+                    if (chkEnableSheetSelectMode.Checked && !string.IsNullOrEmpty(id.WorksheetName))
+                    {
+                        ws = wb.Sheets[id.WorksheetName];
+                        ws.Activate();
+                    }
+                    else
+                    {
+                        wb.Activate();
+                    }
+
+                    SetForegroundWindow((IntPtr)excelApp.Hwnd);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Excelの操作に失敗しました。\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (ws != null) Marshal.ReleaseComObject(ws);
+                if (wb != null) Marshal.ReleaseComObject(wb);
+                if (excelApp != null) Marshal.ReleaseComObject(excelApp);
+            }
+
+            BringMainFormToFront();
+        }
+
+        private void BringMainFormToFront()
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed)
+                {
+                    return;
+                }
+
+                if (WindowState == FormWindowState.Minimized)
+                {
+                    WindowState = FormWindowState.Normal;
+                }
+
+                bool originalTopMost = TopMost;
+                if (!originalTopMost)
+                {
+                    TopMost = true;
+                }
+
+                Activate();
+                SetForegroundWindow(Handle);
+
+                if (!originalTopMost)
+                {
+                    TopMost = false;
+                }
+            }));
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if ((keyData & Keys.Control) == Keys.Control && (keyData & Keys.KeyCode) == Keys.Tab)
+            {
+                if (!(dataGridViewResults.Focused || dataGridViewResults.ContainsFocus))
+                {
+                    return base.ProcessCmdKey(ref msg, keyData);
+                }
+
+                bool isReverse = (keyData & Keys.Shift) == Keys.Shift;
+                MoveSelectionByCtrlTab(isReverse ? -1 : 1);
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void MoveSelectionByCtrlTab(int direction)
+        {
+            if (dataGridViewResults.Rows.Count == 0)
+            {
+                return;
+            }
+
+            int rowCount = dataGridViewResults.Rows.Count;
+            int currentIndex = dataGridViewResults.CurrentCell?.RowIndex ?? -1;
+
+            if (currentIndex < 0 && dataGridViewResults.SelectedRows.Count > 0)
+            {
+                currentIndex = dataGridViewResults.SelectedRows[0].Index;
+            }
+
+            if (currentIndex < 0)
+            {
+                currentIndex = direction > 0 ? -1 : rowCount;
+            }
+
+            int targetIndex = direction > 0
+                ? (currentIndex + 1 + rowCount) % rowCount
+                : (currentIndex - 1 + rowCount) % rowCount;
+
+            dataGridViewResults.CurrentCell = dataGridViewResults.Rows[targetIndex].Cells[0];
+            dataGridViewResults.ClearSelection();
+            dataGridViewResults.Rows[targetIndex].Selected = true;
+
+            try
+            {
+                if (targetIndex >= 0 && targetIndex < dataGridViewResults.RowCount)
+                {
+                    dataGridViewResults.FirstDisplayedScrollingRowIndex = targetIndex;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // 行をスクロールできない場合は無視
+            }
+
+            ActivateExcelForRowIndex(targetIndex);
         }
     }
 }

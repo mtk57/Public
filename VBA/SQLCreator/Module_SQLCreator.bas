@@ -1,24 +1,13 @@
+Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const CATEGORY_NUMERIC As String = "æ•°å€¤"
-Private Const CATEGORY_STRING As String = "æ–‡å­—åˆ—"
-Private Const CATEGORY_DATE As String = "æ—¥ä»˜"
-Private Const CATEGORY_TIME As String = "æ™‚åˆ»"
-Private Const CATEGORY_TIMESTAMP As String = "æ—¥æ™‚"
+Private Const CATEGORY_NUMERIC As String = "”’l"
+Private Const CATEGORY_STRING As String = "•¶š—ñ"
+Private Const CATEGORY_DATE As String = "“ú•t"
+Private Const CATEGORY_TIME As String = ""
+Private Const CATEGORY_TIMESTAMP As String = "“ú"
 
-Private Type ColumnDefinition
-    Name As String
-    DataType As String
-    category As String
-    Precision As Long
-    HasPrecision As Boolean
-    Scale As Long
-    HasScale As Boolean
-    IsPrimaryKey As Boolean
-    IsNotNull As Boolean
-End Type
-
-Public Sub ãƒœã‚¿ãƒ³1_Click()
+Public Sub ƒ{ƒ^ƒ“1_Click()
     ProcessInstructionRows
 End Sub
 
@@ -35,7 +24,7 @@ Private Sub ProcessInstructionRows()
     Set typeCatalog = BuildTypeCatalog(typeWs)
 
     If typeCatalog Is Nothing Or typeCatalog.Count = 0 Then
-        MsgBox "typeã‚·ãƒ¼ãƒˆã®å‹å®šç¾©ãŒå–å¾—ã§ãã¾ã›ã‚“ã€‚", vbCritical
+        MsgBox "typeƒV[ƒg‚ÌŒ^’è‹`‚ªæ“¾‚Å‚«‚Ü‚¹‚ñB", vbCritical
         Exit Sub
     End If
 
@@ -46,7 +35,7 @@ Private Sub ProcessInstructionRows()
     Do While LenB(Trim$(CStr(mainWs.Cells(currentRow, 2).Value))) > 0
         targetMark = Trim$(CStr(mainWs.Cells(currentRow, 3).Value))
         mainWs.Cells(currentRow, 15).Value = vbNullString
-        If targetMark = "â—‹" Then
+        If targetMark = "›" Then
             ProcessSingleInstruction mainWs, typeCatalog, currentRow
         End If
         currentRow = currentRow + 1
@@ -58,7 +47,7 @@ CleanExit:
     Exit Sub
 
 FatalError:
-    MsgBox "SQLä½œæˆä¸­ã«è‡´å‘½çš„ãªã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: " & Err.Description, vbCritical
+    MsgBox "SQLì¬’†‚É’v–½“I‚ÈƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½: " & Err.Description, vbCritical
     Resume CleanExit
 End Sub
 
@@ -93,15 +82,15 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     notNullAddr = Trim$(CStr(mainWs.Cells(rowIndex, 12).Value))
     dbms = Trim$(CStr(mainWs.Cells(rowIndex, 13).Value))
 
-    ValidateRequiredValue filePath, "ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹", errors
-    ValidateRequiredValue sheetName, "ã‚·ãƒ¼ãƒˆå", errors
-    ValidateRequiredValue tableName, "ãƒ†ãƒ¼ãƒ–ãƒ«å", errors
-    ValidateRequiredValue colNameAddr, "ã‚«ãƒ©ãƒ åé–‹å§‹ã‚»ãƒ«", errors
-    ValidateRequiredValue typeAddr, "å‹ã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors
-    ValidateRequiredValue precisionAddr, "æ•´æ•°æ¡ã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors
-    ValidateRequiredValue scaleAddr, "å°æ•°æ¡ã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors
-    ValidateRequiredValue pkAddr, "PKã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors
-    ValidateRequiredValue notNullAddr, "NotNullã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors
+    ValidateRequiredValue filePath, "ƒtƒ@ƒCƒ‹ƒpƒX", errors
+    ValidateRequiredValue sheetName, "ƒV[ƒg–¼", errors
+    ValidateRequiredValue tableName, "ƒe[ƒuƒ‹–¼", errors
+    ValidateRequiredValue colNameAddr, "ƒJƒ‰ƒ€–¼ŠJnƒZƒ‹", errors
+    ValidateRequiredValue typeAddr, "Œ^ƒJƒ‰ƒ€ŠJnƒZƒ‹", errors
+    ValidateRequiredValue precisionAddr, "®”Œ…ƒJƒ‰ƒ€ŠJnƒZƒ‹", errors
+    ValidateRequiredValue scaleAddr, "¬”Œ…ƒJƒ‰ƒ€ŠJnƒZƒ‹", errors
+    ValidateRequiredValue pkAddr, "PKƒJƒ‰ƒ€ŠJnƒZƒ‹", errors
+    ValidateRequiredValue notNullAddr, "NotNullƒJƒ‰ƒ€ŠJnƒZƒ‹", errors
     ValidateDbms dbms, errors
 
     If errors.Count > 0 Then
@@ -110,7 +99,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     If Dir$(filePath, vbNormal) = vbNullString Then
-        AddError errors, "ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ãŒä¸æ­£ã§ã™: " & filePath
+        AddError errors, "ƒtƒ@ƒCƒ‹ƒpƒX‚ª•s³‚Å‚·: " & filePath
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
@@ -118,7 +107,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     On Error Resume Next
     Set definitionWb = Application.Workbooks.Open(fileName:=filePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
     If Err.Number <> 0 Then
-        AddError errors, "Excelãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã‘ã¾ã›ã‚“: " & filePath & " (" & Err.Description & ")"
+        AddError errors, "Excelƒtƒ@ƒCƒ‹‚ğŠJ‚¯‚Ü‚¹‚ñ: " & filePath & " (" & Err.Description & ")"
         Err.Clear
         On Error GoTo 0
         WriteErrors mainWs, rowIndex, errors
@@ -130,7 +119,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Set definitionWs = definitionWb.Worksheets(sheetName)
     On Error GoTo 0
     If definitionWs Is Nothing Then
-        AddError errors, "æŒ‡å®šã‚·ãƒ¼ãƒˆãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: " & sheetName
+        AddError errors, "w’èƒV[ƒg‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: " & sheetName
         SafeCloseWorkbook definitionWb
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
@@ -146,7 +135,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     If columns Is Nothing Or columns.Count = 0 Then
-        AddError errors, "æœ‰åŠ¹ãªã‚«ãƒ©ãƒ å®šç¾©ãŒ1ä»¶ã‚‚ã‚ã‚Šã¾ã›ã‚“ã€‚"
+        AddError errors, "—LŒø‚ÈƒJƒ‰ƒ€’è‹`‚ª1Œ‚à‚ ‚è‚Ü‚¹‚ñB"
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
@@ -163,7 +152,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
-    mainWs.Cells(rowIndex, 15).Value = "SQLå‡ºåŠ›: " & outputPath
+    mainWs.Cells(rowIndex, 15).Value = "SQLo—Í: " & outputPath
 End Sub
 
 Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAddr As String, _
@@ -179,12 +168,12 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
     Dim pkCell As Range
     Dim notNullCell As Range
 
-    Set nameCell = ResolveSingleCell(targetWs, nameAddr, "ã‚«ãƒ©ãƒ åé–‹å§‹ã‚»ãƒ«", errors)
-    Set typeCell = ResolveSingleCell(targetWs, typeAddr, "å‹ã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors)
-    Set precisionCell = ResolveSingleCell(targetWs, precisionAddr, "æ•´æ•°æ¡ã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors)
-    Set scaleCell = ResolveSingleCell(targetWs, scaleAddr, "å°æ•°æ¡ã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors)
-    Set pkCell = ResolveSingleCell(targetWs, pkAddr, "PKã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors)
-    Set notNullCell = ResolveSingleCell(targetWs, notNullAddr, "NotNullã‚«ãƒ©ãƒ é–‹å§‹ã‚»ãƒ«", errors)
+    Set nameCell = ResolveSingleCell(targetWs, nameAddr, "ƒJƒ‰ƒ€–¼ŠJnƒZƒ‹", errors)
+    Set typeCell = ResolveSingleCell(targetWs, typeAddr, "Œ^ƒJƒ‰ƒ€ŠJnƒZƒ‹", errors)
+    Set precisionCell = ResolveSingleCell(targetWs, precisionAddr, "®”Œ…ƒJƒ‰ƒ€ŠJnƒZƒ‹", errors)
+    Set scaleCell = ResolveSingleCell(targetWs, scaleAddr, "¬”Œ…ƒJƒ‰ƒ€ŠJnƒZƒ‹", errors)
+    Set pkCell = ResolveSingleCell(targetWs, pkAddr, "PKƒJƒ‰ƒ€ŠJnƒZƒ‹", errors)
+    Set notNullCell = ResolveSingleCell(targetWs, notNullAddr, "NotNullƒJƒ‰ƒ€ŠJnƒZƒ‹", errors)
 
     If errors.Count > 0 Then
         Exit Function
@@ -202,14 +191,14 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         Dim columnType As String
         columnType = Trim$(CStr(targetWs.Cells(currentRow, typeCell.Column).Value))
         If LenB(columnType) = 0 Then
-            AddError errors, "å‹ãŒæœªå…¥åŠ›ã§ã™: " & targetWs.Cells(currentRow, typeCell.Column).Address(False, False)
+            AddError errors, "Œ^‚ª–¢“ü—Í‚Å‚·: " & targetWs.Cells(currentRow, typeCell.Column).Address(False, False)
             Exit Do
         End If
 
         Dim typeKey As String
         typeKey = UCase$(columnType)
         If Not typeCatalog.Exists(typeKey) Then
-            AddError errors, "å‹ãŒtypeã‚·ãƒ¼ãƒˆã«å­˜åœ¨ã—ã¾ã›ã‚“: " & columnType & " (" & targetWs.Cells(currentRow, typeCell.Column).Address(False, False) & ")"
+            AddError errors, "Œ^‚ªtypeƒV[ƒg‚É‘¶İ‚µ‚Ü‚¹‚ñ: " & columnType & " (" & targetWs.Cells(currentRow, typeCell.Column).Address(False, False) & ")"
             Exit Do
         End If
 
@@ -217,6 +206,7 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         category = CStr(typeCatalog(typeKey))
 
         Dim definition As ColumnDefinition
+        Set definition = New ColumnDefinition
         definition.Name = columnName
         definition.DataType = columnType
         definition.category = category
@@ -227,17 +217,21 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         scaleText = Trim$(CStr(targetWs.Cells(currentRow, scaleCell.Column).Value))
 
         If category = CATEGORY_NUMERIC Or category = CATEGORY_STRING Then
-            If Not TryParsePositiveInteger(precisionText, definition.Precision) Then
-                AddError errors, "æ•´æ•°æ¡ãŒä¸æ­£ã§ã™: " & targetWs.Cells(currentRow, precisionCell.Column).Address(False, False)
+            Dim parsedPrecision As Long
+            If Not TryParsePositiveInteger(precisionText, parsedPrecision) Then
+                AddError errors, "®”Œ…‚ª•s³‚Å‚·: " & targetWs.Cells(currentRow, precisionCell.Column).Address(False, False)
             Else
+                definition.Precision = parsedPrecision
                 definition.HasPrecision = True
             End If
         End If
 
         If category = CATEGORY_NUMERIC Then
-            If Not TryParseNonNegativeInteger(scaleText, definition.Scale) Then
-                AddError errors, "å°æ•°æ¡ãŒä¸æ­£ã§ã™: " & targetWs.Cells(currentRow, scaleCell.Column).Address(False, False)
+            Dim parsedScale As Long
+            If Not TryParseNonNegativeInteger(scaleText, parsedScale) Then
+                AddError errors, "¬”Œ…‚ª•s³‚Å‚·: " & targetWs.Cells(currentRow, scaleCell.Column).Address(False, False)
             Else
+                definition.ScaleDigits = parsedScale
                 definition.HasScale = True
             End If
         End If
@@ -282,7 +276,7 @@ Private Function GenerateSqlText(ByVal tableName As String, ByVal columns As Col
 
     For idx = 1 To columns.Count
         Dim def As ColumnDefinition
-        def = columns(idx)
+        Set def = columns(idx)
         Dim lineText As String
         lineText = "    " & QuoteIdentifier(def.Name, dbms) & " " & FormatDataType(def, dbms, errors)
         If errors.Count > 0 Then Exit Function
@@ -313,20 +307,20 @@ Private Function GenerateSqlText(ByVal tableName As String, ByVal columns As Col
     GenerateSqlText = dropSql & vbCrLf & vbCrLf & createSql
 End Function
 
-Private Function FormatDataType(ByRef definition As ColumnDefinition, ByVal dbms As String, ByVal errors As Collection) As String
+Private Function FormatDataType(ByVal definition As ColumnDefinition, ByVal dbms As String, ByVal errors As Collection) As String
     Dim typeText As String
     typeText = definition.DataType
 
     Select Case definition.category
         Case CATEGORY_NUMERIC
             If Not definition.HasPrecision Or Not definition.HasScale Then
-                AddError errors, "æ•°å€¤å‹ã®æ¡æƒ…å ±ãŒä¸è¶³ã—ã¦ã„ã¾ã™: " & definition.Name
+                AddError errors, "”’lŒ^‚ÌŒ…î•ñ‚ª•s‘«‚µ‚Ä‚¢‚Ü‚·: " & definition.Name
                 Exit Function
             End If
-            FormatDataType = typeText & "(" & CStr(definition.Precision) & "," & CStr(definition.Scale) & ")"
+            FormatDataType = typeText & "(" & CStr(definition.Precision) & "," & CStr(definition.ScaleDigits) & ")"
         Case CATEGORY_STRING
             If Not definition.HasPrecision Then
-                AddError errors, "æ–‡å­—åˆ—å‹ã®æ¡æƒ…å ±ãŒä¸è¶³ã—ã¦ã„ã¾ã™: " & definition.Name
+                AddError errors, "•¶š—ñŒ^‚ÌŒ…î•ñ‚ª•s‘«‚µ‚Ä‚¢‚Ü‚·: " & definition.Name
                 Exit Function
             End If
             FormatDataType = typeText & "(" & CStr(definition.Precision) & ")"
@@ -357,7 +351,7 @@ Private Function WriteSqlFile(ByVal sourceFilePath As String, ByVal tableName As
     Set fso = CreateObject("Scripting.FileSystemObject")
     parentFolder = fso.GetParentFolderName(sourceFilePath)
     If LenB(parentFolder) = 0 Then
-        AddError errors, "ãƒ†ãƒ¼ãƒ–ãƒ«å®šç¾©ãƒ•ã‚¡ã‚¤ãƒ«ã®è¦ªãƒ•ã‚©ãƒ«ãƒ€ã‚’å–å¾—ã§ãã¾ã›ã‚“: " & sourceFilePath
+        AddError errors, "ƒe[ƒuƒ‹’è‹`ƒtƒ@ƒCƒ‹‚ÌeƒtƒHƒ‹ƒ_‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ: " & sourceFilePath
         Exit Function
     End If
 
@@ -367,7 +361,7 @@ Private Function WriteSqlFile(ByVal sourceFilePath As String, ByVal tableName As
     On Error Resume Next
     Set ts = fso.CreateTextFile(outputPath, True, False)
     If Err.Number <> 0 Then
-        AddError errors, "SQLãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆã§ãã¾ã›ã‚“: " & outputPath & " (" & Err.Description & ")"
+        AddError errors, "SQLƒtƒ@ƒCƒ‹‚ğì¬‚Å‚«‚Ü‚¹‚ñ: " & outputPath & " (" & Err.Description & ")"
         Err.Clear
         On Error GoTo 0
         Exit Function
@@ -413,7 +407,7 @@ Private Function ResolveSingleCell(ByVal targetWs As Worksheet, ByVal addressTex
     On Error Resume Next
     Set ResolveSingleCell = targetWs.Range(addressText)
     If Err.Number <> 0 Then
-        AddError errors, label & " ã®ã‚»ãƒ«å‚ç…§ãŒä¸æ­£ã§ã™: " & addressText
+        AddError errors, label & " ‚ÌƒZƒ‹QÆ‚ª•s³‚Å‚·: " & addressText
         Err.Clear
     End If
     On Error GoTo 0
@@ -421,7 +415,7 @@ End Function
 
 Private Sub ValidateRequiredValue(ByVal valueText As String, ByVal label As String, ByVal errors As Collection)
     If LenB(valueText) = 0 Then
-        AddError errors, label & " ãŒæœªå…¥åŠ›ã§ã™ã€‚"
+        AddError errors, label & " ‚ª–¢“ü—Í‚Å‚·B"
     End If
 End Sub
 
@@ -430,7 +424,7 @@ Private Sub ValidateDbms(ByVal dbms As String, ByVal errors As Collection)
         Case "ORACLE", "SQLSERVER", "SQLITE"
             ' OK
         Case Else
-            AddError errors, "DBMSãŒä¸æ­£ã§ã™: " & dbms
+            AddError errors, "DBMS‚ª•s³‚Å‚·: " & dbms
     End Select
 End Sub
 
@@ -556,5 +550,7 @@ Private Sub SafeCloseWorkbook(ByVal targetWb As Workbook)
     End If
     On Error GoTo 0
 End Sub
+
+
 
 

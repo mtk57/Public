@@ -1,12 +1,20 @@
 
+■PoweerShell
+
+<インストール/アップデート>
+winget search Microsoft.PowerShell
+
+
 ■Gemini CLI
 https://github.com/google-gemini/gemini-cli
+
+<インストール/アップデート>
 npm install -g @google/gemini-cli@latest
 
 
 
 ■Codex CLI
-npm install -g @openai/codex
+<インストール/アップデート>
 npm install -g @openai/codex@latest
 
 <環境構築>

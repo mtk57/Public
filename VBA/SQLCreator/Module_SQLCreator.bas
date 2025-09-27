@@ -7,6 +7,26 @@ Private Const CATEGORY_DATE As String = "日付"
 Private Const CATEGORY_TIME As String = "時刻"
 Private Const CATEGORY_TIMESTAMP As String = "日時"
 
+Private Const MAIN_COL_NO As Long = 2
+Private Const MAIN_COL_TARGET As Long = 3
+Private Const MAIN_COL_DEF_FILE As Long = 4
+Private Const MAIN_COL_DEF_SHEET As Long = 5
+Private Const MAIN_COL_DEF_TABLE As Long = 6
+Private Const MAIN_COL_COLNAME_ADDR As Long = 7
+Private Const MAIN_COL_TYPE_ADDR As Long = 8
+Private Const MAIN_COL_PRECISION_ADDR As Long = 9
+Private Const MAIN_COL_SCALE_ADDR As Long = 10
+Private Const MAIN_COL_PK_ADDR As Long = 11
+Private Const MAIN_COL_NOTNULL_ADDR As Long = 12
+Private Const MAIN_COL_DBMS As Long = 13
+Private Const MAIN_COL_DATA_FILE As Long = 14
+Private Const MAIN_COL_DATA_SHEET As Long = 15
+Private Const MAIN_COL_DATA_TABLE As Long = 16
+Private Const MAIN_COL_DATA_START As Long = 17
+Private Const MAIN_COL_MESSAGE As Long = 19
+
+Private Const ORACLE_TIME_BASE_DATE As String = "1970-01-01"
+
 Public Sub ボタン1_Click()
     ProcessInstructionRows
 End Sub
@@ -32,9 +52,9 @@ Private Sub ProcessInstructionRows()
     Application.EnableEvents = False
 
     currentRow = 11
-    Do While LenB(Trim$(CStr(mainWs.Cells(currentRow, 2).Value))) > 0
-        targetMark = Trim$(CStr(mainWs.Cells(currentRow, 3).Value))
-        mainWs.Cells(currentRow, 15).Value = vbNullString
+    Do While LenB(Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_NO).value))) > 0
+        targetMark = Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_TARGET).value))
+        mainWs.Cells(currentRow, MAIN_COL_MESSAGE).value = vbNullString
         If targetMark = "○" Then
             ProcessSingleInstruction mainWs, typeCatalog, currentRow
         End If
@@ -53,44 +73,62 @@ End Sub
 
 Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalog As Object, ByVal rowIndex As Long)
     Dim errors As Collection
-    Dim filePath As String
-    Dim sheetName As String
-    Dim tableName As String
+    Dim definitionFilePath As String
+    Dim definitionSheetName As String
+    Dim definitionTableName As String
     Dim colNameAddr As String
     Dim typeAddr As String
     Dim precisionAddr As String
     Dim scaleAddr As String
     Dim pkAddr As String
     Dim notNullAddr As String
+    Dim dataFilePath As String
+    Dim dataSheetName As String
+    Dim dataTableName As String
+    Dim dataStartAddr As String
     Dim dbms As String
     Dim definitionWb As Workbook
     Dim definitionWs As Worksheet
+    Dim dataWb As Workbook
+    Dim dataWs As Worksheet
     Dim columns As Collection
-    Dim sqlText As String
-    Dim outputPath As String
+    Dim dataRecords As Collection
+    Dim createSql As String
+    Dim insertSql As String
+    Dim createOutputPath As String
+    Dim insertOutputPath As String
+    Dim timestampText As String
 
     Set errors = New Collection
 
-    filePath = Trim$(CStr(mainWs.Cells(rowIndex, 4).Value))
-    sheetName = Trim$(CStr(mainWs.Cells(rowIndex, 5).Value))
-    tableName = Trim$(CStr(mainWs.Cells(rowIndex, 6).Value))
-    colNameAddr = Trim$(CStr(mainWs.Cells(rowIndex, 7).Value))
-    typeAddr = Trim$(CStr(mainWs.Cells(rowIndex, 8).Value))
-    precisionAddr = Trim$(CStr(mainWs.Cells(rowIndex, 9).Value))
-    scaleAddr = Trim$(CStr(mainWs.Cells(rowIndex, 10).Value))
-    pkAddr = Trim$(CStr(mainWs.Cells(rowIndex, 11).Value))
-    notNullAddr = Trim$(CStr(mainWs.Cells(rowIndex, 12).Value))
-    dbms = Trim$(CStr(mainWs.Cells(rowIndex, 13).Value))
+    definitionFilePath = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DEF_FILE).value))
+    definitionSheetName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DEF_SHEET).value))
+    definitionTableName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DEF_TABLE).value))
+    colNameAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_COLNAME_ADDR).value))
+    typeAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_TYPE_ADDR).value))
+    precisionAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_PRECISION_ADDR).value))
+    scaleAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_SCALE_ADDR).value))
+    pkAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_PK_ADDR).value))
+    notNullAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_NOTNULL_ADDR).value))
+    dbms = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DBMS).value))
+    dataFilePath = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_FILE).value))
+    dataSheetName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_SHEET).value))
+    dataTableName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TABLE).value))
+    dataStartAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_START).value))
 
-    ValidateRequiredValue filePath, "ファイルパス", errors
-    ValidateRequiredValue sheetName, "シート名", errors
-    ValidateRequiredValue tableName, "テーブル名", errors
+    ValidateRequiredValue definitionFilePath, "定義ファイルパス", errors
+    ValidateRequiredValue definitionSheetName, "定義シート名", errors
+    ValidateRequiredValue definitionTableName, "定義テーブル名", errors
     ValidateRequiredValue colNameAddr, "カラム名開始セル", errors
     ValidateRequiredValue typeAddr, "型カラム開始セル", errors
     ValidateRequiredValue precisionAddr, "整数桁カラム開始セル", errors
     ValidateRequiredValue scaleAddr, "小数桁カラム開始セル", errors
     ValidateRequiredValue pkAddr, "PKカラム開始セル", errors
     ValidateRequiredValue notNullAddr, "NotNullカラム開始セル", errors
+    ValidateRequiredValue dataFilePath, "データファイルパス", errors
+    ValidateRequiredValue dataSheetName, "データシート名", errors
+    ValidateRequiredValue dataTableName, "データテーブル名", errors
+    ValidateRequiredValue dataStartAddr, "データ開始セル", errors
     ValidateDbms dbms, errors
 
     If errors.Count > 0 Then
@@ -98,16 +136,16 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
-    If Dir$(filePath, vbNormal) = vbNullString Then
-        AddError errors, "ファイルパスが不正です: " & filePath
+    If Dir$(definitionFilePath, vbNormal) = vbNullString Then
+        AddError errors, "定義ファイルパスが存在しません: " & definitionFilePath
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
     On Error Resume Next
-    Set definitionWb = Application.Workbooks.Open(fileName:=filePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
+    Set definitionWb = Application.Workbooks.Open(fileName:=definitionFilePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
     If Err.Number <> 0 Then
-        AddError errors, "Excelファイルを開けません: " & filePath & " (" & Err.Description & ")"
+        AddError errors, "定義ファイルを開けません: " & definitionFilePath & " (" & Err.Description & ")"
         Err.Clear
         On Error GoTo 0
         WriteErrors mainWs, rowIndex, errors
@@ -116,10 +154,10 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     On Error GoTo 0
 
     On Error Resume Next
-    Set definitionWs = definitionWb.Worksheets(sheetName)
+    Set definitionWs = definitionWb.Worksheets(definitionSheetName)
     On Error GoTo 0
     If definitionWs Is Nothing Then
-        AddError errors, "指定シートが見つかりません: " & sheetName
+        AddError errors, "定義シートが見つかりません: " & definitionSheetName
         SafeCloseWorkbook definitionWb
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
@@ -135,26 +173,288 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     If columns Is Nothing Or columns.Count = 0 Then
-        AddError errors, "有効なカラム定義が1件もありません。"
+        AddError errors, "有効なカラム定義が1件も取得できません。"
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
-    sqlText = GenerateSqlText(tableName, columns, dbms, errors)
+    If Dir$(dataFilePath, vbNormal) = vbNullString Then
+        AddError errors, "データファイルパスが存在しません: " & dataFilePath
+        WriteErrors mainWs, rowIndex, errors
+        Exit Sub
+    End If
+
+    On Error Resume Next
+    Set dataWb = Application.Workbooks.Open(fileName:=dataFilePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
+    If Err.Number <> 0 Then
+        AddError errors, "データファイルを開けません: " & dataFilePath & " (" & Err.Description & ")"
+        Err.Clear
+        On Error GoTo 0
+        WriteErrors mainWs, rowIndex, errors
+        Exit Sub
+    End If
+    On Error GoTo 0
+
+    On Error Resume Next
+    Set dataWs = dataWb.Worksheets(dataSheetName)
+    On Error GoTo 0
+    If dataWs Is Nothing Then
+        AddError errors, "データシートが見つかりません: " & dataSheetName
+        SafeCloseWorkbook dataWb
+        WriteErrors mainWs, rowIndex, errors
+        Exit Sub
+    End If
+
+    Set dataRecords = ReadDataRecords(dataWs, dataStartAddr, columns, errors)
+
+    SafeCloseWorkbook dataWb
+
     If errors.Count > 0 Then
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
-    outputPath = WriteSqlFile(filePath, tableName, sqlText, errors)
+    createSql = GenerateCreateSqlText(definitionTableName, columns, dbms, errors)
     If errors.Count > 0 Then
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
-    mainWs.Cells(rowIndex, 15).Value = "SQL出力: " & outputPath
+    insertSql = GenerateInsertSqlText(dataTableName, columns, dataRecords, dbms, errors)
+    If errors.Count > 0 Then
+        WriteErrors mainWs, rowIndex, errors
+        Exit Sub
+    End If
+
+    timestampText = Format$(Now, "yyyymmdd_hhnnss")
+    createOutputPath = WriteSqlFile(definitionFilePath, timestampText & "_" & SanitizeForFile(tableName:=definitionTableName) & "_CREATE.sql", createSql, errors)
+    If errors.Count > 0 Then
+        WriteErrors mainWs, rowIndex, errors
+        Exit Sub
+    End If
+
+    insertOutputPath = WriteSqlFile(definitionFilePath, timestampText & "_" & SanitizeForFile(tableName:=dataTableName) & "_INSERT.sql", insertSql, errors)
+    If errors.Count > 0 Then
+        WriteErrors mainWs, rowIndex, errors
+        Exit Sub
+    End If
+
+    mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
 End Sub
 
+Private Function NormalizeDbms(ByVal dbms As String) As String
+    Select Case UCase$(dbms)
+        Case "ORACLE"
+            NormalizeDbms = "Oracle"
+        Case "SQLSERVER"
+            NormalizeDbms = "SQLServer"
+        Case "SQLITE"
+            NormalizeDbms = "SQLite"
+    End Select
+End Function
+
+Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns As Collection, _
+                                       ByVal dataRecords As Collection, ByVal dbms As String, _
+                                       ByVal errors As Collection) As String
+    Dim schemaName As String
+    Dim pureTableName As String
+    Dim qualifiedName As String
+    Dim columnParts() As String
+    Dim idx As Long
+
+    If columns Is Nothing Or columns.Count = 0 Then
+        AddError errors, "投入データ用のカラム定義が存在しません。"
+        Exit Function
+    End If
+
+    schemaName = ExtractSchemaName(tableName)
+    pureTableName = ExtractTableName(tableName)
+
+    Select Case dbms
+        Case "SQLServer"
+            If LenB(schemaName) = 0 Then schemaName = "dbo"
+        Case "SQLite"
+            schemaName = vbNullString
+    End Select
+
+    qualifiedName = BuildQualifiedName(schemaName, pureTableName, dbms)
+
+    ReDim columnParts(0 To columns.Count - 1)
+    For idx = 1 To columns.Count
+        columnParts(idx - 1) = QuoteIdentifier(columns(idx).Name, dbms)
+    Next idx
+
+    Dim columnList As String
+    columnList = "(" & Join(columnParts, ", ") & ")"
+
+    If dataRecords Is Nothing Or dataRecords.Count = 0 Then
+        GenerateInsertSqlText = "-- データ行が存在しません。"
+        Exit Function
+    End If
+
+    Dim statements() As String
+    ReDim statements(0 To dataRecords.Count - 1)
+
+    Dim statementIndex As Long
+    statementIndex = 0
+
+    For idx = 1 To dataRecords.Count
+        Dim record As Object
+        Set record = dataRecords(idx)
+        Dim values() As Variant
+        Dim addresses() As String
+        values = record("Values")
+        addresses = record("Addresses")
+
+        Dim valueParts() As String
+        ReDim valueParts(0 To columns.Count - 1)
+
+        Dim colIdx As Long
+        For colIdx = 1 To columns.Count
+            Dim def As ColumnDefinition
+            Set def = columns(colIdx)
+            valueParts(colIdx - 1) = FormatValueLiteral(def, values(colIdx), addresses(colIdx), dbms, errors)
+            If errors.Count > 0 Then Exit Function
+        Next colIdx
+
+        statements(statementIndex) = "INSERT INTO " & qualifiedName & " " & columnList & " VALUES (" & Join(valueParts, ", ") & ");"
+        statementIndex = statementIndex + 1
+    Next idx
+
+    GenerateInsertSqlText = Join(statements, vbCrLf)
+End Function
+
+Private Function FormatValueLiteral(ByVal definition As ColumnDefinition, ByVal value As Variant, _
+                                    ByVal address As String, ByVal dbms As String, _
+                                    ByVal errors As Collection) As String
+    If IsNullOrEmptyValue(value) Then
+        FormatValueLiteral = "NULL"
+        Exit Function
+    End If
+
+    Select Case definition.category
+        Case CATEGORY_NUMERIC
+            FormatValueLiteral = FormatNumericLiteral(value)
+        Case CATEGORY_STRING
+            FormatValueLiteral = FormatStringLiteral(value)
+        Case CATEGORY_DATE
+            FormatValueLiteral = FormatDateLiteral(value, address, dbms, errors)
+        Case CATEGORY_TIME
+            FormatValueLiteral = FormatTimeLiteral(value, address, dbms, errors)
+        Case CATEGORY_TIMESTAMP
+            FormatValueLiteral = FormatTimestampLiteral(value, address, dbms, errors)
+        Case Else
+            FormatValueLiteral = FormatStringLiteral(value)
+    End Select
+End Function
+
+Private Function IsNullOrEmptyValue(ByVal value As Variant) As Boolean
+    If IsNull(value) Or IsEmpty(value) Then
+        IsNullOrEmptyValue = True
+    ElseIf VarType(value) = vbString Then
+        IsNullOrEmptyValue = (LenB(Trim$(CStr(value))) = 0)
+    Else
+        IsNullOrEmptyValue = False
+    End If
+End Function
+
+Private Function FormatNumericLiteral(ByVal value As Variant) As String
+    FormatNumericLiteral = Trim$(CStr(value))
+End Function
+
+Private Function FormatStringLiteral(ByVal value As Variant) As String
+    Dim textValue As String
+    textValue = CStr(value)
+    textValue = Replace(textValue, "'", "''")
+    FormatStringLiteral = "'" & textValue & "'"
+End Function
+
+Private Function FormatDateLiteral(ByVal value As Variant, ByVal address As String, _
+                                   ByVal dbms As String, ByVal errors As Collection) As String
+    Dim dt As Date
+    If Not TryParseDateValue(value, dt) Then
+        AddError errors, "日付の値を解析できません: " & address
+        Exit Function
+    End If
+
+    Dim dateText As String
+    dateText = Format$(dt, "yyyy-mm-dd")
+
+    Select Case dbms
+        Case "Oracle"
+            FormatDateLiteral = "TO_DATE('" & dateText & "','YYYY-MM-DD')"
+        Case "SQLServer"
+            FormatDateLiteral = "CAST('" & dateText & "' AS DATE)"
+        Case Else
+            FormatDateLiteral = "'" & dateText & "'"
+    End Select
+End Function
+
+Private Function FormatTimeLiteral(ByVal value As Variant, ByVal address As String, _
+                                   ByVal dbms As String, ByVal errors As Collection) As String
+    Dim dt As Date
+    If Not TryParseDateValue(value, dt) Then
+        AddError errors, "時刻の値を解析できません: " & address
+        Exit Function
+    End If
+
+    Dim timeText As String
+    timeText = Format$(dt, "HH:nn:ss")
+
+    Select Case dbms
+        Case "Oracle"
+            FormatTimeLiteral = "TO_TIMESTAMP('" & ORACLE_TIME_BASE_DATE & " " & timeText & "','YYYY-MM-DD HH24:MI:SS')"
+        Case "SQLServer"
+            FormatTimeLiteral = "CAST('" & timeText & "' AS TIME)"
+        Case Else
+            FormatTimeLiteral = "'" & timeText & "'"
+    End Select
+End Function
+
+Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As String, _
+                                        ByVal dbms As String, ByVal errors As Collection) As String
+    Dim dt As Date
+    If Not TryParseDateValue(value, dt) Then
+        AddError errors, "日時の値を解析できません: " & address
+        Exit Function
+    End If
+
+    Dim timestampText As String
+    timestampText = Format$(dt, "yyyy-mm-dd HH:nn:ss")
+
+    Select Case dbms
+        Case "Oracle"
+            FormatTimestampLiteral = "TO_TIMESTAMP('" & timestampText & "','YYYY-MM-DD HH24:MI:SS')"
+        Case "SQLServer"
+            FormatTimestampLiteral = "CAST('" & timestampText & "' AS DATETIME2)"
+        Case Else
+            FormatTimestampLiteral = "'" & timestampText & "'"
+    End Select
+End Function
+
+Private Function TryParseDateValue(ByVal value As Variant, ByRef resultValue As Date) As Boolean
+    On Error Resume Next
+    If IsDate(value) Then
+        resultValue = CDate(value)
+        TryParseDateValue = True
+    Else
+        Dim textValue As String
+        textValue = Trim$(CStr(value))
+        If LenB(textValue) = 0 Then
+            TryParseDateValue = False
+        Else
+            resultValue = CDate(textValue)
+            If Err.Number = 0 Then
+                TryParseDateValue = True
+            End If
+        End If
+    End If
+
+    If Err.Number <> 0 Then
+        Err.Clear
+    End If
+    On Error GoTo 0
+End Function
 Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAddr As String, _
                                        ByVal typeAddr As String, ByVal precisionAddr As String, _
                                        ByVal scaleAddr As String, ByVal pkAddr As String, _
@@ -185,20 +485,20 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
 
     Do While currentRow <= targetWs.Rows.Count
         Dim columnName As String
-        columnName = Trim$(CStr(targetWs.Cells(currentRow, nameCell.Column).Value))
+        columnName = Trim$(CStr(targetWs.Cells(currentRow, nameCell.Column).value))
         If LenB(columnName) = 0 Then Exit Do
 
         Dim columnType As String
-        columnType = Trim$(CStr(targetWs.Cells(currentRow, typeCell.Column).Value))
+        columnType = Trim$(CStr(targetWs.Cells(currentRow, typeCell.Column).value))
         If LenB(columnType) = 0 Then
-            AddError errors, "型が未入力です: " & targetWs.Cells(currentRow, typeCell.Column).Address(False, False)
+            AddError errors, "型が未入力です: " & targetWs.Cells(currentRow, typeCell.Column).address(False, False)
             Exit Do
         End If
 
         Dim typeKey As String
         typeKey = UCase$(columnType)
         If Not typeCatalog.Exists(typeKey) Then
-            AddError errors, "型がtypeシートに存在しません: " & columnType & " (" & targetWs.Cells(currentRow, typeCell.Column).Address(False, False) & ")"
+            AddError errors, "型がtypeシートに存在しません: " & columnType & " (" & targetWs.Cells(currentRow, typeCell.Column).address(False, False) & ")"
             Exit Do
         End If
 
@@ -212,14 +512,14 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         definition.category = category
 
         Dim precisionText As String
-        precisionText = Trim$(CStr(targetWs.Cells(currentRow, precisionCell.Column).Value))
+        precisionText = Trim$(CStr(targetWs.Cells(currentRow, precisionCell.Column).value))
         Dim scaleText As String
-        scaleText = Trim$(CStr(targetWs.Cells(currentRow, scaleCell.Column).Value))
+        scaleText = Trim$(CStr(targetWs.Cells(currentRow, scaleCell.Column).value))
 
         If category = CATEGORY_NUMERIC Or category = CATEGORY_STRING Then
             Dim parsedPrecision As Long
             If Not TryParsePositiveInteger(precisionText, parsedPrecision) Then
-                AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).Address(False, False)
+                AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
             Else
                 definition.Precision = parsedPrecision
                 definition.HasPrecision = True
@@ -229,7 +529,7 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         If category = CATEGORY_NUMERIC Then
             Dim parsedScale As Long
             If Not TryParseNonNegativeInteger(scaleText, parsedScale) Then
-                AddError errors, "小数桁が不正です: " & targetWs.Cells(currentRow, scaleCell.Column).Address(False, False)
+                AddError errors, "小数桁が不正です: " & targetWs.Cells(currentRow, scaleCell.Column).address(False, False)
             Else
                 definition.ScaleDigits = parsedScale
                 definition.HasScale = True
@@ -240,8 +540,8 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
             Exit Do
         End If
 
-        definition.IsPrimaryKey = (LenB(Trim$(CStr(targetWs.Cells(currentRow, pkCell.Column).Value))) > 0)
-        definition.IsNotNull = (LenB(Trim$(CStr(targetWs.Cells(currentRow, notNullCell.Column).Value))) > 0) Or definition.IsPrimaryKey
+        definition.IsPrimaryKey = (LenB(Trim$(CStr(targetWs.Cells(currentRow, pkCell.Column).value))) > 0)
+        definition.IsNotNull = (LenB(Trim$(CStr(targetWs.Cells(currentRow, notNullCell.Column).value))) > 0) Or definition.IsPrimaryKey
 
         columns.Add definition
         currentRow = currentRow + 1
@@ -252,7 +552,114 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
     End If
 End Function
 
-Private Function GenerateSqlText(ByVal tableName As String, ByVal columns As Collection, ByVal dbms As String, ByVal errors As Collection) As String
+Private Function ReadDataRecords(ByVal targetWs As Worksheet, ByVal startAddr As String, _
+                                 ByVal columns As Collection, ByVal errors As Collection) As Collection
+    Dim startCell As Range
+    Dim headerRow As Long
+    Dim dataRow As Long
+    Dim noColumn As Long
+    Dim headerValue As String
+
+    Set startCell = ResolveSingleCell(targetWs, startAddr, "データ開始セル", errors)
+    If errors.Count > 0 Then Exit Function
+    If startCell Is Nothing Then Exit Function
+
+    noColumn = startCell.Column
+    headerValue = Trim$(CStr(startCell.value))
+
+    If StrComp(headerValue, "No", vbTextCompare) = 0 Then
+        headerRow = startCell.Row
+        dataRow = headerRow + 1
+    Else
+        headerRow = startCell.Row - 1
+        If headerRow < 1 Then
+            AddError errors, "No列ヘッダ位置を特定できません: " & startCell.address(False, False)
+            Exit Function
+        End If
+        If StrComp(Trim$(CStr(targetWs.Cells(headerRow, noColumn).value)), "No", vbTextCompare) <> 0 Then
+            AddError errors, "No列ヘッダが見つかりません: " & targetWs.Cells(headerRow, noColumn).address(False, False)
+            Exit Function
+        End If
+        dataRow = startCell.Row
+    End If
+
+    Dim headerMap As Object
+    Set headerMap = CreateObject("Scripting.Dictionary")
+    headerMap.CompareMode = vbTextCompare
+
+    Dim currentColumn As Long
+    currentColumn = noColumn
+    Do While LenB(Trim$(CStr(targetWs.Cells(headerRow, currentColumn).value))) > 0
+        Dim colName As String
+        colName = Trim$(CStr(targetWs.Cells(headerRow, currentColumn).value))
+        If LenB(colName) > 0 Then
+            If Not headerMap.Exists(colName) Then
+                headerMap.Add colName, currentColumn
+            End If
+        End If
+        currentColumn = currentColumn + 1
+    Loop
+
+    Dim idx As Long
+    For idx = 1 To columns.Count
+        Dim def As ColumnDefinition
+        Set def = columns(idx)
+        If Not headerMap.Exists(def.Name) Then
+            AddError errors, "投入データ定義ヘッダにカラムが存在しません: " & def.Name
+        End If
+    Next idx
+
+    If errors.Count > 0 Then Exit Function
+
+    Dim records As New Collection
+    Dim rowValues() As Variant
+    Dim rowAddresses() As String
+    Dim currentRow As Long
+    currentRow = dataRow
+
+    Do While currentRow <= targetWs.Rows.Count
+        Dim noValue As String
+        noValue = Trim$(CStr(targetWs.Cells(currentRow, noColumn).value))
+        If LenB(noValue) = 0 Then Exit Do
+
+        ReDim rowValues(1 To columns.Count)
+        ReDim rowAddresses(1 To columns.Count)
+
+        For idx = 1 To columns.Count
+            Dim valueCell As Range
+            Dim keyName As String
+            keyName = CStr(columns(idx).Name)
+            Set valueCell = targetWs.Cells(currentRow, CLng(headerMap(keyName)))
+            rowValues(idx) = valueCell.value
+            rowAddresses(idx) = valueCell.address(False, False)
+
+            Dim trimmedText As String
+            trimmedText = Trim$(CStr(valueCell.value))
+            If LenB(trimmedText) = 0 Then
+                If columns(idx).IsPrimaryKey Or columns(idx).IsNotNull Then
+                    AddError errors, "必須項目が空欄です: " & valueCell.address(False, False)
+                End If
+            End If
+        Next idx
+
+        If errors.Count > 0 Then Exit Do
+
+        Dim record As Object
+        Set record = CreateObject("Scripting.Dictionary")
+        record.CompareMode = vbBinaryCompare
+        record.Add "Values", rowValues
+        record.Add "Addresses", rowAddresses
+        records.Add record
+
+        currentRow = currentRow + 1
+    Loop
+
+    If errors.Count = 0 Then
+        Set ReadDataRecords = records
+    End If
+End Function
+
+Private Function GenerateCreateSqlText(ByVal tableName As String, ByVal columns As Collection, ByVal dbms As String, ByVal errors As Collection) As String
     Dim schemaName As String
     Dim pureTableName As String
     Dim qualifiedName As String
@@ -304,7 +711,7 @@ Private Function GenerateSqlText(ByVal tableName As String, ByVal columns As Col
     Dim createSql As String
     createSql = "CREATE TABLE " & qualifiedName & vbCrLf & "(" & vbCrLf & Join(lines, "," & vbCrLf) & vbCrLf & ");"
 
-    GenerateSqlText = dropSql & vbCrLf & vbCrLf & createSql
+    GenerateCreateSqlText = dropSql & vbCrLf & vbCrLf & createSql
 End Function
 
 Private Function FormatDataType(ByVal definition As ColumnDefinition, ByVal dbms As String, ByVal errors As Collection) As String
@@ -340,22 +747,25 @@ Private Function BuildDropStatement(ByVal qualifiedName As String, ByVal dbms As
     End Select
 End Function
 
-Private Function WriteSqlFile(ByVal sourceFilePath As String, ByVal tableName As String, _
+Private Function WriteSqlFile(ByVal sourceFilePath As String, ByVal fileName As String, _
                               ByVal sqlText As String, ByVal errors As Collection) As String
     Dim fso As Object
     Dim parentFolder As String
-    Dim fileName As String
     Dim outputPath As String
     Dim ts As Object
+
+    If LenB(fileName) = 0 Then
+        AddError errors, "出力ファイル名が正しく生成できません。"
+        Exit Function
+    End If
 
     Set fso = CreateObject("Scripting.FileSystemObject")
     parentFolder = fso.GetParentFolderName(sourceFilePath)
     If LenB(parentFolder) = 0 Then
-        AddError errors, "テーブル定義ファイルの親フォルダを取得できません: " & sourceFilePath
+        AddError errors, "参照ファイルの親フォルダを取得できません: " & sourceFilePath
         Exit Function
     End If
 
-    fileName = Format$(Now, "yyyymmdd_hhnnss") & "_" & SanitizeForFile(tableName:=tableName) & ".sql"
     outputPath = fso.BuildPath(parentFolder, fileName)
 
     On Error Resume Next
@@ -381,14 +791,14 @@ Private Function BuildTypeCatalog(ByVal typeWs As Worksheet) As Object
     Dim currentRow As Long
     currentRow = 3
 
-    Do While LenB(Trim$(CStr(typeWs.Cells(currentRow, 2).Value))) > 0
+    Do While LenB(Trim$(CStr(typeWs.Cells(currentRow, MAIN_COL_NO).value))) > 0
         Dim category As String
-        category = Trim$(CStr(typeWs.Cells(currentRow, 2).Value))
+        category = Trim$(CStr(typeWs.Cells(currentRow, MAIN_COL_NO).value))
         Dim currentColumn As Long
         currentColumn = 3
-        Do While LenB(Trim$(CStr(typeWs.Cells(currentRow, currentColumn).Value))) > 0
+        Do While LenB(Trim$(CStr(typeWs.Cells(currentRow, currentColumn).value))) > 0
             Dim typeName As String
-            typeName = UCase$(Trim$(CStr(typeWs.Cells(currentRow, currentColumn).Value)))
+            typeName = UCase$(Trim$(CStr(typeWs.Cells(currentRow, currentColumn).value)))
             If LenB(typeName) > 0 Then
                 If Not dict.Exists(typeName) Then
                     dict.Add typeName, category
@@ -419,13 +829,15 @@ Private Sub ValidateRequiredValue(ByVal valueText As String, ByVal label As Stri
     End If
 End Sub
 
-Private Sub ValidateDbms(ByVal dbms As String, ByVal errors As Collection)
-    Select Case UCase$(dbms)
-        Case "ORACLE", "SQLSERVER", "SQLITE"
-            ' OK
-        Case Else
-            AddError errors, "DBMSが不正です: " & dbms
-    End Select
+Private Sub ValidateDbms(ByRef dbms As String, ByVal errors As Collection)
+    Dim normalized As String
+    normalized = NormalizeDbms(dbms)
+
+    If LenB(normalized) = 0 Then
+        AddError errors, "DBMSが不正です: " & dbms
+    Else
+        dbms = normalized
+    End If
 End Sub
 
 Private Function ExtractSchemaName(ByVal tableName As String) As String
@@ -518,7 +930,7 @@ Private Sub AddError(ByVal errors As Collection, ByVal message As String)
 End Sub
 
 Private Sub WriteErrors(ByVal mainWs As Worksheet, ByVal rowIndex As Long, ByVal errors As Collection)
-    mainWs.Cells(rowIndex, 15).Value = JoinCollection(errors, vbLf)
+    mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = JoinCollection(errors, vbLf)
 End Sub
 
 Private Function TryParsePositiveInteger(ByVal textValue As String, ByRef resultValue As Long) As Boolean
@@ -550,6 +962,8 @@ Private Sub SafeCloseWorkbook(ByVal targetWb As Workbook)
     End If
     On Error GoTo 0
 End Sub
+
+
 
 
 

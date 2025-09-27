@@ -1,22 +1,21 @@
-main
-SQL Creator														
-ver 1.0.0														
-														
-														
-														
-														
-														
-														
-														
-	No	対象	ファイルパス	シート名	テーブル名	カラム名開始セル	型カラム開始セル	整数桁カラム開始セル	小数桁カラム開始セル	PKカラム開始セル	NotNullカラム開始セル	DBMS		エラーメッセージ
-	1	○	C:\_git\Public\VBA\SQLCreator\testdata\テーブル定義.xlsx	HOGE	HOGE	B3	C3	D3	E3	F3	G3	Oracle		SQL出力: C:\_git\Public\VBA\SQLCreator\testdata\20250927_215609_HOGE.sql
+■mainシート
+SQL Creator
+ver 2.0.1
 
 
-type
-					
-					
-	数値	DECIMAL	NUMBER		
+
+
+
+
+			テーブル定義										投入データ
+	No	対象	定義ファイルパス	シート名	テーブル名	カラム名開始セル	型カラム開始セル	整数桁カラム開始セル	小数桁カラム開始セル	PKカラム開始セル	NotNullカラム開始セル	DBMS	データファイルパス	シート名	テーブル名	データ開始セル		エラーメッセージ
+	1	○	C:\_git\Public\VBA\SQLCreator\testdata\テーブル定義.xlsx	HOGE	HOGE	B3	C3	D3	E3	F3	G3	Oracle	C:\_git\Public\VBA\SQLCreator\testdata\投入データ.xlsx	HOGE	HOGE	B3
+------------------
+■typeシート
+
+
+	数値	DECIMAL	NUMBER
 	文字列	VARCHAR	VARCHAR2	NVARCHAR	CHAR
-	日付	DATE			
-	時刻	TIME			
-	日時	TIMESTAMP			
+	日付	DATE
+	時刻	TIME
+	日時	TIMESTAMP

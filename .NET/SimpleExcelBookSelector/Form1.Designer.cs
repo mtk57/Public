@@ -50,6 +50,7 @@
             this.dataGridViewResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.dataGridViewResults.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dataGridViewResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.clmPinned,
@@ -69,7 +70,6 @@
             this.clmPinned.Name = "clmPinned";
             this.clmPinned.ReadOnly = true;
             this.clmPinned.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.clmPinned.Width = 70;
             // 
             // clmDir
             // 

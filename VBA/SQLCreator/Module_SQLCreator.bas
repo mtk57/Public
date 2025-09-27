@@ -568,18 +568,24 @@ Private Function ReadDataRecords(ByVal targetWs As Worksheet, ByVal startAddr As
     headerValue = Trim$(CStr(startCell.value))
 
     If StrComp(headerValue, "No", vbTextCompare) = 0 Then
+        noColumn = startCell.Column
         headerRow = startCell.Row
         dataRow = headerRow + 1
     Else
-        headerRow = startCell.Row - 1
-        If headerRow < 1 Then
+        Dim headerCandidateRow As Long
+        headerCandidateRow = startCell.Row - 1
+        If headerCandidateRow < 1 Then
             AddError errors, "No列ヘッダ位置を特定できません: " & startCell.address(False, False)
             Exit Function
         End If
-        If StrComp(Trim$(CStr(targetWs.Cells(headerRow, noColumn).value)), "No", vbTextCompare) <> 0 Then
-            AddError errors, "No列ヘッダが見つかりません: " & targetWs.Cells(headerRow, noColumn).address(False, False)
+
+        noColumn = LocateNoHeaderColumn(targetWs, headerCandidateRow, startCell.Column)
+        If noColumn = 0 Then
+            AddError errors, "No列ヘッダが見つかりません: " & targetWs.Cells(headerCandidateRow, startCell.Column).address(False, False)
             Exit Function
         End If
+
+        headerRow = headerCandidateRow
         dataRow = startCell.Row
     End If
 
@@ -657,6 +663,39 @@ Private Function ReadDataRecords(ByVal targetWs As Worksheet, ByVal startAddr As
     If errors.Count = 0 Then
         Set ReadDataRecords = records
     End If
+End Function
+
+Private Function LocateNoHeaderColumn(ByVal targetWs As Worksheet, ByVal headerRow As Long, _
+                                      ByVal hintColumn As Long) As Long
+    Dim valueText As String
+    valueText = Trim$(CStr(targetWs.Cells(headerRow, hintColumn).value))
+    If StrComp(valueText, "No", vbTextCompare) = 0 Then
+        LocateNoHeaderColumn = hintColumn
+        Exit Function
+    End If
+
+    Dim searchColumn As Long
+    For searchColumn = hintColumn - 1 To 1 Step -1
+        valueText = Trim$(CStr(targetWs.Cells(headerRow, searchColumn).value))
+        If StrComp(valueText, "No", vbTextCompare) = 0 Then
+            LocateNoHeaderColumn = searchColumn
+            Exit Function
+        End If
+    Next searchColumn
+
+    Dim lastColumn As Long
+    lastColumn = targetWs.Cells(headerRow, targetWs.columns.Count).End(xlToLeft).Column
+    If lastColumn < hintColumn Then
+        lastColumn = hintColumn
+    End If
+
+    For searchColumn = hintColumn + 1 To lastColumn
+        valueText = Trim$(CStr(targetWs.Cells(headerRow, searchColumn).value))
+        If StrComp(valueText, "No", vbTextCompare) = 0 Then
+            LocateNoHeaderColumn = searchColumn
+            Exit Function
+        End If
+    Next searchColumn
 End Function
 
 Private Function GenerateCreateSqlText(ByVal tableName As String, ByVal columns As Collection, ByVal dbms As String, ByVal errors As Collection) As String
@@ -962,6 +1001,8 @@ Private Sub SafeCloseWorkbook(ByVal targetWb As Workbook)
     End If
     On Error GoTo 0
 End Sub
+
+
 
 
 

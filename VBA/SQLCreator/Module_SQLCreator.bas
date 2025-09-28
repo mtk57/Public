@@ -1,6 +1,8 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
+Private Const VER As String = "2.2.0"
+
 Private Const CATEGORY_NUMERIC As String = "数値"
 Private Const CATEGORY_STRING As String = "文字列"
 Private Const CATEGORY_DATE As String = "日付"
@@ -430,6 +432,126 @@ Private Function FormatTimeLiteral(ByVal value As Variant, ByVal address As Stri
     End Select
 End Function
 
+
+Private Function ResolveDbmsTypeName(ByVal rawTypeName As String, ByVal category As String, ByVal dbms As String, ByVal errors As Collection) As String
+    Dim normalized As String
+    normalized = UCase$(Trim$(rawTypeName))
+    Dim resolved As String
+
+    Select Case dbms
+        Case "SQLServer"
+            resolved = ResolveSqlServerTypeName(normalized, category)
+        Case "Oracle"
+            resolved = ResolveOracleTypeName(normalized, category)
+        Case "SQLite"
+            resolved = ResolveSqliteTypeName(normalized, category)
+        Case Else
+            resolved = normalized
+    End Select
+
+    If LenB(resolved) = 0 Then
+        AddError errors, "DBMS(" & dbms & ")で利用できない型です: " & rawTypeName
+    End If
+
+    ResolveDbmsTypeName = resolved
+End Function
+
+Private Function ResolveSqlServerTypeName(ByVal normalized As String, ByVal category As String) As String
+    Select Case normalized
+        Case "NUMBER", "DECIMAL"
+            ResolveSqlServerTypeName = "DECIMAL"
+        Case "VARCHAR2", "NVARCHAR"
+            ResolveSqlServerTypeName = "NVARCHAR"
+        Case "VARCHAR"
+            ResolveSqlServerTypeName = "VARCHAR"
+        Case "CHAR"
+            ResolveSqlServerTypeName = "CHAR"
+        Case "TIMESTAMP"
+            ResolveSqlServerTypeName = "DATETIME2"
+        Case "DATE"
+            ResolveSqlServerTypeName = "DATE"
+        Case "TIME"
+            ResolveSqlServerTypeName = "TIME"
+        Case "DATETIME", "DATETIME2"
+            ResolveSqlServerTypeName = normalized
+        Case Else
+            Select Case category
+                Case CATEGORY_NUMERIC
+                    ResolveSqlServerTypeName = "DECIMAL"
+                Case CATEGORY_STRING
+                    ResolveSqlServerTypeName = "NVARCHAR"
+                Case CATEGORY_DATE
+                    ResolveSqlServerTypeName = "DATE"
+                Case CATEGORY_TIME
+                    ResolveSqlServerTypeName = "TIME"
+                Case CATEGORY_TIMESTAMP
+                    ResolveSqlServerTypeName = "DATETIME2"
+                Case Else
+                    ResolveSqlServerTypeName = normalized
+            End Select
+    End Select
+End Function
+
+Private Function ResolveOracleTypeName(ByVal normalized As String, ByVal category As String) As String
+    Select Case normalized
+        Case "DECIMAL"
+            ResolveOracleTypeName = "NUMBER"
+        Case "NUMBER"
+            ResolveOracleTypeName = "NUMBER"
+        Case "VARCHAR"
+            ResolveOracleTypeName = "VARCHAR2"
+        Case "NVARCHAR"
+            ResolveOracleTypeName = "NVARCHAR2"
+        Case "VARCHAR2"
+            ResolveOracleTypeName = "VARCHAR2"
+        Case "CHAR"
+            ResolveOracleTypeName = "CHAR"
+        Case "DATE"
+            ResolveOracleTypeName = "DATE"
+        Case "TIME"
+            ResolveOracleTypeName = "DATE"
+        Case "TIMESTAMP"
+            ResolveOracleTypeName = "TIMESTAMP"
+        Case Else
+            Select Case category
+                Case CATEGORY_NUMERIC
+                    ResolveOracleTypeName = "NUMBER"
+                Case CATEGORY_STRING
+                    ResolveOracleTypeName = "VARCHAR2"
+                Case CATEGORY_DATE
+                    ResolveOracleTypeName = "DATE"
+                Case CATEGORY_TIME
+                    ResolveOracleTypeName = "DATE"
+                Case CATEGORY_TIMESTAMP
+                    ResolveOracleTypeName = "TIMESTAMP"
+                Case Else
+                    ResolveOracleTypeName = normalized
+            End Select
+    End Select
+End Function
+
+Private Function ResolveSqliteTypeName(ByVal normalized As String, ByVal category As String) As String
+    Select Case normalized
+        Case "NUMBER", "DECIMAL"
+            ResolveSqliteTypeName = "NUMERIC"
+        Case "VARCHAR", "VARCHAR2", "NVARCHAR", "CHAR"
+            ResolveSqliteTypeName = "TEXT"
+        Case "DATE", "TIME", "TIMESTAMP"
+            ResolveSqliteTypeName = "TEXT"
+        Case Else
+            Select Case category
+                Case CATEGORY_NUMERIC
+                    ResolveSqliteTypeName = "NUMERIC"
+                Case CATEGORY_STRING
+                    ResolveSqliteTypeName = "TEXT"
+                Case CATEGORY_DATE, CATEGORY_TIME, CATEGORY_TIMESTAMP
+                    ResolveSqliteTypeName = "TEXT"
+                Case Else
+                    ResolveSqliteTypeName = normalized
+            End Select
+    End Select
+End Function
+
 Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As String, _
                                         ByVal dbms As String, ByVal errors As Collection) As String
     Dim dt As Date
@@ -773,8 +895,9 @@ Private Function GenerateCreateSqlText(ByVal tableName As String, ByVal columns 
 End Function
 
 Private Function FormatDataType(ByVal definition As ColumnDefinition, ByVal dbms As String, ByVal errors As Collection) As String
-    Dim typeText As String
-    typeText = definition.DataType
+    Dim baseType As String
+    baseType = ResolveDbmsTypeName(definition.DataType, definition.category, dbms, errors)
+    If LenB(baseType) = 0 Or errors.Count > 0 Then Exit Function
 
     Select Case definition.category
         Case CATEGORY_NUMERIC
@@ -782,15 +905,19 @@ Private Function FormatDataType(ByVal definition As ColumnDefinition, ByVal dbms
                 AddError errors, "数値型の桁情報が不足しています: " & definition.Name
                 Exit Function
             End If
-            FormatDataType = typeText & "(" & CStr(definition.Precision) & "," & CStr(definition.ScaleDigits) & ")"
+            FormatDataType = baseType & "(" & CStr(definition.Precision) & "," & CStr(definition.ScaleDigits) & ")"
         Case CATEGORY_STRING
             If Not definition.HasPrecision Then
                 AddError errors, "文字列型の桁情報が不足しています: " & definition.Name
                 Exit Function
             End If
-            FormatDataType = typeText & "(" & CStr(definition.Precision) & ")"
+            If dbms = "SQLite" And UCase$(baseType) = "TEXT" Then
+                FormatDataType = baseType
+            Else
+                FormatDataType = baseType & "(" & CStr(definition.Precision) & ")"
+            End If
         Case Else
-            FormatDataType = typeText
+            FormatDataType = baseType
     End Select
 End Function
 

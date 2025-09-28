@@ -797,7 +797,11 @@ End Function
 Private Function BuildDropStatement(ByVal qualifiedName As String, ByVal dbms As String) As String
     Select Case dbms
         Case "SQLServer"
-            BuildDropStatement = "DROP TABLE IF EXISTS " & qualifiedName & ";"
+            Dim objectName As String
+            objectName = Replace(qualifiedName, "[", vbNullString)
+            objectName = Replace(objectName, "]", vbNullString)
+            BuildDropStatement = "IF OBJECT_ID(N'" & objectName & "', N'U') IS NOT NULL" & vbCrLf & _
+                               "    DROP TABLE " & qualifiedName & ";"
         Case "SQLite"
             BuildDropStatement = "DROP TABLE IF EXISTS " & qualifiedName & ";"
         Case Else

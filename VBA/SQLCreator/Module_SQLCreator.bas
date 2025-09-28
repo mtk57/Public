@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.0"
+Private Const VER As String = "2.2.1"
 
 Private Const CATEGORY_NUMERIC As String = "êîíl"
 Private Const CATEGORY_STRING As String = "ï∂éöóÒ"
@@ -405,7 +405,7 @@ Private Function FormatDateLiteral(ByVal value As Variant, ByVal address As Stri
         Case "Oracle"
             FormatDateLiteral = "TO_DATE('" & dateText & "','YYYY-MM-DD')"
         Case "SQLServer"
-            FormatDateLiteral = "CAST('" & dateText & "' AS DATE)"
+            FormatDateLiteral = "CAST('" & dateText & "' AS DATETIME)"
         Case Else
             FormatDateLiteral = "'" & dateText & "'"
     End Select
@@ -426,7 +426,7 @@ Private Function FormatTimeLiteral(ByVal value As Variant, ByVal address As Stri
         Case "Oracle"
             FormatTimeLiteral = "TO_TIMESTAMP('" & ORACLE_TIME_BASE_DATE & " " & timeText & "','YYYY-MM-DD HH24:MI:SS')"
         Case "SQLServer"
-            FormatTimeLiteral = "CAST('" & timeText & "' AS TIME)"
+            FormatTimeLiteral = "CAST('1900-01-01 " & timeText & "' AS DATETIME)"
         Case Else
             FormatTimeLiteral = "'" & timeText & "'"
     End Select
@@ -467,11 +467,11 @@ Private Function ResolveSqlServerTypeName(ByVal normalized As String, ByVal cate
         Case "CHAR"
             ResolveSqlServerTypeName = "CHAR"
         Case "TIMESTAMP"
-            ResolveSqlServerTypeName = "DATETIME2"
+            ResolveSqlServerTypeName = "DATETIME"
         Case "DATE"
-            ResolveSqlServerTypeName = "DATE"
+            ResolveSqlServerTypeName = "DATETIME"
         Case "TIME"
-            ResolveSqlServerTypeName = "TIME"
+            ResolveSqlServerTypeName = "DATETIME"
         Case "DATETIME", "DATETIME2"
             ResolveSqlServerTypeName = normalized
         Case Else
@@ -481,11 +481,11 @@ Private Function ResolveSqlServerTypeName(ByVal normalized As String, ByVal cate
                 Case CATEGORY_STRING
                     ResolveSqlServerTypeName = "NVARCHAR"
                 Case CATEGORY_DATE
-                    ResolveSqlServerTypeName = "DATE"
+                    ResolveSqlServerTypeName = "DATETIME"
                 Case CATEGORY_TIME
-                    ResolveSqlServerTypeName = "TIME"
+                    ResolveSqlServerTypeName = "DATETIME"
                 Case CATEGORY_TIMESTAMP
-                    ResolveSqlServerTypeName = "DATETIME2"
+                    ResolveSqlServerTypeName = "DATETIME"
                 Case Else
                     ResolveSqlServerTypeName = normalized
             End Select
@@ -567,7 +567,7 @@ Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As
         Case "Oracle"
             FormatTimestampLiteral = "TO_TIMESTAMP('" & timestampText & "','YYYY-MM-DD HH24:MI:SS')"
         Case "SQLServer"
-            FormatTimestampLiteral = "CAST('" & timestampText & "' AS DATETIME2)"
+            FormatTimestampLiteral = "CAST('" & timestampText & "' AS DATETIME)"
         Case Else
             FormatTimestampLiteral = "'" & timestampText & "'"
     End Select

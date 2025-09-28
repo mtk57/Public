@@ -98,6 +98,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim createOutputPath As String
     Dim insertOutputPath As String
     Dim timestampText As String
+    Dim hasDataFile As Boolean
 
     Set errors = New Collection
 
@@ -116,7 +117,12 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     dataTableName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TABLE).value))
     dataStartAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_START).value))
 
-    ValidateRequiredValue definitionFilePath, "定義ファイルパス", errors
+    If LenB(definitionFilePath) = 0 Then
+        Exit Sub
+    End If
+
+    hasDataFile = (LenB(dataFilePath) > 0)
+
     ValidateRequiredValue definitionSheetName, "定義シート名", errors
     ValidateRequiredValue definitionTableName, "定義テーブル名", errors
     ValidateRequiredValue colNameAddr, "カラム名開始セル", errors
@@ -125,11 +131,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     ValidateRequiredValue scaleAddr, "小数桁カラム開始セル", errors
     ValidateRequiredValue pkAddr, "PKカラム開始セル", errors
     ValidateRequiredValue notNullAddr, "NotNullカラム開始セル", errors
-    ValidateRequiredValue dataFilePath, "データファイルパス", errors
-    ValidateRequiredValue dataSheetName, "データシート名", errors
-    ValidateRequiredValue dataTableName, "データテーブル名", errors
-    ValidateRequiredValue dataStartAddr, "データ開始セル", errors
     ValidateDbms dbms, errors
+
+    If hasDataFile Then
+        ValidateRequiredValue dataFilePath, "データファイルパス", errors
+        ValidateRequiredValue dataSheetName, "データシート名", errors
+        ValidateRequiredValue dataTableName, "データテーブル名", errors
+        ValidateRequiredValue dataStartAddr, "データ開始セル", errors
+    End If
 
     If errors.Count > 0 Then
         WriteErrors mainWs, rowIndex, errors
@@ -178,40 +187,42 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
-    If Dir$(dataFilePath, vbNormal) = vbNullString Then
-        AddError errors, "データファイルパスが存在しません: " & dataFilePath
-        WriteErrors mainWs, rowIndex, errors
-        Exit Sub
-    End If
+    If hasDataFile Then
+        If Dir$(dataFilePath, vbNormal) = vbNullString Then
+            AddError errors, "データファイルパスが存在しません: " & dataFilePath
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
 
-    On Error Resume Next
-    Set dataWb = Application.Workbooks.Open(fileName:=dataFilePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
-    If Err.Number <> 0 Then
-        AddError errors, "データファイルを開けません: " & dataFilePath & " (" & Err.Description & ")"
-        Err.Clear
+        On Error Resume Next
+        Set dataWb = Application.Workbooks.Open(fileName:=dataFilePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
+        If Err.Number <> 0 Then
+            AddError errors, "データファイルを開けません: " & dataFilePath & " (" & Err.Description & ")"
+            Err.Clear
+            On Error GoTo 0
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
         On Error GoTo 0
-        WriteErrors mainWs, rowIndex, errors
-        Exit Sub
-    End If
-    On Error GoTo 0
 
-    On Error Resume Next
-    Set dataWs = dataWb.Worksheets(dataSheetName)
-    On Error GoTo 0
-    If dataWs Is Nothing Then
-        AddError errors, "データシートが見つかりません: " & dataSheetName
+        On Error Resume Next
+        Set dataWs = dataWb.Worksheets(dataSheetName)
+        On Error GoTo 0
+        If dataWs Is Nothing Then
+            AddError errors, "データシートが見つかりません: " & dataSheetName
+            SafeCloseWorkbook dataWb
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+
+        Set dataRecords = ReadDataRecords(dataWs, dataStartAddr, columns, errors)
+
         SafeCloseWorkbook dataWb
-        WriteErrors mainWs, rowIndex, errors
-        Exit Sub
-    End If
 
-    Set dataRecords = ReadDataRecords(dataWs, dataStartAddr, columns, errors)
-
-    SafeCloseWorkbook dataWb
-
-    If errors.Count > 0 Then
-        WriteErrors mainWs, rowIndex, errors
-        Exit Sub
+        If errors.Count > 0 Then
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
     End If
 
     createSql = GenerateCreateSqlText(definitionTableName, columns, dbms, errors)
@@ -220,10 +231,12 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
-    insertSql = GenerateInsertSqlText(dataTableName, columns, dataRecords, dbms, errors)
-    If errors.Count > 0 Then
-        WriteErrors mainWs, rowIndex, errors
-        Exit Sub
+    If hasDataFile Then
+        insertSql = GenerateInsertSqlText(dataTableName, columns, dataRecords, dbms, errors)
+        If errors.Count > 0 Then
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
     End If
 
     timestampText = Format$(Now, "yyyymmdd_hhnnss")
@@ -233,13 +246,19 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
-    insertOutputPath = WriteSqlFile(definitionFilePath, timestampText & "_" & SanitizeForFile(tableName:=dataTableName) & "_INSERT.sql", insertSql, errors)
-    If errors.Count > 0 Then
-        WriteErrors mainWs, rowIndex, errors
-        Exit Sub
+    If hasDataFile Then
+        insertOutputPath = WriteSqlFile(definitionFilePath, timestampText & "_" & SanitizeForFile(tableName:=dataTableName) & "_INSERT.sql", insertSql, errors)
+        If errors.Count > 0 Then
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
     End If
 
-    mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
+    If hasDataFile Then
+        mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
+    Else
+        mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath
+    End If
 End Sub
 
 Private Function NormalizeDbms(ByVal dbms As String) As String
@@ -1001,6 +1020,8 @@ Private Sub SafeCloseWorkbook(ByVal targetWb As Workbook)
     End If
     On Error GoTo 0
 End Sub
+
+
 
 
 

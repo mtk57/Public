@@ -29,17 +29,17 @@
         private void InitializeComponent ()
         {
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
-            this.clmPinned = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmDir = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmSheet = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmUpdated = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.chkEnableSheetSelectMode = new System.Windows.Forms.CheckBox();
             this.chkEnableAutoUpdateMode = new System.Windows.Forms.CheckBox();
             this.textAutoUpdateSec = new System.Windows.Forms.TextBox();
             this.btnForceUpdate = new System.Windows.Forms.Button();
             this.btnHistory = new System.Windows.Forms.Button();
             this.chkIsOpenDir = new System.Windows.Forms.CheckBox();
+            this.clmPinned = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmDir = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmSheet = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmUpdated = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -50,7 +50,6 @@
             this.dataGridViewResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.dataGridViewResults.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dataGridViewResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.clmPinned,
@@ -59,49 +58,12 @@
             this.clmSheet,
             this.clmUpdated});
             this.dataGridViewResults.Location = new System.Drawing.Point(12, 64);
+            this.dataGridViewResults.MultiSelect = false;
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
+            this.dataGridViewResults.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             this.dataGridViewResults.Size = new System.Drawing.Size(693, 191);
             this.dataGridViewResults.TabIndex = 6;
-            // 
-            // clmPinned
-            // 
-            this.clmPinned.HeaderText = "ピン留め";
-            this.clmPinned.Name = "clmPinned";
-            this.clmPinned.ReadOnly = true;
-            this.clmPinned.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
-            // clmDir
-            // 
-            this.clmDir.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmDir.HeaderText = "フォルダ";
-            this.clmDir.Name = "clmDir";
-            this.clmDir.ReadOnly = true;
-            this.clmDir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
-            // clmFile
-            // 
-            this.clmFile.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFile.HeaderText = "ファイル";
-            this.clmFile.Name = "clmFile";
-            this.clmFile.ReadOnly = true;
-            this.clmFile.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
-            // clmSheet
-            // 
-            this.clmSheet.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmSheet.HeaderText = "シート";
-            this.clmSheet.Name = "clmSheet";
-            this.clmSheet.ReadOnly = true;
-            this.clmSheet.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            // 
-            // clmUpdated
-            // 
-            this.clmUpdated.HeaderText = "更新日時";
-            this.clmUpdated.Name = "clmUpdated";
-            this.clmUpdated.ReadOnly = true;
-            this.clmUpdated.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.clmUpdated.Width = 140;
             // 
             // chkEnableSheetSelectMode
             // 
@@ -160,6 +122,48 @@
             this.chkIsOpenDir.Text = "ダブルクリックでフォルダを開く";
             this.chkIsOpenDir.UseVisualStyleBackColor = true;
             // 
+            // clmPinned
+            // 
+            this.clmPinned.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmPinned.FillWeight = 20F;
+            this.clmPinned.HeaderText = "ピン留め";
+            this.clmPinned.Name = "clmPinned";
+            this.clmPinned.ReadOnly = true;
+            this.clmPinned.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            // 
+            // clmDir
+            // 
+            this.clmDir.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmDir.HeaderText = "フォルダ";
+            this.clmDir.Name = "clmDir";
+            this.clmDir.ReadOnly = true;
+            this.clmDir.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            // 
+            // clmFile
+            // 
+            this.clmFile.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFile.HeaderText = "ファイル";
+            this.clmFile.Name = "clmFile";
+            this.clmFile.ReadOnly = true;
+            this.clmFile.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            // 
+            // clmSheet
+            // 
+            this.clmSheet.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmSheet.HeaderText = "シート";
+            this.clmSheet.Name = "clmSheet";
+            this.clmSheet.ReadOnly = true;
+            this.clmSheet.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            // 
+            // clmUpdated
+            // 
+            this.clmUpdated.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmUpdated.FillWeight = 50F;
+            this.clmUpdated.HeaderText = "更新日時";
+            this.clmUpdated.Name = "clmUpdated";
+            this.clmUpdated.ReadOnly = true;
+            this.clmUpdated.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -182,16 +186,17 @@
 
         #endregion
         private System.Windows.Forms.DataGridView dataGridViewResults;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmPinned;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmDir;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmFile;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmSheet;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clmUpdated;
         private System.Windows.Forms.CheckBox chkEnableSheetSelectMode;
         private System.Windows.Forms.CheckBox chkEnableAutoUpdateMode;
         private System.Windows.Forms.TextBox textAutoUpdateSec;
         private System.Windows.Forms.Button btnForceUpdate;
         private System.Windows.Forms.Button btnHistory;
         private System.Windows.Forms.CheckBox chkIsOpenDir;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmPinned;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmDir;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmFile;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmSheet;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmUpdated;
     }
 }
+

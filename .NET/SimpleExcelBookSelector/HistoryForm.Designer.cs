@@ -42,17 +42,33 @@
             this.btnApply = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnOpenAllPin = new System.Windows.Forms.Button();
+            this.colPinned = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.colDirectory = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colUpdatedAt = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
             // dataGridView1
             // 
+            this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
             this.dataGridView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.colPinned,
+            this.colCheck,
+            this.colDirectory,
+            this.colFileName,
+            this.colFilePath,
+            this.colUpdatedAt});
             this.dataGridView1.Location = new System.Drawing.Point(21, 66);
             this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.ReadOnly = true;
             this.dataGridView1.RowTemplate.Height = 21;
             this.dataGridView1.Size = new System.Drawing.Size(775, 127);
             this.dataGridView1.TabIndex = 0;
@@ -188,6 +204,51 @@
             this.btnOpenAllPin.UseVisualStyleBackColor = true;
             this.btnOpenAllPin.Click += new System.EventHandler(this.btnOpenAllPin_Click);
             // 
+            // colPinned
+            // 
+            this.colPinned.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colPinned.FillWeight = 20F;
+            this.colPinned.HeaderText = "ピン";
+            this.colPinned.Name = "colPinned";
+            this.colPinned.ReadOnly = true;
+            // 
+            // colCheck
+            // 
+            this.colCheck.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colCheck.FillWeight = 20F;
+            this.colCheck.HeaderText = "";
+            this.colCheck.Name = "colCheck";
+            this.colCheck.ReadOnly = true;
+            // 
+            // colDirectory
+            // 
+            this.colDirectory.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colDirectory.HeaderText = "フォルダ";
+            this.colDirectory.Name = "colDirectory";
+            this.colDirectory.ReadOnly = true;
+            // 
+            // colFileName
+            // 
+            this.colFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colFileName.HeaderText = "ファイル";
+            this.colFileName.Name = "colFileName";
+            this.colFileName.ReadOnly = true;
+            // 
+            // colFilePath
+            // 
+            this.colFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colFilePath.HeaderText = "ファイルパス";
+            this.colFilePath.Name = "colFilePath";
+            this.colFilePath.ReadOnly = true;
+            // 
+            // colUpdatedAt
+            // 
+            this.colUpdatedAt.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colUpdatedAt.FillWeight = 50F;
+            this.colUpdatedAt.HeaderText = "更新日時";
+            this.colUpdatedAt.Name = "colUpdatedAt";
+            this.colUpdatedAt.ReadOnly = true;
+            // 
             // HistoryForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -232,5 +293,11 @@
         private System.Windows.Forms.Button btnApply;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button btnOpenAllPin;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colPinned;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn colCheck;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colDirectory;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colFileName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colFilePath;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colUpdatedAt;
     }
 }

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
@@ -288,53 +287,50 @@ namespace SimpleExcelBookSelector
             if (!File.Exists(_settingsFilePath))
             {
                 _settings = new AppSettings();
+                return;
             }
-            else
+
+            try
             {
+                // Try to load the new format first
+                using (var stream = File.OpenRead(_settingsFilePath))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                    _settings = (AppSettings)serializer.ReadObject(stream);
+                }
+            }
+            catch (SerializationException)
+            {
+                // If it fails, try to load the old format and migrate
                 try
                 {
-                    // Try to load the new format first
                     using (var stream = File.OpenRead(_settingsFilePath))
                     {
-                        var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                        _settings = (AppSettings)serializer.ReadObject(stream);
-                    }
-                }
-                catch (SerializationException)
-                {
-                    // If it fails, try to load the old format and migrate
-                    try
-                    {
-                        using (var stream = File.OpenRead(_settingsFilePath))
-                        {
-                            var serializer = new DataContractJsonSerializer(typeof(AppSettings_Old));
-                            var oldSettings = (AppSettings_Old)serializer.ReadObject(stream);
+                        var serializer = new DataContractJsonSerializer(typeof(AppSettings_Old));
+                        var oldSettings = (AppSettings_Old)serializer.ReadObject(stream);
 
-                            _settings = new AppSettings
-                            {
-                                IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
-                                IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
-                                RefreshInterval = oldSettings.RefreshInterval,
-                                FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList()
-                            };
-                        }
-                        // Immediately save the settings in the new format
-                        // SaveSettings(); // BUG: This overwrites migrated settings with default UI values.
+                        _settings = new AppSettings
+                        {
+                            IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
+                            IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
+                            RefreshInterval = oldSettings.RefreshInterval,
+                            FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList()
+                        };
                     }
-                    catch
-                    {
-                        // If migration also fails, create default settings
-                        _settings = new AppSettings();
-                    }
+                    // Immediately save the settings in the new format
+                    // SaveSettings(); // BUG: This overwrites migrated settings with default UI values.
                 }
                 catch
                 {
-                    // For any other error, create default settings
+                    // If migration also fails, create default settings
                     _settings = new AppSettings();
                 }
             }
-
-            EnsureLayoutSettings();
+            catch
+            {
+                // For any other error, create default settings
+                _settings = new AppSettings();
+            }
 
             // Reflect settings on the UI
             chkEnableSheetSelectMode.Checked = _settings.IsSheetSelectionEnabled;
@@ -342,13 +338,11 @@ namespace SimpleExcelBookSelector
             textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
             chkIsOpenDir.Checked = _settings.IsOpenFolderOnDoubleClickEnabled;
 
-            ApplyMainFormLayout();
         }
 
 
         private void SaveSettings()
         {
-            CaptureMainFormLayout();
             // Get settings from the UI
             _settings.IsSheetSelectionEnabled = chkEnableSheetSelectMode.Checked;
             _settings.IsAutoRefreshEnabled = chkEnableAutoUpdateMode.Checked;
@@ -376,65 +370,6 @@ namespace SimpleExcelBookSelector
                 MessageBox.Show($"Failed to save settings.\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        private void EnsureLayoutSettings()
-        {
-            if (_settings.MainFormLayout == null)
-            {
-                _settings.MainFormLayout = new FormLayoutSettings();
-            }
-
-            if (_settings.HistoryFormLayout == null)
-            {
-                _settings.HistoryFormLayout = new FormLayoutSettings();
-            }
-        }
-
-        private void ApplyMainFormLayout()
-        {
-            if (_settings == null)
-            {
-                return;
-            }
-
-            var layout = _settings.MainFormLayout;
-            if (layout != null)
-            {
-                if (layout.Width > 0 && layout.Height > 0)
-                {
-                    var newSize = new Size(layout.Width, layout.Height);
-                    if (this.WindowState == FormWindowState.Minimized)
-                    {
-                        this.WindowState = FormWindowState.Normal;
-                    }
-                    this.Size = newSize;
-                }
-
-                if (!string.IsNullOrWhiteSpace(layout.WindowState) && Enum.TryParse(layout.WindowState, true, out FormWindowState savedState))
-                {
-                    this.WindowState = savedState;
-                }
-
-            }
-        }
-
-        private void CaptureMainFormLayout()
-        {
-            if (_settings == null)
-            {
-                return;
-            }
-
-            EnsureLayoutSettings();
-
-            var targetLayout = _settings.MainFormLayout;
-            var bounds = this.WindowState == FormWindowState.Normal ? this.Bounds : this.RestoreBounds;
-            targetLayout.Width = bounds.Width;
-            targetLayout.Height = bounds.Height;
-            targetLayout.WindowState = this.WindowState.ToString();
-
-        }
-
 
         private void AddToHistory(string filePath)
         {

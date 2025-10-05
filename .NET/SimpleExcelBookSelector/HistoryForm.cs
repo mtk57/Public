@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -12,6 +11,7 @@ namespace SimpleExcelBookSelector
     {
         public List<HistoryItem> FileHistory { get; private set; }
         private readonly AppSettings _settings;
+
         private const string PinnedColumnName = "colPinned";
         private const string CheckBoxColumnName = "colCheck";
         private const string DirectoryColumnName = "colDirectory";
@@ -26,24 +26,17 @@ namespace SimpleExcelBookSelector
         {
             InitializeComponent();
             _settings = settings;
-            EnsureHistoryLayoutSettings();
-            this.FormClosing += HistoryForm_FormClosing;
             FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned, LastUpdated = item.LastUpdated }));
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)
         {
-            SetupDataGridView();
-            ApplyHistoryLayout();
+            //SetupDataGridView();
             ApplyFilterAndSort();
         }
 
         private void SetupDataGridView()
         {
-            dataGridView1.AllowUserToAddRows = false;
-            dataGridView1.RowHeadersVisible = false;
-            dataGridView1.AutoGenerateColumns = false;
-
             var pinnedColumn = new DataGridViewTextBoxColumn
             {
                 Name = PinnedColumnName,
@@ -106,39 +99,6 @@ namespace SimpleExcelBookSelector
             dataGridView1.Columns.Add(updatedAtColumn);
 
             dataGridView1.CellClick += DataGridView1_CellClick;
-        }
-
-        private void EnsureHistoryLayoutSettings()
-        {
-            if (_settings.HistoryFormLayout == null)
-            {
-                _settings.HistoryFormLayout = new FormLayoutSettings();
-            }
-        }
-
-        private void ApplyHistoryLayout()
-        {
-            var layout = _settings.HistoryFormLayout;
-            if (layout == null)
-            {
-                return;
-            }
-
-            if (layout.Width > 0 && layout.Height > 0)
-            {
-                if (WindowState == FormWindowState.Minimized)
-                {
-                    WindowState = FormWindowState.Normal;
-                }
-                Size = new Size(layout.Width, layout.Height);
-            }
-
-            if (!string.IsNullOrWhiteSpace(layout.WindowState) && Enum.TryParse(layout.WindowState, true, out FormWindowState savedState))
-            {
-                WindowState = savedState;
-            }
-
-            // 列幅は保存せず、標準の挙動に任せる
         }
 
         private void PopulateDataGridView(List<HistoryItem> history)
@@ -530,22 +490,5 @@ namespace SimpleExcelBookSelector
             historyItem.IsPinned = !historyItem.IsPinned;
             ApplyFilterAndSort();
         }
-
-        private void HistoryForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            CaptureHistoryLayout();
-        }
-
-        private void CaptureHistoryLayout()
-        {
-            EnsureHistoryLayoutSettings();
-
-            var layout = _settings.HistoryFormLayout;
-            var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
-            layout.Width = bounds.Width;
-            layout.Height = bounds.Height;
-            layout.WindowState = WindowState.ToString();
-        }
-
     }
 }

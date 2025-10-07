@@ -28,6 +28,7 @@ namespace SimpleExcelBookSelector
 
         private Timer _timer;
         private List<string> _lastDisplayedKeys = new List<string>();
+        private readonly HashSet<string> _excludedHistoryPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private string _currentSortColumnName;
         private bool _isSortAscending = true;
         private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
@@ -92,6 +93,7 @@ namespace SimpleExcelBookSelector
         {
             dynamic excelApp = null;
             var newIdentifiers = new List<ExcelSheetIdentifier>();
+            var currentWorkbookPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -100,13 +102,15 @@ namespace SimpleExcelBookSelector
                 int index = 0;
                 foreach (dynamic wb in excelApp.Workbooks)
                 {
-                    AddToHistory(wb.FullName);
+                    string workbookFullName = wb.FullName;
+                    currentWorkbookPaths.Add(workbookFullName);
+                    AddToHistory(workbookFullName);
 
-                    var historyItem = FindHistoryItem(wb.FullName);
+                    var historyItem = FindHistoryItem(workbookFullName);
                     bool isPinned = historyItem?.IsPinned ?? false;
                     DateTime? lastUpdated = historyItem?.LastUpdated;
-                    string directoryName = Path.GetDirectoryName(wb.FullName);
-                    string fileName = Path.GetFileName(wb.FullName);
+                    string directoryName = Path.GetDirectoryName(workbookFullName);
+                    string fileName = Path.GetFileName(workbookFullName);
 
                     if (chkEnableSheetSelectMode.Checked)
                     {
@@ -114,7 +118,7 @@ namespace SimpleExcelBookSelector
                         {
                             newIdentifiers.Add(new ExcelSheetIdentifier
                             {
-                                WorkbookFullName = wb.FullName,
+                                WorkbookFullName = workbookFullName,
                                 WorksheetName = ws.Name,
                                 DirectoryName = directoryName,
                                 FileName = fileName,
@@ -128,7 +132,7 @@ namespace SimpleExcelBookSelector
                     {
                         newIdentifiers.Add(new ExcelSheetIdentifier
                         {
-                            WorkbookFullName = wb.FullName,
+                            WorkbookFullName = workbookFullName,
                             WorksheetName = string.Empty,
                             DirectoryName = directoryName,
                             FileName = fileName,
@@ -146,6 +150,8 @@ namespace SimpleExcelBookSelector
             {
                 if (excelApp != null) Marshal.ReleaseComObject(excelApp);
             }
+
+            _excludedHistoryPaths.RemoveWhere(path => !currentWorkbookPaths.Contains(path));
 
             var sortedIdentifiers = ApplyCurrentSort(newIdentifiers);
             var sortedKeys = sortedIdentifiers.Select(id => id.Key).ToList();
@@ -375,6 +381,11 @@ namespace SimpleExcelBookSelector
         {
             if (string.IsNullOrEmpty(filePath)) return;
 
+            if (_excludedHistoryPaths.Contains(filePath))
+            {
+                return;
+            }
+
             DateTime? lastModified = null;
             try
             {
@@ -557,12 +568,25 @@ namespace SimpleExcelBookSelector
         private void btnHistory_Click(object sender, EventArgs e)
         {
             _settings.IsOpenFolderOnDoubleClickEnabled = chkIsOpenDir.Checked;
+            var previousHistoryPaths = new HashSet<string>(
+                _settings.FileHistory?.Select(i => i.FilePath) ?? Enumerable.Empty<string>(),
+                StringComparer.OrdinalIgnoreCase);
+
             using (var historyForm = new HistoryForm(_settings))
             {
                 if (historyForm.ShowDialog(this) == DialogResult.OK)
                 {
                     // History was changed in the dialog, perform a deep copy of the results
-                    _settings.FileHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned, LastUpdated = i.LastUpdated }));
+                    var updatedHistory = new List<HistoryItem>(historyForm.FileHistory.Select(i => new HistoryItem { FilePath = i.FilePath, IsPinned = i.IsPinned, LastUpdated = i.LastUpdated }));
+                    var updatedHistoryPaths = new HashSet<string>(updatedHistory.Select(i => i.FilePath), StringComparer.OrdinalIgnoreCase);
+                    var removedPaths = new HashSet<string>(previousHistoryPaths, StringComparer.OrdinalIgnoreCase);
+                    removedPaths.ExceptWith(updatedHistoryPaths);
+                    foreach (var removedPath in removedPaths)
+                    {
+                        _excludedHistoryPaths.Add(removedPath);
+                    }
+
+                    _settings.FileHistory = updatedHistory;
                     SaveSettings();
                     RefreshExcelFileList(forceUpdate: true);
                 }

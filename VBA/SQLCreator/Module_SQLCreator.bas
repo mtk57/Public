@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.1"
+Private Const VER As String = "2.2.2"
 
 Private Const CATEGORY_NUMERIC As String = "êîíl"
 Private Const CATEGORY_STRING As String = "ï∂éöóÒ"
@@ -314,10 +314,12 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
     End If
 
     Dim statements() As String
-    ReDim statements(0 To dataRecords.Count - 1)
+    ReDim statements(0 To dataRecords.Count)
+
+    statements(0) = "DELETE FROM " & qualifiedName & ";"
 
     Dim statementIndex As Long
-    statementIndex = 0
+    statementIndex = 1
 
     For idx = 1 To dataRecords.Count
         Dim record As Object

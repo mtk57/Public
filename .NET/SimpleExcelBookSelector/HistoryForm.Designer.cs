@@ -29,6 +29,12 @@
         private void InitializeComponent()
         {
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.colPinned = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.colDirectory = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colUpdatedAt = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnAllOpen = new System.Windows.Forms.Button();
             this.btnAllClear = new System.Windows.Forms.Button();
             this.btnSelectOpen = new System.Windows.Forms.Button();
@@ -42,12 +48,6 @@
             this.btnApply = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnOpenAllPin = new System.Windows.Forms.Button();
-            this.colPinned = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.colDirectory = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colUpdatedAt = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -68,12 +68,50 @@
             this.colUpdatedAt});
             this.dataGridView1.Location = new System.Drawing.Point(21, 66);
             this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.ReadOnly = true;
             this.dataGridView1.RowTemplate.Height = 21;
             this.dataGridView1.Size = new System.Drawing.Size(775, 127);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             this.dataGridView1.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView1_ColumnHeaderMouseClick);
+            // 
+            // colPinned
+            // 
+            this.colPinned.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colPinned.FillWeight = 20F;
+            this.colPinned.HeaderText = "ピン";
+            this.colPinned.Name = "colPinned";
+            // 
+            // colCheck
+            // 
+            this.colCheck.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colCheck.FillWeight = 20F;
+            this.colCheck.HeaderText = "";
+            this.colCheck.Name = "colCheck";
+            // 
+            // colDirectory
+            // 
+            this.colDirectory.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colDirectory.HeaderText = "フォルダ";
+            this.colDirectory.Name = "colDirectory";
+            // 
+            // colFileName
+            // 
+            this.colFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colFileName.HeaderText = "ファイル";
+            this.colFileName.Name = "colFileName";
+            // 
+            // colFilePath
+            // 
+            this.colFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colFilePath.HeaderText = "ファイルパス";
+            this.colFilePath.Name = "colFilePath";
+            // 
+            // colUpdatedAt
+            // 
+            this.colUpdatedAt.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colUpdatedAt.FillWeight = 50F;
+            this.colUpdatedAt.HeaderText = "更新日時";
+            this.colUpdatedAt.Name = "colUpdatedAt";
             // 
             // btnAllOpen
             // 
@@ -203,51 +241,6 @@
             this.btnOpenAllPin.Text = "ピン止めを全て開く";
             this.btnOpenAllPin.UseVisualStyleBackColor = true;
             this.btnOpenAllPin.Click += new System.EventHandler(this.btnOpenAllPin_Click);
-            // 
-            // colPinned
-            // 
-            this.colPinned.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colPinned.FillWeight = 20F;
-            this.colPinned.HeaderText = "ピン";
-            this.colPinned.Name = "colPinned";
-            this.colPinned.ReadOnly = true;
-            // 
-            // colCheck
-            // 
-            this.colCheck.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colCheck.FillWeight = 20F;
-            this.colCheck.HeaderText = "";
-            this.colCheck.Name = "colCheck";
-            this.colCheck.ReadOnly = true;
-            // 
-            // colDirectory
-            // 
-            this.colDirectory.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colDirectory.HeaderText = "フォルダ";
-            this.colDirectory.Name = "colDirectory";
-            this.colDirectory.ReadOnly = true;
-            // 
-            // colFileName
-            // 
-            this.colFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colFileName.HeaderText = "ファイル";
-            this.colFileName.Name = "colFileName";
-            this.colFileName.ReadOnly = true;
-            // 
-            // colFilePath
-            // 
-            this.colFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colFilePath.HeaderText = "ファイルパス";
-            this.colFilePath.Name = "colFilePath";
-            this.colFilePath.ReadOnly = true;
-            // 
-            // colUpdatedAt
-            // 
-            this.colUpdatedAt.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colUpdatedAt.FillWeight = 50F;
-            this.colUpdatedAt.HeaderText = "更新日時";
-            this.colUpdatedAt.Name = "colUpdatedAt";
-            this.colUpdatedAt.ReadOnly = true;
             // 
             // HistoryForm
             // 

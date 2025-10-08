@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.2"
+Private Const VER As String = "2.2.3"
 
 Private Const CATEGORY_NUMERIC As String = "数値"
 Private Const CATEGORY_STRING As String = "文字列"
@@ -10,7 +10,7 @@ Private Const CATEGORY_TIME As String = "時刻"
 Private Const CATEGORY_TIMESTAMP As String = "日時"
 
 Private Const MAIN_COL_NO As Long = 2
-Private Const MAIN_COL_TARGET As Long = 3
+Private Const MAIN_COL_DEF_TARGET As Long = 3
 Private Const MAIN_COL_DEF_FILE As Long = 4
 Private Const MAIN_COL_DEF_SHEET As Long = 5
 Private Const MAIN_COL_DEF_TABLE As Long = 6
@@ -21,11 +21,12 @@ Private Const MAIN_COL_SCALE_ADDR As Long = 10
 Private Const MAIN_COL_PK_ADDR As Long = 11
 Private Const MAIN_COL_NOTNULL_ADDR As Long = 12
 Private Const MAIN_COL_DBMS As Long = 13
-Private Const MAIN_COL_DATA_FILE As Long = 14
-Private Const MAIN_COL_DATA_SHEET As Long = 15
-Private Const MAIN_COL_DATA_TABLE As Long = 16
-Private Const MAIN_COL_DATA_START As Long = 17
-Private Const MAIN_COL_MESSAGE As Long = 19
+Private Const MAIN_COL_DATA_TARGET As Long = 14
+Private Const MAIN_COL_DATA_FILE As Long = 15
+Private Const MAIN_COL_DATA_SHEET As Long = 16
+Private Const MAIN_COL_DATA_TABLE As Long = 17
+Private Const MAIN_COL_DATA_START As Long = 18
+Private Const MAIN_COL_MESSAGE As Long = 20
 
 Private Const ORACLE_TIME_BASE_DATE As String = "1970-01-01"
 
@@ -55,7 +56,7 @@ Private Sub ProcessInstructionRows()
 
     currentRow = 11
     Do While LenB(Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_NO).value))) > 0
-        targetMark = Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_TARGET).value))
+        targetMark = Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DEF_TARGET).value))
         mainWs.Cells(currentRow, MAIN_COL_MESSAGE).value = vbNullString
         If targetMark = "○" Then
             ProcessSingleInstruction mainWs, typeCatalog, currentRow
@@ -100,6 +101,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim createOutputPath As String
     Dim insertOutputPath As String
     Dim timestampText As String
+    Dim dataTargetMark As String
     Dim hasDataFile As Boolean
 
     Set errors = New Collection
@@ -114,6 +116,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     pkAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_PK_ADDR).value))
     notNullAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_NOTNULL_ADDR).value))
     dbms = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DBMS).value))
+    dataTargetMark = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TARGET).value))
     dataFilePath = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_FILE).value))
     dataSheetName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_SHEET).value))
     dataTableName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TABLE).value))
@@ -123,7 +126,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
-    hasDataFile = (LenB(dataFilePath) > 0)
+    hasDataFile = (dataTargetMark = "○")
 
     ValidateRequiredValue definitionSheetName, "定義シート名", errors
     ValidateRequiredValue definitionTableName, "定義テーブル名", errors

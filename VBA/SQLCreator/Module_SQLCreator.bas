@@ -279,8 +279,11 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim dataTargetMark As String
     Dim hasDataFile As Boolean
     Dim logPrefix As String
+    Dim currentStage As String
 
     Set errors = New Collection
+    On Error GoTo UnexpectedError
+    currentStage = "Initialize"
 
     definitionFilePath = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DEF_FILE).value))
     definitionSheetName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DEF_SHEET).value))
@@ -325,6 +328,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         LogDebug logPrefix & "hasDataFile=" & CStr(hasDataFile)
     End If
 
+    currentStage = "Validation"
     ValidateRequiredValue definitionSheetName, "定義シート名", errors
     ValidateRequiredValue definitionTableName, "定義テーブル名", errors
     ValidateRequiredValue colNameAddr, "カラム名開始セル", errors
@@ -348,6 +352,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
+    currentStage = "CheckDefinitionFile"
     If Dir$(definitionFilePath, vbNormal) = vbNullString Then
         AddError errors, "定義ファイルパスが存在しません: " & definitionFilePath
         LogErrorsWithStage logPrefix, "定義ファイル存在確認", errors
@@ -355,6 +360,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         Exit Sub
     End If
 
+    currentStage = "OpenDefinitionWorkbook"
     On Error Resume Next
     Set definitionWb = Application.Workbooks.Open(fileName:=definitionFilePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
     If Err.Number <> 0 Then
@@ -371,6 +377,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         LogDebug logPrefix & "定義ファイルを開きました: " & definitionFilePath
     End If
 
+    currentStage = "GetDefinitionWorksheet"
     On Error Resume Next
     Set definitionWs = definitionWb.Worksheets(definitionSheetName)
     On Error GoTo 0
@@ -386,6 +393,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         LogDebug logPrefix & "定義シートを取得しました: " & definitionSheetName
     End If
 
+    currentStage = "ReadColumnDefinitions"
     Set columns = ReadColumnDefinitions(definitionWs, colNameAddr, typeAddr, precisionAddr, scaleAddr, pkAddr, notNullAddr, typeCatalog, errors)
 
     SafeCloseWorkbook definitionWb
@@ -408,6 +416,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     If hasDataFile Then
+        currentStage = "CheckDataFile"
         If Dir$(dataFilePath, vbNormal) = vbNullString Then
             AddError errors, "データファイルパスが存在しません: " & dataFilePath
             LogErrorsWithStage logPrefix, "データファイル存在確認", errors
@@ -419,6 +428,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             LogDebug logPrefix & "データファイル存在確認OK: " & dataFilePath
         End If
 
+        currentStage = "OpenDataWorkbook"
         On Error Resume Next
         Set dataWb = Application.Workbooks.Open(fileName:=dataFilePath, UpdateLinks:=False, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
         If Err.Number <> 0 Then
@@ -435,6 +445,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             LogDebug logPrefix & "データファイルを開きました: " & dataFilePath
         End If
 
+        currentStage = "GetDataWorksheet"
         On Error Resume Next
         Set dataWs = dataWb.Worksheets(dataSheetName)
         On Error GoTo 0
@@ -450,6 +461,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             LogDebug logPrefix & "データシートを取得しました: " & dataSheetName
         End If
 
+        currentStage = "ReadDataRecords"
         Set dataRecords = ReadDataRecords(dataWs, dataStartAddr, columns, errors)
 
         SafeCloseWorkbook dataWb
@@ -472,6 +484,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     If LOG_ENABLED Then
         LogDebug logPrefix & "CREATE SQL生成開始"
     End If
+    currentStage = "GenerateCreateSql"
     createSql = GenerateCreateSqlText(definitionTableName, columns, dbms, errors)
     If errors.Count > 0 Then
         LogErrorsWithStage logPrefix, "CREATE SQL生成", errors
@@ -486,6 +499,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogDebug logPrefix & "INSERT SQL生成開始"
         End If
+        currentStage = "GenerateInsertSql"
         insertSql = GenerateInsertSqlText(dataTableName, columns, dataRecords, dbms, errors)
         If errors.Count > 0 Then
             LogErrorsWithStage logPrefix, "INSERT SQL生成", errors
@@ -501,6 +515,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     If LOG_ENABLED Then
         LogDebug logPrefix & "CREATE SQLファイル出力開始"
     End If
+    currentStage = "WriteCreateSqlFile"
     createOutputPath = WriteSqlFile(definitionFilePath, SanitizeForFile(tableName:=definitionTableName) & "_CREATE_" & timestampText & ".sql", createSql, errors)
     If errors.Count > 0 Then
         LogErrorsWithStage logPrefix, "CREATE SQLファイル出力", errors
@@ -515,6 +530,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogDebug logPrefix & "INSERT SQLファイル出力開始"
         End If
+        currentStage = "WriteInsertSqlFile"
         insertOutputPath = WriteSqlFile(definitionFilePath, SanitizeForFile(tableName:=dataTableName) & "_INSERT_" & timestampText & ".sql", insertSql, errors)
         If errors.Count > 0 Then
             LogErrorsWithStage logPrefix, "INSERT SQLファイル出力", errors
@@ -539,6 +555,19 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             LogInfo logPrefix & "処理完了 (CREATEのみ)"
         End If
     End If
+
+    currentStage = "Finalize"
+    On Error GoTo 0
+    Exit Sub
+
+UnexpectedError:
+    On Error GoTo 0
+    If LOG_ENABLED Then
+        LogErrorMessage logPrefix & "予期せぬエラー発生(Stage=" & currentStage & "): ErrNumber=" & CStr(Err.Number) & ", Description=" & Err.Description
+    End If
+    SafeCloseWorkbook definitionWb
+    SafeCloseWorkbook dataWb
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
 Private Function NormalizeDbms(ByVal dbms As String) As String

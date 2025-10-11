@@ -8,7 +8,7 @@ Excelシートの内容からDBのDROP TABLE, CREATE TABLEのSQLを作成する�
 ## 言語
 Excel VBA
 
-## 仕様詳細  Version 2.2.6
+## 仕様詳細  Version 2.2.7
 
 # ユーザー入力につて
 1. ユーザーからの入力はExcelのシート上から行う。
@@ -90,6 +90,7 @@ No■項目名1■項目名2■・・・項目名n
 2. 作成するSQLファイルの命名規則は以下とする。
 - テーブル作成SQL：テーブル名_CREATE_YYYYMMDD_hhmmss.sql
 - データ投入SQL：テーブル名_INSERT_YYYYMMDD_hhmmss.sql
+3. 投入データに環境依存文字が使用されている場合、定数定義された文字に置換する。またエラーメッセージ列に置換した旨を出力する。
 
 #デバッグログについて
 1. 定数でON/OFF可能とする。

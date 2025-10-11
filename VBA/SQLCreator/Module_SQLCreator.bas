@@ -1,13 +1,17 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.6"
+Private Const VER As String = "2.2.7"
 
 Private Const LOG_ENABLED As Boolean = True
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
 
+Private Const UNSUPPORTED_CHAR_REPLACEMENT As String = "_"
+Private Const SANITIZE_CODE_PAGE As Long = 932
+
 Private logFilePath As String
 Private logInitialized As Boolean
+Private hasUnsupportedCharReplacement As Boolean
 
 Private Const CATEGORY_NUMERIC As String = "数値"
 Private Const CATEGORY_STRING As String = "文字列"
@@ -158,6 +162,75 @@ DescribeError:
     DescribeVariantArray = "<Unavailable>"
 End Function
 
+Private Function ReplaceUnsupportedCharacters(ByVal textValue As String) As String
+    Dim idx As Long
+    Dim ch As String
+    Dim builder As String
+    Dim sanitizedChar As String
+    Dim replaced As Boolean
+
+    If LenB(textValue) = 0 Then
+        ReplaceUnsupportedCharacters = textValue
+        Exit Function
+    End If
+
+    For idx = 1 To Len(textValue)
+        ch = Mid$(textValue, idx, 1)
+        sanitizedChar = EnsureCharacterSupported(ch)
+        If StrComp(sanitizedChar, ch, vbBinaryCompare) <> 0 Then
+            replaced = True
+        End If
+        builder = builder & sanitizedChar
+    Next idx
+
+    If replaced Then
+        hasUnsupportedCharReplacement = True
+        If LOG_ENABLED Then
+            LogDebug "ReplaceUnsupportedCharacters: at least one character was replaced."
+        End If
+    End If
+
+    ReplaceUnsupportedCharacters = builder
+End Function
+
+Private Function EnsureCharacterSupported(ByVal ch As String) As String
+    If LenB(ch) = 0 Then
+        EnsureCharacterSupported = ch
+        Exit Function
+    End If
+
+    Dim bytes() As Byte
+    Dim roundtrip As String
+
+    On Error Resume Next
+    bytes = StrConv(ch, vbFromUnicode, SANITIZE_CODE_PAGE)
+    If Err.Number <> 0 Then
+        Err.Clear
+        EnsureCharacterSupported = UNSUPPORTED_CHAR_REPLACEMENT
+        On Error GoTo 0
+        Exit Function
+    End If
+
+    roundtrip = StrConv(bytes, vbUnicode, SANITIZE_CODE_PAGE)
+    If Err.Number <> 0 Then
+        Err.Clear
+        EnsureCharacterSupported = UNSUPPORTED_CHAR_REPLACEMENT
+        On Error GoTo 0
+        Exit Function
+    End If
+    On Error GoTo 0
+
+    If StrComp(roundtrip, ch, vbBinaryCompare) = 0 Then
+        EnsureCharacterSupported = ch
+    Else
+        EnsureCharacterSupported = UNSUPPORTED_CHAR_REPLACEMENT
+    End If
+End Function
+
+Private Function BuildUnsupportedCharNote() As String
+    BuildUnsupportedCharNote = "環境依存文字が使用されているデータがあったので「" & UNSUPPORTED_CHAR_REPLACEMENT & "」に置換しました"
+End Function
+
 Private Sub LogErrorsWithStage(ByVal logPrefix As String, ByVal stage As String, ByVal errors As Collection)
     If Not LOG_ENABLED Then Exit Sub
     If errors Is Nothing Then Exit Sub
@@ -177,6 +250,12 @@ Private Sub ProcessInstructionRows()
     Dim currentRow As Long
     Dim targetMark As String
     Dim rowSummary As String
+    Dim processStage As String
+    Dim fatalRowIndex As Long
+
+    processStage = "Initialize"
+    fatalRowIndex = 0
+    hasUnsupportedCharReplacement = False
 
     If LOG_ENABLED Then
         logInitialized = False
@@ -187,8 +266,10 @@ Private Sub ProcessInstructionRows()
         End If
     End If
 
+    processStage = "GetWorksheets"
     Set mainWs = ThisWorkbook.Worksheets("main")
     Set typeWs = ThisWorkbook.Worksheets("type")
+    processStage = "BuildTypeCatalog"
     Set typeCatalog = BuildTypeCatalog(typeWs)
 
     If LOG_ENABLED Then
@@ -204,11 +285,14 @@ Private Sub ProcessInstructionRows()
         Exit Sub
     End If
 
+    processStage = "PrepareApplication"
     Application.ScreenUpdating = False
     Application.EnableEvents = False
 
     currentRow = 11
     Do While LenB(Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_NO).value))) > 0
+        processStage = "RowLoop"
+        fatalRowIndex = currentRow
         targetMark = Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DEF_TARGET).value))
         mainWs.Cells(currentRow, MAIN_COL_MESSAGE).value = vbNullString
         If LOG_ENABLED Then
@@ -220,11 +304,13 @@ Private Sub ProcessInstructionRows()
             LogDebug rowSummary
         End If
         If targetMark = "○" Then
+            processStage = "ProcessRow"
             If LOG_ENABLED Then
                 LogDebug "Row " & CStr(currentRow) & " is marked for processing"
             End If
             ProcessSingleInstruction mainWs, typeCatalog, currentRow
         Else
+            processStage = "SkipRow"
             If LOG_ENABLED Then
                 LogDebug "Row " & CStr(currentRow) & " skipped (def target mark='" & targetMark & "')"
             End If
@@ -232,18 +318,25 @@ Private Sub ProcessInstructionRows()
         currentRow = currentRow + 1
     Loop
 
+    processStage = "LoopCompleted"
     If LOG_ENABLED Then
         LogInfo "ProcessInstructionRows completed. Final row index=" & CStr(currentRow)
     End If
 
 CleanExit:
+    processStage = "CleanExit"
     Application.EnableEvents = True
     Application.ScreenUpdating = True
     Exit Sub
 
 FatalError:
     If LOG_ENABLED Then
-        LogErrorMessage "ProcessInstructionRows fatal error: ErrNumber=" & CStr(Err.Number) & ", Description=" & Err.Description
+        Dim fatalMessage As String
+        fatalMessage = "ProcessInstructionRows fatal error(Stage=" & processStage & ", row=" & CStr(fatalRowIndex) & "): ErrNumber=" & CStr(Err.Number) & ", Description=" & Err.Description & ", Source=" & Err.Source
+        If LenB(rowSummary) > 0 Then
+            fatalMessage = fatalMessage & ", RowSummary=" & rowSummary
+        End If
+        LogErrorMessage fatalMessage
     End If
     MsgBox "SQL作成中に致命的なエラーが発生しました: " & Err.Description, vbCritical
     Resume CleanExit
@@ -282,6 +375,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim currentStage As String
 
     Set errors = New Collection
+    hasUnsupportedCharReplacement = False
     On Error GoTo UnexpectedError
     currentStage = "Initialize"
 
@@ -542,11 +636,16 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         End If
     End If
 
+    Dim successMessage As String
     If hasDataFile Then
-        mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
+        successMessage = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
     Else
-        mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath
+        successMessage = "SQL出力: " & createOutputPath
     End If
+    If hasUnsupportedCharReplacement Then
+        successMessage = successMessage & vbLf & BuildUnsupportedCharNote()
+    End If
+    mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = successMessage
 
     If LOG_ENABLED Then
         If hasDataFile Then
@@ -557,6 +656,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     currentStage = "Finalize"
+    hasUnsupportedCharReplacement = False
     On Error GoTo 0
     Exit Sub
 
@@ -567,6 +667,7 @@ UnexpectedError:
     End If
     SafeCloseWorkbook definitionWb
     SafeCloseWorkbook dataWb
+    hasUnsupportedCharReplacement = False
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
@@ -760,7 +861,7 @@ End Function
 
 Private Function FormatStringLiteral(ByVal value As Variant) As String
     Dim textValue As String
-    textValue = CStr(value)
+    textValue = ReplaceUnsupportedCharacters(CStr(value))
     textValue = Replace(textValue, "'", "''")
     FormatStringLiteral = "'" & textValue & "'"
 End Function
@@ -1505,12 +1606,19 @@ End Sub
 Private Sub WriteErrors(ByVal mainWs As Worksheet, ByVal rowIndex As Long, ByVal errors As Collection)
     Dim messageText As String
     messageText = JoinCollection(errors, vbLf)
+    If hasUnsupportedCharReplacement Then
+        If LenB(messageText) > 0 Then
+            messageText = messageText & vbLf
+        End If
+        messageText = messageText & BuildUnsupportedCharNote()
+    End If
     mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = messageText
     If LOG_ENABLED Then
         Dim flattened As String
         flattened = Replace(messageText, vbLf, " | ")
         LogErrorMessage "Row " & CStr(rowIndex) & " エラー: " & flattened
     End If
+    hasUnsupportedCharReplacement = False
 End Sub
 
 Private Function TryParsePositiveInteger(ByVal textValue As String, ByRef resultValue As Long) As Boolean

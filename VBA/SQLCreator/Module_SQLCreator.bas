@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.3"
+Private Const VER As String = "2.2.4"
 
 Private Const CATEGORY_NUMERIC As String = "êîíl"
 Private Const CATEGORY_STRING As String = "ï∂éöóÒ"
@@ -245,14 +245,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     timestampText = Format$(Now, "yyyymmdd_hhnnss")
-    createOutputPath = WriteSqlFile(definitionFilePath, timestampText & "_" & SanitizeForFile(tableName:=definitionTableName) & "_CREATE.sql", createSql, errors)
+    createOutputPath = WriteSqlFile(definitionFilePath, SanitizeForFile(tableName:=definitionTableName) & "_CREATE_" & timestampText & ".sql", createSql, errors)
     If errors.Count > 0 Then
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
     If hasDataFile Then
-        insertOutputPath = WriteSqlFile(definitionFilePath, timestampText & "_" & SanitizeForFile(tableName:=dataTableName) & "_INSERT.sql", insertSql, errors)
+        insertOutputPath = WriteSqlFile(definitionFilePath, SanitizeForFile(tableName:=dataTableName) & "_INSERT_" & timestampText & ".sql", insertSql, errors)
         If errors.Count > 0 Then
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
@@ -353,7 +353,7 @@ End Function
 Private Function FormatValueLiteral(ByVal definition As ColumnDefinition, ByVal value As Variant, _
                                     ByVal address As String, ByVal dbms As String, _
                                     ByVal errors As Collection) As String
-    If IsNullOrEmptyValue(value) Then
+    If ShouldTreatAsNull(definition, value) Then
         FormatValueLiteral = "NULL"
         Exit Function
     End If
@@ -373,6 +373,37 @@ Private Function FormatValueLiteral(ByVal definition As ColumnDefinition, ByVal 
             FormatValueLiteral = FormatStringLiteral(value)
     End Select
 End Function
+
+Private Function ShouldTreatAsNull(ByVal definition As ColumnDefinition, ByVal value As Variant) As Boolean
+    If IsNull(value) Or IsEmpty(value) Then
+        ShouldTreatAsNull = True
+        Exit Function
+    End If
+
+    If VarType(value) = vbString Then
+        Dim textValue As String
+        textValue = CStr(value)
+
+        Select Case definition.category
+            Case CATEGORY_STRING
+                ShouldTreatAsNull = (LenB(textValue) = 0)
+            Case Else
+                ShouldTreatAsNull = (LenB(Trim$(textValue)) = 0)
+        End Select
+    Else
+        ShouldTreatAsNull = False
+    End If
+End Function
+Private Function HasValueWithoutTrim(ByVal value As Variant) As Boolean
+    If IsNull(value) Or IsEmpty(value) Then
+        HasValueWithoutTrim = False
+    ElseIf VarType(value) = vbString Then
+        HasValueWithoutTrim = (LenB(CStr(value)) > 0)
+    Else
+        HasValueWithoutTrim = True
+    End If
+End Function
+
 
 Private Function IsNullOrEmptyValue(ByVal value As Variant) As Boolean
     If IsNull(value) Or IsEmpty(value) Then
@@ -687,7 +718,10 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         End If
 
         definition.IsPrimaryKey = (LenB(Trim$(CStr(targetWs.Cells(currentRow, pkCell.Column).value))) > 0)
-        definition.IsNotNull = (LenB(Trim$(CStr(targetWs.Cells(currentRow, notNullCell.Column).value))) > 0) Or definition.IsPrimaryKey
+
+        Dim notNullValue As Variant
+        notNullValue = targetWs.Cells(currentRow, notNullCell.Column).value
+        definition.IsNotNull = HasValueWithoutTrim(notNullValue) Or definition.IsPrimaryKey
 
         columns.Add definition
         currentRow = currentRow + 1
@@ -782,13 +816,17 @@ Private Function ReadDataRecords(ByVal targetWs As Worksheet, ByVal startAddr As
             Dim keyName As String
             keyName = CStr(columns(idx).Name)
             Set valueCell = targetWs.Cells(currentRow, CLng(headerMap(keyName)))
-            rowValues(idx) = valueCell.value
+            Dim cellValue As Variant
+            cellValue = valueCell.value
+            rowValues(idx) = cellValue
             rowAddresses(idx) = valueCell.address(False, False)
 
-            Dim trimmedText As String
-            trimmedText = Trim$(CStr(valueCell.value))
-            If LenB(trimmedText) = 0 Then
-                If columns(idx).IsPrimaryKey Or columns(idx).IsNotNull Then
+            If columns(idx).IsPrimaryKey Then
+                If IsNullOrEmptyValue(cellValue) Then
+                    AddError errors, "ïKê{çÄñ⁄Ç™ãÛóìÇ≈Ç∑: " & valueCell.address(False, False)
+                End If
+            ElseIf columns(idx).IsNotNull Then
+                If Not HasValueWithoutTrim(cellValue) Then
                     AddError errors, "ïKê{çÄñ⁄Ç™ãÛóìÇ≈Ç∑: " & valueCell.address(False, False)
                 End If
             End If

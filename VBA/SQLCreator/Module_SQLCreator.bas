@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.4"
+Private Const VER As String = "2.2.5"
 
 Private Const CATEGORY_NUMERIC As String = "êîíl"
 Private Const CATEGORY_STRING As String = "ï∂éöóÒ"
@@ -717,7 +717,9 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
             Exit Do
         End If
 
-        definition.IsPrimaryKey = (LenB(Trim$(CStr(targetWs.Cells(currentRow, pkCell.Column).value))) > 0)
+        Dim pkValue As Variant
+        pkValue = targetWs.Cells(currentRow, pkCell.Column).value
+        definition.IsPrimaryKey = HasValueWithoutTrim(pkValue)
 
         Dim notNullValue As Variant
         notNullValue = targetWs.Cells(currentRow, notNullCell.Column).value
@@ -822,7 +824,7 @@ Private Function ReadDataRecords(ByVal targetWs As Worksheet, ByVal startAddr As
             rowAddresses(idx) = valueCell.address(False, False)
 
             If columns(idx).IsPrimaryKey Then
-                If IsNullOrEmptyValue(cellValue) Then
+                If Not HasValueWithoutTrim(cellValue) Then
                     AddError errors, "ïKê{çÄñ⁄Ç™ãÛóìÇ≈Ç∑: " & valueCell.address(False, False)
                 End If
             ElseIf columns(idx).IsNotNull Then

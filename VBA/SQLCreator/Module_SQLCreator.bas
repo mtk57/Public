@@ -1,7 +1,13 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.5"
+Private Const VER As String = "2.2.6"
+
+Private Const LOG_ENABLED As Boolean = True
+Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
+
+Private logFilePath As String
+Private logInitialized As Boolean
 
 Private Const CATEGORY_NUMERIC As String = "数値"
 Private Const CATEGORY_STRING As String = "文字列"
@@ -30,6 +36,135 @@ Private Const MAIN_COL_MESSAGE As Long = 20
 
 Private Const ORACLE_TIME_BASE_DATE As String = "1970-01-01"
 
+Private Sub InitializeLogger()
+    If Not LOG_ENABLED Then Exit Sub
+    Dim baseFolder As String
+    baseFolder = ThisWorkbook.Path
+    If LenB(baseFolder) = 0 Then
+        On Error Resume Next
+        baseFolder = Environ$("TEMP")
+        If Err.Number <> 0 Then
+            Err.Clear
+        End If
+        On Error GoTo 0
+    End If
+    If LenB(baseFolder) = 0 Then Exit Sub
+
+    logFilePath = baseFolder & Application.PathSeparator & LOG_FILE_NAME
+
+    On Error Resume Next
+    Dim fso As Object
+    Dim ts As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set ts = fso.CreateTextFile(logFilePath, True, False)
+    If Err.Number = 0 Then
+        ts.WriteLine "==== Log Start (" & Format$(Now, "yyyy-mm-dd HH:nn:ss") & ") ===="
+        ts.Close
+        logInitialized = True
+    Else
+        Err.Clear
+    End If
+    On Error GoTo 0
+End Sub
+
+Private Sub EnsureLoggerInitialized()
+    If Not LOG_ENABLED Then Exit Sub
+    If logInitialized Then Exit Sub
+    InitializeLogger
+End Sub
+
+Private Sub AppendLogLine(ByVal level As String, ByVal message As String)
+    If Not LOG_ENABLED Then Exit Sub
+    EnsureLoggerInitialized
+    If Not logInitialized Or LenB(logFilePath) = 0 Then Exit Sub
+
+    Dim timestamp As String
+    timestamp = Format$(Now, "yyyy-mm-dd HH:nn:ss")
+
+    On Error Resume Next
+    Dim fso As Object
+    Dim ts As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set ts = fso.OpenTextFile(logFilePath, 8, True)
+    If Err.Number = 0 Then
+        Dim lineText As String
+        lineText = "[" & timestamp & "] [" & level & "] " & message
+        ts.WriteLine lineText
+        ts.Close
+        Debug.Print lineText
+    Else
+        Err.Clear
+    End If
+    On Error GoTo 0
+End Sub
+
+Private Sub LogInfo(ByVal message As String)
+    AppendLogLine "INFO", message
+End Sub
+
+Private Sub LogDebug(ByVal message As String)
+    AppendLogLine "DEBUG", message
+End Sub
+
+Private Sub LogErrorMessage(ByVal message As String)
+    AppendLogLine "ERROR", message
+End Sub
+
+Private Function DescribeVariant(ByVal value As Variant) As String
+    On Error GoTo VariantError
+    If IsObject(value) Then
+        DescribeVariant = "<Object:" & TypeName(value) & ">"
+    ElseIf IsArray(value) Then
+        DescribeVariant = "<Array>"
+    ElseIf IsError(value) Then
+        DescribeVariant = "<Error>"
+    ElseIf IsNull(value) Then
+        DescribeVariant = "<Null>"
+    ElseIf IsEmpty(value) Then
+        DescribeVariant = "<Empty>"
+    Else
+        DescribeVariant = CStr(value) & " (Type=" & TypeName(value) & ")"
+    End If
+    Exit Function
+VariantError:
+    DescribeVariant = "<Unprintable>"
+End Function
+
+Private Function DescribeStringArray(ByRef values() As String) As String
+    On Error GoTo DescribeError
+    Dim result As String
+    Dim idx As Long
+    For idx = LBound(values) To UBound(values)
+        If LenB(result) > 0 Then result = result & ", "
+        result = result & values(idx)
+    Next idx
+    DescribeStringArray = result
+    Exit Function
+DescribeError:
+    DescribeStringArray = "<Unavailable>"
+End Function
+
+Private Function DescribeVariantArray(ByRef values() As Variant) As String
+    On Error GoTo DescribeError
+    Dim result As String
+    Dim idx As Long
+    For idx = LBound(values) To UBound(values)
+        If LenB(result) > 0 Then result = result & ", "
+        result = result & DescribeVariant(values(idx))
+    Next idx
+    DescribeVariantArray = result
+    Exit Function
+DescribeError:
+    DescribeVariantArray = "<Unavailable>"
+End Function
+
+Private Sub LogErrorsWithStage(ByVal logPrefix As String, ByVal stage As String, ByVal errors As Collection)
+    If Not LOG_ENABLED Then Exit Sub
+    If errors Is Nothing Then Exit Sub
+    If errors.Count = 0 Then Exit Sub
+    LogErrorMessage logPrefix & stage & ": " & JoinCollection(errors, " | ")
+End Sub
+
 Public Sub ボタン1_Click()
     ProcessInstructionRows
 End Sub
@@ -41,10 +176,28 @@ Private Sub ProcessInstructionRows()
     Dim typeCatalog As Object
     Dim currentRow As Long
     Dim targetMark As String
+    Dim rowSummary As String
+
+    If LOG_ENABLED Then
+        logInitialized = False
+        logFilePath = vbNullString
+        LogInfo "ProcessInstructionRows start. Version=" & VER
+        If LenB(logFilePath) > 0 Then
+            LogDebug "Log file path=" & logFilePath
+        End If
+    End If
 
     Set mainWs = ThisWorkbook.Worksheets("main")
     Set typeWs = ThisWorkbook.Worksheets("type")
     Set typeCatalog = BuildTypeCatalog(typeWs)
+
+    If LOG_ENABLED Then
+        If typeCatalog Is Nothing Then
+            LogErrorMessage "BuildTypeCatalog returned Nothing"
+        Else
+            LogDebug "Type catalog count=" & CStr(typeCatalog.Count)
+        End If
+    End If
 
     If typeCatalog Is Nothing Or typeCatalog.Count = 0 Then
         MsgBox "typeシートの型定義が取得できません。", vbCritical
@@ -58,11 +211,30 @@ Private Sub ProcessInstructionRows()
     Do While LenB(Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_NO).value))) > 0
         targetMark = Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DEF_TARGET).value))
         mainWs.Cells(currentRow, MAIN_COL_MESSAGE).value = vbNullString
+        If LOG_ENABLED Then
+            rowSummary = "row=" & CStr(currentRow) & _
+                          ", defTarget='" & targetMark & "'" & _
+                          ", defFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DEF_FILE).value)) & "'" & _
+                          ", dataTarget='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_TARGET).value)) & "'" & _
+                          ", dataFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_FILE).value)) & "'"
+            LogDebug rowSummary
+        End If
         If targetMark = "○" Then
+            If LOG_ENABLED Then
+                LogDebug "Row " & CStr(currentRow) & " is marked for processing"
+            End If
             ProcessSingleInstruction mainWs, typeCatalog, currentRow
+        Else
+            If LOG_ENABLED Then
+                LogDebug "Row " & CStr(currentRow) & " skipped (def target mark='" & targetMark & "')"
+            End If
         End If
         currentRow = currentRow + 1
     Loop
+
+    If LOG_ENABLED Then
+        LogInfo "ProcessInstructionRows completed. Final row index=" & CStr(currentRow)
+    End If
 
 CleanExit:
     Application.EnableEvents = True
@@ -70,6 +242,9 @@ CleanExit:
     Exit Sub
 
 FatalError:
+    If LOG_ENABLED Then
+        LogErrorMessage "ProcessInstructionRows fatal error: ErrNumber=" & CStr(Err.Number) & ", Description=" & Err.Description
+    End If
     MsgBox "SQL作成中に致命的なエラーが発生しました: " & Err.Description, vbCritical
     Resume CleanExit
 End Sub
@@ -103,6 +278,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim timestampText As String
     Dim dataTargetMark As String
     Dim hasDataFile As Boolean
+    Dim logPrefix As String
 
     Set errors = New Collection
 
@@ -122,11 +298,32 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     dataTableName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TABLE).value))
     dataStartAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_START).value))
 
+    logPrefix = "Row " & CStr(rowIndex) & ": "
+
+    If LOG_ENABLED Then
+        LogInfo logPrefix & "開始: 定義ファイル=" & definitionFilePath & _
+                ", 定義シート=" & definitionSheetName & _
+                ", 定義テーブル=" & definitionTableName & _
+                ", DBMS=" & dbms & _
+                ", データ対象=" & dataTargetMark & _
+                ", データファイル=" & dataFilePath & _
+                ", データシート=" & dataSheetName & _
+                ", データテーブル=" & dataTableName & _
+                ", データ開始セル=" & dataStartAddr
+    End If
+
     If LenB(definitionFilePath) = 0 Then
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "定義ファイルパスが空のためスキップ"
+        End If
         Exit Sub
     End If
 
     hasDataFile = (dataTargetMark = "○")
+
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "hasDataFile=" & CStr(hasDataFile)
+    End If
 
     ValidateRequiredValue definitionSheetName, "定義シート名", errors
     ValidateRequiredValue definitionTableName, "定義テーブル名", errors
@@ -146,12 +343,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     If errors.Count > 0 Then
+        LogErrorsWithStage logPrefix, "必須チェック", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
     If Dir$(definitionFilePath, vbNormal) = vbNullString Then
         AddError errors, "定義ファイルパスが存在しません: " & definitionFilePath
+        LogErrorsWithStage logPrefix, "定義ファイル存在確認", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
@@ -162,10 +361,15 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         AddError errors, "定義ファイルを開けません: " & definitionFilePath & " (" & Err.Description & ")"
         Err.Clear
         On Error GoTo 0
+        LogErrorsWithStage logPrefix, "定義ファイルオープン", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
     On Error GoTo 0
+
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "定義ファイルを開きました: " & definitionFilePath
+    End If
 
     On Error Resume Next
     Set definitionWs = definitionWb.Worksheets(definitionSheetName)
@@ -173,8 +377,13 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     If definitionWs Is Nothing Then
         AddError errors, "定義シートが見つかりません: " & definitionSheetName
         SafeCloseWorkbook definitionWb
+        LogErrorsWithStage logPrefix, "定義シート取得", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
+    End If
+
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "定義シートを取得しました: " & definitionSheetName
     End If
 
     Set columns = ReadColumnDefinitions(definitionWs, colNameAddr, typeAddr, precisionAddr, scaleAddr, pkAddr, notNullAddr, typeCatalog, errors)
@@ -182,21 +391,32 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     SafeCloseWorkbook definitionWb
 
     If errors.Count > 0 Then
+        LogErrorsWithStage logPrefix, "定義列読み込み", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
 
     If columns Is Nothing Or columns.Count = 0 Then
         AddError errors, "有効なカラム定義が1件も取得できません。"
+        LogErrorsWithStage logPrefix, "定義列検証", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
+    End If
+
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "定義列数=" & CStr(columns.Count)
     End If
 
     If hasDataFile Then
         If Dir$(dataFilePath, vbNormal) = vbNullString Then
             AddError errors, "データファイルパスが存在しません: " & dataFilePath
+            LogErrorsWithStage logPrefix, "データファイル存在確認", errors
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
+        End If
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "データファイル存在確認OK: " & dataFilePath
         End If
 
         On Error Resume Next
@@ -205,10 +425,15 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             AddError errors, "データファイルを開けません: " & dataFilePath & " (" & Err.Description & ")"
             Err.Clear
             On Error GoTo 0
+            LogErrorsWithStage logPrefix, "データファイルオープン", errors
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
         End If
         On Error GoTo 0
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "データファイルを開きました: " & dataFilePath
+        End If
 
         On Error Resume Next
         Set dataWs = dataWb.Worksheets(dataSheetName)
@@ -216,8 +441,13 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If dataWs Is Nothing Then
             AddError errors, "データシートが見つかりません: " & dataSheetName
             SafeCloseWorkbook dataWb
+            LogErrorsWithStage logPrefix, "データシート取得", errors
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
+        End If
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "データシートを取得しました: " & dataSheetName
         End If
 
         Set dataRecords = ReadDataRecords(dataWs, dataStartAddr, columns, errors)
@@ -225,37 +455,74 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         SafeCloseWorkbook dataWb
 
         If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "投入データ読み込み", errors
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
         End If
+
+        If LOG_ENABLED Then
+            If dataRecords Is Nothing Then
+                LogDebug logPrefix & "投入データ件数=0 (Nothing)"
+            Else
+                LogDebug logPrefix & "投入データ件数=" & CStr(dataRecords.Count)
+            End If
+        End If
     End If
 
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "CREATE SQL生成開始"
+    End If
     createSql = GenerateCreateSqlText(definitionTableName, columns, dbms, errors)
     If errors.Count > 0 Then
+        LogErrorsWithStage logPrefix, "CREATE SQL生成", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "CREATE SQL生成完了。文字数=" & CStr(Len(createSql))
+    End If
 
     If hasDataFile Then
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "INSERT SQL生成開始"
+        End If
         insertSql = GenerateInsertSqlText(dataTableName, columns, dataRecords, dbms, errors)
         If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "INSERT SQL生成", errors
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "INSERT SQL生成完了。文字数=" & CStr(Len(insertSql))
         End If
     End If
 
     timestampText = Format$(Now, "yyyymmdd_hhnnss")
+    If LOG_ENABLED Then
+        LogDebug logPrefix & "CREATE SQLファイル出力開始"
+    End If
     createOutputPath = WriteSqlFile(definitionFilePath, SanitizeForFile(tableName:=definitionTableName) & "_CREATE_" & timestampText & ".sql", createSql, errors)
     If errors.Count > 0 Then
+        LogErrorsWithStage logPrefix, "CREATE SQLファイル出力", errors
         WriteErrors mainWs, rowIndex, errors
         Exit Sub
     End If
+    If LOG_ENABLED Then
+        LogInfo logPrefix & "CREATE SQL出力完了: " & createOutputPath
+    End If
 
     If hasDataFile Then
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "INSERT SQLファイル出力開始"
+        End If
         insertOutputPath = WriteSqlFile(definitionFilePath, SanitizeForFile(tableName:=dataTableName) & "_INSERT_" & timestampText & ".sql", insertSql, errors)
         If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "INSERT SQLファイル出力", errors
             WriteErrors mainWs, rowIndex, errors
             Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogInfo logPrefix & "INSERT SQL出力完了: " & insertOutputPath
         End If
     End If
 
@@ -263,6 +530,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
     Else
         mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = "SQL出力: " & createOutputPath
+    End If
+
+    If LOG_ENABLED Then
+        If hasDataFile Then
+            LogInfo logPrefix & "処理完了 (CREATE/INSERT)"
+        Else
+            LogInfo logPrefix & "処理完了 (CREATEのみ)"
+        End If
     End If
 End Sub
 
@@ -285,6 +560,22 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
     Dim qualifiedName As String
     Dim columnParts() As String
     Dim idx As Long
+
+    If LOG_ENABLED Then
+        Dim columnCountText As String
+        Dim recordCountText As String
+        If columns Is Nothing Then
+            columnCountText = "0"
+        Else
+            columnCountText = CStr(columns.Count)
+        End If
+        If dataRecords Is Nothing Then
+            recordCountText = "0"
+        Else
+            recordCountText = CStr(dataRecords.Count)
+        End If
+        LogDebug "GenerateInsertSqlText開始: table=" & tableName & ", columns=" & columnCountText & ", records=" & recordCountText & ", dbms=" & dbms
+    End If
 
     If columns Is Nothing Or columns.Count = 0 Then
         AddError errors, "投入データ用のカラム定義が存在しません。"
@@ -312,6 +603,9 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
     columnList = "(" & Join(columnParts, ", ") & ")"
 
     If dataRecords Is Nothing Or dataRecords.Count = 0 Then
+        If LOG_ENABLED Then
+            LogInfo "GenerateInsertSqlText: データ行が存在しないためINSERT文を出力しません"
+        End If
         GenerateInsertSqlText = "-- データ行が存在しません。"
         Exit Function
     End If
@@ -332,6 +626,11 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
         values = record("Values")
         addresses = record("Addresses")
 
+        If LOG_ENABLED Then
+            LogDebug "GenerateInsertSqlText: record=" & CStr(idx) & ", addresses=[" & DescribeStringArray(addresses) & "]"
+            LogDebug "GenerateInsertSqlText: record=" & CStr(idx) & ", rawValues=[" & DescribeVariantArray(values) & "]"
+        End If
+
         Dim valueParts() As String
         ReDim valueParts(0 To columns.Count - 1)
 
@@ -339,8 +638,19 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
         For colIdx = 1 To columns.Count
             Dim def As ColumnDefinition
             Set def = columns(colIdx)
+            If LOG_ENABLED Then
+                LogDebug "GenerateInsertSqlText: record=" & CStr(idx) & ", column=" & def.Name & ", sourceValue=" & DescribeVariant(values(colIdx)) & ", address=" & addresses(colIdx)
+            End If
             valueParts(colIdx - 1) = FormatValueLiteral(def, values(colIdx), addresses(colIdx), dbms, errors)
-            If errors.Count > 0 Then Exit Function
+            If errors.Count > 0 Then
+                If LOG_ENABLED Then
+                    LogErrorMessage "GenerateInsertSqlText: 値変換エラー record=" & CStr(idx) & ", column=" & def.Name & ", address=" & addresses(colIdx)
+                End If
+                Exit Function
+            End If
+            If LOG_ENABLED Then
+                LogDebug "GenerateInsertSqlText: record=" & CStr(idx) & ", column=" & def.Name & ", literal=" & valueParts(colIdx - 1)
+            End If
         Next colIdx
 
         statements(statementIndex) = "INSERT INTO " & qualifiedName & " " & columnList & " VALUES (" & Join(valueParts, ", ") & ");"
@@ -1164,7 +1474,14 @@ Private Sub AddError(ByVal errors As Collection, ByVal message As String)
 End Sub
 
 Private Sub WriteErrors(ByVal mainWs As Worksheet, ByVal rowIndex As Long, ByVal errors As Collection)
-    mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = JoinCollection(errors, vbLf)
+    Dim messageText As String
+    messageText = JoinCollection(errors, vbLf)
+    mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = messageText
+    If LOG_ENABLED Then
+        Dim flattened As String
+        flattened = Replace(messageText, vbLf, " | ")
+        LogErrorMessage "Row " & CStr(rowIndex) & " エラー: " & flattened
+    End If
 End Sub
 
 Private Function TryParsePositiveInteger(ByVal textValue As String, ByRef resultValue As Long) As Boolean

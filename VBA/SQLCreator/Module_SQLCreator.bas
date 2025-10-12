@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.8"
+Private Const VER As String = "2.3.0"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -684,6 +684,8 @@ Private Function NormalizeDbms(ByVal dbms As String) As String
             NormalizeDbms = "SQLServer"
         Case "SQLITE"
             NormalizeDbms = "SQLite"
+        Case "ACCESS"
+            NormalizeDbms = "Access"
     End Select
 End Function
 
@@ -723,7 +725,7 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
     Select Case dbms
         Case "SQLServer"
             If LenB(schemaName) = 0 Then schemaName = "dbo"
-        Case "SQLite"
+        Case "SQLite", "Access"
             schemaName = vbNullString
     End Select
 
@@ -887,6 +889,8 @@ Private Function FormatDateLiteral(ByVal value As Variant, ByVal address As Stri
             FormatDateLiteral = "TO_DATE('" & dateText & "','YYYY-MM-DD')"
         Case "SQLServer"
             FormatDateLiteral = "CAST('" & dateText & "' AS DATETIME)"
+        Case "Access"
+            FormatDateLiteral = "#" & dateText & "#"
         Case Else
             FormatDateLiteral = "'" & dateText & "'"
     End Select
@@ -908,6 +912,8 @@ Private Function FormatTimeLiteral(ByVal value As Variant, ByVal address As Stri
             FormatTimeLiteral = "TO_TIMESTAMP('" & ORACLE_TIME_BASE_DATE & " " & timeText & "','YYYY-MM-DD HH24:MI:SS')"
         Case "SQLServer"
             FormatTimeLiteral = "CAST('1900-01-01 " & timeText & "' AS DATETIME)"
+        Case "Access"
+            FormatTimeLiteral = "#" & timeText & "#"
         Case Else
             FormatTimeLiteral = "'" & timeText & "'"
     End Select
@@ -926,6 +932,8 @@ Private Function ResolveDbmsTypeName(ByVal rawTypeName As String, ByVal category
             resolved = ResolveOracleTypeName(normalized, category)
         Case "SQLite"
             resolved = ResolveSqliteTypeName(normalized, category)
+        Case "Access"
+            resolved = ResolveAccessTypeName(normalized, category)
         Case Else
             resolved = normalized
     End Select
@@ -1033,6 +1041,30 @@ Private Function ResolveSqliteTypeName(ByVal normalized As String, ByVal categor
     End Select
 End Function
 
+Private Function ResolveAccessTypeName(ByVal normalized As String, ByVal category As String) As String
+    Select Case normalized
+        Case "NUMBER", "DECIMAL"
+            ResolveAccessTypeName = "DECIMAL"
+        Case "INTEGER", "INT"
+            ResolveAccessTypeName = "INTEGER"
+        Case "VARCHAR", "VARCHAR2", "NVARCHAR", "CHAR"
+            ResolveAccessTypeName = "TEXT"
+        Case "TIMESTAMP", "DATE", "TIME", "DATETIME"
+            ResolveAccessTypeName = "DATETIME"
+        Case Else
+            Select Case category
+                Case CATEGORY_NUMERIC
+                    ResolveAccessTypeName = "DECIMAL"
+                Case CATEGORY_STRING
+                    ResolveAccessTypeName = "TEXT"
+                Case CATEGORY_DATE, CATEGORY_TIME, CATEGORY_TIMESTAMP
+                    ResolveAccessTypeName = "DATETIME"
+                Case Else
+                    ResolveAccessTypeName = normalized
+            End Select
+    End Select
+End Function
+
 Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As String, _
                                         ByVal dbms As String, ByVal errors As Collection) As String
     Dim dt As Date
@@ -1049,6 +1081,8 @@ Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As
             FormatTimestampLiteral = "TO_TIMESTAMP('" & timestampText & "','YYYY-MM-DD HH24:MI:SS')"
         Case "SQLServer"
             FormatTimestampLiteral = "CAST('" & timestampText & "' AS DATETIME)"
+        Case "Access"
+            FormatTimestampLiteral = "#" & timestampText & "#"
         Case Else
             FormatTimestampLiteral = "'" & timestampText & "'"
     End Select
@@ -1340,7 +1374,7 @@ Private Function GenerateCreateSqlText(ByVal tableName As String, ByVal columns 
     Select Case dbms
         Case "SQLServer"
             If LenB(schemaName) = 0 Then schemaName = "dbo"
-        Case "SQLite"
+        Case "SQLite", "Access"
             schemaName = vbNullString
     End Select
 
@@ -1547,7 +1581,7 @@ Private Function QuoteIdentifier(ByVal identifier As String, ByVal dbms As Strin
     Dim cleaned As String
     cleaned = Trim$(identifier)
     Select Case dbms
-        Case "SQLServer"
+        Case "SQLServer", "Access"
             cleaned = Replace(cleaned, "[", vbNullString)
             cleaned = Replace(cleaned, "]", vbNullString)
             QuoteIdentifier = "[" & cleaned & "]"

@@ -1,13 +1,14 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.2.7"
+Private Const VER As String = "2.2.8"
 
-Private Const LOG_ENABLED As Boolean = True
+Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
 
 Private Const UNSUPPORTED_CHAR_REPLACEMENT As String = "_"
-Private Const SANITIZE_CODE_PAGE As Long = 932
+Private Const ENV_DEPENDENT_CHAR_CODES As String = "9312,9313,9314,9315,9316,9317,9318,9319,9320,9321,9322,9323,9324,9325,9326,9327,9328,9329,9330,9331,12964,12965,12966,12967,12968,12969,12970,12971,12972,12973,12974,12975,12976,12953,12849,12850,12857,13182,13181,13180,13179,13129,13130,13076,13080,13090,13091,13094,13095,13110,13115,13116,13127,13128,13143,13133"
+Private Const LCID_JAPANESE As Long = &H411
 
 Private logFilePath As String
 Private logInitialized As Boolean
@@ -166,7 +167,6 @@ Private Function ReplaceUnsupportedCharacters(ByVal textValue As String) As Stri
     Dim idx As Long
     Dim ch As String
     Dim builder As String
-    Dim sanitizedChar As String
     Dim replaced As Boolean
 
     If LenB(textValue) = 0 Then
@@ -176,11 +176,12 @@ Private Function ReplaceUnsupportedCharacters(ByVal textValue As String) As Stri
 
     For idx = 1 To Len(textValue)
         ch = Mid$(textValue, idx, 1)
-        sanitizedChar = EnsureCharacterSupported(ch)
-        If StrComp(sanitizedChar, ch, vbBinaryCompare) <> 0 Then
+        If IsEnvironmentDependentCharacter(ch) Then
+            builder = builder & UNSUPPORTED_CHAR_REPLACEMENT
             replaced = True
+        Else
+            builder = builder & ch
         End If
-        builder = builder & sanitizedChar
     Next idx
 
     If replaced Then
@@ -193,38 +194,42 @@ Private Function ReplaceUnsupportedCharacters(ByVal textValue As String) As Stri
     ReplaceUnsupportedCharacters = builder
 End Function
 
-Private Function EnsureCharacterSupported(ByVal ch As String) As String
-    If LenB(ch) = 0 Then
-        EnsureCharacterSupported = ch
-        Exit Function
+Private Function IsEnvironmentDependentCharacter(ByVal ch As String) As Boolean
+    Static envChars As Object
+    If LenB(ch) = 0 Then Exit Function
+
+    If envChars Is Nothing Then
+        Set envChars = CreateObject("Scripting.Dictionary")
+        Dim codes As Variant
+        codes = Split(ENV_DEPENDENT_CHAR_CODES, ",")
+        Dim codeText As Variant
+        For Each codeText In codes
+            codeText = Trim(CStr(codeText))
+            If LenB(codeText) > 0 Then
+                envChars(ChrW$(CLng(codeText))) = True
+            End If
+        Next codeText
     End If
 
+    If envChars.Exists(ch) Then
+        IsEnvironmentDependentCharacter = True
+    Else
+        IsEnvironmentDependentCharacter = Not CanRepresentInJapaneseCodePage(ch)
+    End If
+End Function
+
+Private Function CanRepresentInJapaneseCodePage(ByVal ch As String) As Boolean
+    On Error GoTo Failure
     Dim bytes() As Byte
     Dim roundtrip As String
 
-    On Error Resume Next
-    bytes = StrConv(ch, vbFromUnicode, SANITIZE_CODE_PAGE)
-    If Err.Number <> 0 Then
-        Err.Clear
-        EnsureCharacterSupported = UNSUPPORTED_CHAR_REPLACEMENT
-        On Error GoTo 0
-        Exit Function
-    End If
-
-    roundtrip = StrConv(bytes, vbUnicode, SANITIZE_CODE_PAGE)
-    If Err.Number <> 0 Then
-        Err.Clear
-        EnsureCharacterSupported = UNSUPPORTED_CHAR_REPLACEMENT
-        On Error GoTo 0
-        Exit Function
-    End If
-    On Error GoTo 0
-
-    If StrComp(roundtrip, ch, vbBinaryCompare) = 0 Then
-        EnsureCharacterSupported = ch
-    Else
-        EnsureCharacterSupported = UNSUPPORTED_CHAR_REPLACEMENT
-    End If
+    bytes = StrConv(ch, vbFromUnicode, LCID_JAPANESE)
+    roundtrip = StrConv(bytes, vbUnicode, LCID_JAPANESE)
+    CanRepresentInJapaneseCodePage = (StrComp(roundtrip, ch, vbBinaryCompare) = 0)
+    Exit Function
+Failure:
+    CanRepresentInJapaneseCodePage = False
+    Err.Clear
 End Function
 
 Private Function BuildUnsupportedCharNote() As String

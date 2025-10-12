@@ -8,7 +8,7 @@ Excelシートの内容からDBのDROP TABLE, CREATE TABLEのSQLを作成する�
 ## 言語
 Excel VBA
 
-## 仕様詳細  Version 2.2.7
+## 仕様詳細  Version 2.2.8
 
 # ユーザー入力につて
 1. ユーザーからの入力はExcelのシート上から行う。

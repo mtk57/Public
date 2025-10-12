@@ -27,6 +27,7 @@ namespace SimpleExcelBookSelector
             InitializeComponent();
             _settings = settings;
             FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned, LastUpdated = item.LastUpdated }));
+            dataGridView1.CellClick += DataGridView1_CellClick;
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)

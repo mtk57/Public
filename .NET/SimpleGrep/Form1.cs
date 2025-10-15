@@ -31,6 +31,7 @@ namespace SimpleGrep
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
+            this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -40,6 +41,7 @@ namespace SimpleGrep
             dataGridViewResults.Columns.Add("Encoding", "Encoding");
             dataGridViewResults.Columns["Encoding"].Visible = false;
             LoadSettings();
+            UpdateMethodColumnVisibility();
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -148,6 +150,7 @@ namespace SimpleGrep
                     chkCase.Checked = settings.CaseSensitive;
                     chkUseRegex.Checked = settings.UseRegex;
                     chkTagJump.Checked = settings.TagJump;
+                    chkMethod.Checked = settings.DeriveMethod;
                 }
             }
             catch (Exception ex)
@@ -166,7 +169,8 @@ namespace SimpleGrep
                 SearchSubDir = chkSearchSubDir.Checked,
                 CaseSensitive = chkCase.Checked,
                 UseRegex = chkUseRegex.Checked,
-                TagJump = chkTagJump.Checked
+                TagJump = chkTagJump.Checked,
+                DeriveMethod = chkMethod.Checked
             };
 
             try
@@ -238,7 +242,12 @@ namespace SimpleGrep
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             labelTime.Text = ""; 
 
-            var searchOption = chkSearchSubDir.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            bool searchSubdirectories = chkSearchSubDir.Checked;
+            bool caseSensitive = chkCase.Checked;
+            bool useRegex = chkUseRegex.Checked;
+            bool deriveMethod = chkMethod.Checked;
+
+            var searchOption = searchSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
             string[] filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
             int totalFiles = filesToSearch.Length;
 
@@ -262,10 +271,10 @@ namespace SimpleGrep
                 lblPer.Text = $"{(int)((double)processedCount / totalFiles * 100)} %";
             });
 
-            IEnumerable<object[]> searchResults = null;
+            IEnumerable<SearchResult> searchResults = null;
             try
             {
-                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress));
+                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod));
 
                 if (searchResults != null && searchResults.Any())
                 {
@@ -273,8 +282,17 @@ namespace SimpleGrep
                     // 結果をDataGridView用の配列に変換してから追加
                     var rows = searchResults.Select(r =>
                     {
+                        object[] cells =
+                        {
+                            r.FilePath,
+                            r.LineNumber,
+                            r.LineText,
+                            r.MethodSignature,
+                            r.EncodingName
+                        };
+
                         var row = new DataGridViewRow();
-                        row.CreateCells(dataGridViewResults, r);
+                        row.CreateCells(dataGridViewResults, cells);
                         return row;
                     }).ToArray();
                     dataGridViewResults.Rows.AddRange(rows);
@@ -309,10 +327,10 @@ namespace SimpleGrep
             comboBox.Text = newItem;
         }
 
-        private IEnumerable<object[]> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress)
+        private IEnumerable<SearchResult> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress, bool caseSensitive, bool useRegex, bool deriveMethod)
         {
-            var results = new ConcurrentBag<object[]>(); // スレッドセーフなコレクションを使用
-            var regexOptions = chkCase.Checked ? RegexOptions.None : RegexOptions.IgnoreCase;
+            var results = new ConcurrentBag<SearchResult>(); // スレッドセーフなコレクションを使用
+            var regexOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
             int processedFileCount = 0;
 
             try
@@ -325,41 +343,65 @@ namespace SimpleGrep
                         Encoding encoding = DetectEncoding(filePath); // ファイルごとにエンコーディングを判定
                         string encodingName = GetEncodingName(encoding);
 
+                        string[] lines;
                         using (var reader = new StreamReader(filePath, encoding))
                         {
-                            string line;
-                            int lineNumber = 1;
-                            while ((line = reader.ReadLine()) != null)
-                            {
-                                bool isMatch = false;
-                                if (chkUseRegex.Checked)
-                                {
-                                    try
-                                    {
-                                        isMatch = Regex.IsMatch(line, grepPattern, regexOptions);
-                                    }
-                                    catch (ArgumentException) { /* Invalid regex pattern, skip */ }
-                                }
-                                else
-                                {
-                                    var comparisonType = chkCase.Checked ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                                    isMatch = line.IndexOf(grepPattern, comparisonType) >= 0;
-                                }
+                            var content = reader.ReadToEnd();
+                            lines = content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+                        }
 
-                                if (isMatch)
+                        JavaMethodSignatureResolver javaResolver = null;
+                        if (deriveMethod && string.Equals(Path.GetExtension(filePath), ".java", StringComparison.OrdinalIgnoreCase))
+                        {
+                            javaResolver = new JavaMethodSignatureResolver(lines);
+                        }
+
+                        for (int index = 0; index < lines.Length; index++)
+                        {
+                            string line = lines[index];
+                            int lineNumber = index + 1;
+                            bool isMatch = false;
+
+                            if (useRegex)
+                            {
+                                try
                                 {
-                                    results.Add(new object[] { filePath, lineNumber, line, encodingName });
+                                    isMatch = Regex.IsMatch(line, grepPattern, regexOptions);
                                 }
-                                lineNumber++;
+                                catch (ArgumentException)
+                                {
+                                    // 無効な正規表現パターンはスキップ
+                                }
+                            }
+                            else
+                            {
+                                var comparisonType = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                                isMatch = line.IndexOf(grepPattern, comparisonType) >= 0;
+                            }
+
+                            if (isMatch)
+                            {
+                                string methodSignature = javaResolver?.GetMethodSignature(lineNumber) ?? string.Empty;
+                                results.Add(new SearchResult
+                                {
+                                    FilePath = filePath,
+                                    LineNumber = lineNumber,
+                                    LineText = line,
+                                    MethodSignature = methodSignature,
+                                    EncodingName = encodingName
+                                });
                             }
                         }
                     }
-                    catch (Exception) { /* Skip file read errors */ }
+                    catch (Exception)
+                    {
+                        // Skip file read errors
+                    }
                     finally
                     {
                         // 処理済みファイル数をスレッドセーフにインクリメント
                         int currentCount = Interlocked.Increment(ref processedFileCount);
-                        
+
                         // 100ファイルごと、または最後のファイル処理時に進捗を通知
                         if (currentCount % 100 == 0 || currentCount == filePaths.Length)
                         {
@@ -377,6 +419,19 @@ namespace SimpleGrep
                 }));
             }
             return results;
+        }
+
+        private void chkMethod_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateMethodColumnVisibility();
+        }
+
+        private void UpdateMethodColumnVisibility()
+        {
+            if (clmMethodSignature != null)
+            {
+                clmMethodSignature.Visible = chkMethod.Checked;
+            }
         }
 
         // ★★ここから修正★★
@@ -398,7 +453,8 @@ namespace SimpleGrep
                         string filePath = row.Cells[0].Value.ToString();
                         string lineNumber = row.Cells[1].Value.ToString();
                         string lineContent = row.Cells[2].Value.ToString();
-                        string encoding = row.Cells.Count > 3 && row.Cells[3].Value != null ? row.Cells[3].Value.ToString() : "UTF-8";
+                        var encodingCell = row.Cells["Encoding"];
+                        string encoding = encodingCell != null && encodingCell.Value != null ? encodingCell.Value.ToString() : "UTF-8";
                         
                         writer.WriteLine($"{filePath}({lineNumber},1)  [{encoding}]: {lineContent}");
                     }
@@ -554,6 +610,463 @@ namespace SimpleGrep
             }
         }
 
+        private sealed class SearchResult
+        {
+            public string FilePath { get; set; }
+            public int LineNumber { get; set; }
+            public string LineText { get; set; }
+            public string MethodSignature { get; set; }
+            public string EncodingName { get; set; }
+        }
+
+        private sealed class JavaMethodSignatureResolver
+        {
+            private static readonly HashSet<string> MethodModifiers = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "public","protected","private","static","final","abstract","synchronized","native","strictfp","default"
+            };
+
+            private static readonly HashSet<string> DisallowedMethodNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "if","for","while","switch","catch","try","return","new","else","do"
+            };
+
+            private readonly List<MethodSpan> _methodSpans;
+
+            public JavaMethodSignatureResolver(string[] lines)
+            {
+                _methodSpans = BuildSpans(lines);
+            }
+
+            public string GetMethodSignature(int lineNumber)
+            {
+                if (_methodSpans.Count == 0)
+                {
+                    return string.Empty;
+                }
+
+                int low = 0;
+                int high = _methodSpans.Count - 1;
+                while (low <= high)
+                {
+                    int mid = (low + high) / 2;
+                    var span = _methodSpans[mid];
+                    if (lineNumber < span.StartLine)
+                    {
+                        high = mid - 1;
+                    }
+                    else if (lineNumber > span.EndLine)
+                    {
+                        low = mid + 1;
+                    }
+                    else
+                    {
+                        return span.Signature;
+                    }
+                }
+
+                return string.Empty;
+            }
+
+            private static List<MethodSpan> BuildSpans(string[] lines)
+            {
+                var spans = new List<MethodSpan>();
+                var methodStack = new Stack<MethodSpanBuilder>();
+                bool inBlockComment = false;
+                bool capturingSignature = false;
+                int signatureStartLine = -1;
+                var signatureBuilder = new StringBuilder();
+                int braceDepth = 0;
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string rawLine = lines[i] ?? string.Empty;
+                    string withoutComments = RemoveComments(rawLine, ref inBlockComment);
+                    string braceSafeLine = RemoveStringLiterals(withoutComments);
+                    string trimmed = withoutComments.Trim();
+
+                    if (!capturingSignature && StartsWithAnnotation(trimmed))
+                    {
+                        // アノテーションは次行の署名判定に影響させない
+                    }
+                    else
+                    {
+                        if (!capturingSignature && ContainsMethodToken(trimmed))
+                        {
+                            capturingSignature = true;
+                            signatureBuilder.Clear();
+                            signatureBuilder.Append(trimmed);
+                            signatureStartLine = i + 1;
+                        }
+                        else if (capturingSignature && !string.IsNullOrWhiteSpace(trimmed))
+                        {
+                            signatureBuilder.Append(" ").Append(trimmed);
+                        }
+
+                        if (capturingSignature)
+                        {
+                            string candidate = signatureBuilder.ToString();
+                            if (candidate.Contains(";") && !candidate.Contains("{"))
+                            {
+                                // インターフェース等の宣言は対象外
+                                capturingSignature = false;
+                            }
+                            else if (candidate.Contains("{"))
+                            {
+                                if (TryParseJavaMethodSignature(candidate, out string signature))
+                                {
+                                    methodStack.Push(new MethodSpanBuilder
+                                    {
+                                        Signature = signature,
+                                        StartLine = signatureStartLine,
+                                        StartDepth = braceDepth
+                                    });
+                                }
+                                capturingSignature = false;
+                            }
+                        }
+                    }
+
+                    braceDepth += CountChar(braceSafeLine, '{');
+                    braceDepth -= CountChar(braceSafeLine, '}');
+                    if (braceDepth < 0)
+                    {
+                        braceDepth = 0;
+                    }
+
+                    while (methodStack.Count > 0 && braceDepth <= methodStack.Peek().StartDepth)
+                    {
+                        var builder = methodStack.Pop();
+                        builder.EndLine = i + 1;
+                        spans.Add(builder.ToSpan());
+                    }
+                }
+
+                while (methodStack.Count > 0)
+                {
+                    var builder = methodStack.Pop();
+                    builder.EndLine = lines.Length;
+                    spans.Add(builder.ToSpan());
+                }
+
+                spans.Sort((a, b) => a.StartLine.CompareTo(b.StartLine));
+                return spans;
+            }
+
+            private static bool ContainsMethodToken(string trimmedLine)
+            {
+                if (string.IsNullOrWhiteSpace(trimmedLine))
+                {
+                    return false;
+                }
+
+                if (trimmedLine.StartsWith("@", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                int parenIndex = trimmedLine.IndexOf('(');
+                if (parenIndex < 0)
+                {
+                    return false;
+                }
+
+                string before = trimmedLine.Substring(0, parenIndex);
+                if (before.IndexOf(" class ", StringComparison.Ordinal) >= 0 ||
+                    before.IndexOf(" interface ", StringComparison.Ordinal) >= 0 ||
+                    before.IndexOf(" enum ", StringComparison.Ordinal) >= 0)
+                {
+                    return false;
+                }
+
+                if (before.EndsWith("class", StringComparison.Ordinal) ||
+                    before.EndsWith("interface", StringComparison.Ordinal) ||
+                    before.EndsWith("enum", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            private static int CountChar(string text, char target)
+            {
+                if (string.IsNullOrEmpty(text))
+                {
+                    return 0;
+                }
+
+                int count = 0;
+                foreach (char c in text)
+                {
+                    if (c == target)
+                    {
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            private static string RemoveStringLiterals(string text)
+            {
+                if (string.IsNullOrEmpty(text))
+                {
+                    return string.Empty;
+                }
+
+                var sb = new StringBuilder(text.Length);
+                bool inString = false;
+                char delimiter = '\0';
+
+                for (int i = 0; i < text.Length; i++)
+                {
+                    char c = text[i];
+
+                    if (!inString && (c == '"' || c == '\''))
+                    {
+                        inString = true;
+                        delimiter = c;
+                        sb.Append(' ');
+                        continue;
+                    }
+
+                    if (inString)
+                    {
+                        if (c == delimiter && (i == 0 || text[i - 1] != '\\'))
+                        {
+                            inString = false;
+                            delimiter = '\0';
+                        }
+                        sb.Append(' ');
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                }
+
+                return sb.ToString();
+            }
+
+            private static string RemoveComments(string line, ref bool inBlockComment)
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    return string.Empty;
+                }
+
+                var sb = new StringBuilder();
+                bool inString = false;
+                char stringDelimiter = '\0';
+
+                for (int i = 0; i < line.Length; i++)
+                {
+                    char current = line[i];
+
+                    if (inBlockComment)
+                    {
+                        if (current == '*' && i + 1 < line.Length && line[i + 1] == '/')
+                        {
+                            inBlockComment = false;
+                            i++;
+                        }
+                        continue;
+                    }
+
+                    if (inString)
+                    {
+                        sb.Append(current);
+                        if (current == stringDelimiter && (i == 0 || line[i - 1] != '\\'))
+                        {
+                            inString = false;
+                            stringDelimiter = '\0';
+                        }
+                        continue;
+                    }
+
+                    if (current == '"' || current == '\'')
+                    {
+                        inString = true;
+                        stringDelimiter = current;
+                        sb.Append(current);
+                        continue;
+                    }
+
+                    if (current == '/' && i + 1 < line.Length)
+                    {
+                        char next = line[i + 1];
+                        if (next == '/')
+                        {
+                            break;
+                        }
+                        if (next == '*')
+                        {
+                            inBlockComment = true;
+                            i++;
+                            continue;
+                        }
+                    }
+
+                    sb.Append(current);
+                }
+
+                return sb.ToString();
+            }
+
+            private static bool TryParseJavaMethodSignature(string candidate, out string signature)
+            {
+                signature = string.Empty;
+                if (string.IsNullOrWhiteSpace(candidate))
+                {
+                    return false;
+                }
+
+                int braceIndex = candidate.IndexOf('{');
+                if (braceIndex >= 0)
+                {
+                    candidate = candidate.Substring(0, braceIndex);
+                }
+
+                candidate = candidate.Trim();
+
+                int parenOpen = candidate.IndexOf('(');
+                int parenClose = candidate.LastIndexOf(')');
+                if (parenOpen < 0 || parenClose <= parenOpen)
+                {
+                    return false;
+                }
+
+                string before = candidate.Substring(0, parenOpen).Trim();
+                if (string.IsNullOrEmpty(before) || before.Contains("="))
+                {
+                    return false;
+                }
+
+                string parameters = candidate.Substring(parenOpen + 1, parenClose - parenOpen - 1).Trim();
+
+                var tokens = SplitTokens(before);
+                tokens = tokens.Where(t => !string.IsNullOrEmpty(t)).ToList();
+                tokens.RemoveAll(t => MethodModifiers.Contains(t));
+                tokens.RemoveAll(t => t.StartsWith("@", StringComparison.Ordinal));
+
+                if (tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                string methodName = tokens[tokens.Count - 1];
+                if (!IsValidIdentifier(methodName) || DisallowedMethodNames.Contains(methodName))
+                {
+                    return false;
+                }
+
+                string returnType = tokens.Count > 1 ? string.Join(" ", tokens.Take(tokens.Count - 1)) : string.Empty;
+                if (string.IsNullOrEmpty(returnType))
+                {
+                    returnType = methodName;
+                }
+
+                string normalizedReturnType = NormalizeWhitespace(returnType);
+                string normalizedParameters = NormalizeWhitespace(parameters);
+
+                signature = $"{normalizedReturnType} {methodName}({normalizedParameters})".Trim();
+                return true;
+            }
+
+            private static List<string> SplitTokens(string input)
+            {
+                return input.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            }
+
+            private static bool IsValidIdentifier(string token)
+            {
+                if (string.IsNullOrEmpty(token))
+                {
+                    return false;
+                }
+
+                if (!(char.IsLetter(token[0]) || token[0] == '_' || token[0] == '$'))
+                {
+                    return false;
+                }
+
+                for (int i = 1; i < token.Length; i++)
+                {
+                    char c = token[i];
+                    if (!(char.IsLetterOrDigit(c) || c == '_' || c == '$'))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            private static string NormalizeWhitespace(string text)
+            {
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return text?.Trim() ?? string.Empty;
+                }
+
+                var sb = new StringBuilder();
+                bool previousWhitespace = false;
+                foreach (char c in text)
+                {
+                    if (char.IsWhiteSpace(c))
+                    {
+                        if (!previousWhitespace)
+                        {
+                            sb.Append(' ');
+                            previousWhitespace = true;
+                        }
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                        previousWhitespace = false;
+                    }
+                }
+
+                return sb.ToString().Trim();
+            }
+
+            private sealed class MethodSpan
+            {
+                public int StartLine { get; set; }
+                public int EndLine { get; set; }
+                public string Signature { get; set; }
+            }
+
+            private sealed class MethodSpanBuilder
+            {
+                public string Signature { get; set; }
+                public int StartLine { get; set; }
+                public int StartDepth { get; set; }
+                public int EndLine { get; set; }
+
+                public MethodSpan ToSpan()
+                {
+                    return new MethodSpan
+                    {
+                        StartLine = StartLine,
+                        EndLine = EndLine,
+                        Signature = Signature
+                    };
+                }
+            }
+
+            private static bool StartsWithAnnotation(string text)
+            {
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return false;
+                }
+
+                return text[0] == '@';
+            }
+        }
+
         [DataContract]
         private class AppSettings
         {
@@ -572,6 +1085,9 @@ namespace SimpleGrep
             
             [DataMember]
             public bool TagJump { get; set; } = true;
+
+            [DataMember]
+            public bool DeriveMethod { get; set; }
         }
     }
 }

@@ -47,12 +47,12 @@
             this.chkTagJump = new System.Windows.Forms.CheckBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblPer = new System.Windows.Forms.Label();
+            this.chkMethod = new System.Windows.Forms.CheckBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.chkMethod = new System.Windows.Forms.CheckBox();
-            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -235,6 +235,17 @@
             this.lblPer.TabIndex = 76;
             this.lblPer.Text = "0 %";
             // 
+            // chkMethod
+            // 
+            this.chkMethod.AutoSize = true;
+            this.chkMethod.Location = new System.Drawing.Point(331, 182);
+            this.chkMethod.Name = "chkMethod";
+            this.chkMethod.Size = new System.Drawing.Size(102, 16);
+            this.chkMethod.TabIndex = 77;
+            this.chkMethod.Text = "メソッド名を導出";
+            this.toolTip1.SetToolTip(this.chkMethod, "現バージョンではJavaのみをサポート");
+            this.chkMethod.UseVisualStyleBackColor = true;
+            // 
             // clmFilePath
             // 
             this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
@@ -258,20 +269,10 @@
             // 
             // clmMethodSignature
             // 
+            this.clmMethodSignature.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.clmMethodSignature.HeaderText = "メソッド";
             this.clmMethodSignature.Name = "clmMethodSignature";
             this.clmMethodSignature.ReadOnly = true;
-            // 
-            // chkMethod
-            // 
-            this.chkMethod.AutoSize = true;
-            this.chkMethod.Location = new System.Drawing.Point(331, 182);
-            this.chkMethod.Name = "chkMethod";
-            this.chkMethod.Size = new System.Drawing.Size(102, 16);
-            this.chkMethod.TabIndex = 77;
-            this.chkMethod.Text = "メソッド名を導出";
-            this.toolTip1.SetToolTip(this.chkMethod, "現バージョンではJavaのみをサポート");
-            this.chkMethod.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -326,12 +327,12 @@
         private System.Windows.Forms.CheckBox chkTagJump;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label lblPer;
+        private System.Windows.Forms.CheckBox chkMethod;
+        private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFilePath;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmLine;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmMethodSignature;
-        private System.Windows.Forms.CheckBox chkMethod;
-        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
 

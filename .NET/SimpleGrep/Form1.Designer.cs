@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent ()
         {
+            this.components = new System.ComponentModel.Container();
             this.btnBrowse = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -36,9 +37,6 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.labelTime = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
@@ -49,6 +47,12 @@
             this.chkTagJump = new System.Windows.Forms.CheckBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblPer = new System.Windows.Forms.Label();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.chkMethod = new System.Windows.Forms.CheckBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -131,33 +135,13 @@
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.clmFilePath,
             this.clmLine,
-            this.clmGrepResult});
+            this.clmGrepResult,
+            this.clmMethodSignature});
             this.dataGridViewResults.Location = new System.Drawing.Point(48, 284);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 311);
             this.dataGridViewResults.TabIndex = 6;
-            // 
-            // clmFilePath
-            // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
-            // 
-            // clmLine
-            // 
-            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmLine.HeaderText = "行";
-            this.clmLine.Name = "clmLine";
-            this.clmLine.ReadOnly = true;
-            // 
-            // clmGrepResult
-            // 
-            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmGrepResult.HeaderText = "Grep結果";
-            this.clmGrepResult.Name = "clmGrepResult";
-            this.clmGrepResult.ReadOnly = true;
             // 
             // labelTime
             // 
@@ -251,11 +235,50 @@
             this.lblPer.TabIndex = 76;
             this.lblPer.Text = "0 %";
             // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmLine
+            // 
+            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmLine.HeaderText = "行";
+            this.clmLine.Name = "clmLine";
+            this.clmLine.ReadOnly = true;
+            // 
+            // clmGrepResult
+            // 
+            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmGrepResult.HeaderText = "Grep結果";
+            this.clmGrepResult.Name = "clmGrepResult";
+            this.clmGrepResult.ReadOnly = true;
+            // 
+            // clmMethodSignature
+            // 
+            this.clmMethodSignature.HeaderText = "メソッド";
+            this.clmMethodSignature.Name = "clmMethodSignature";
+            this.clmMethodSignature.ReadOnly = true;
+            // 
+            // chkMethod
+            // 
+            this.chkMethod.AutoSize = true;
+            this.chkMethod.Location = new System.Drawing.Point(331, 182);
+            this.chkMethod.Name = "chkMethod";
+            this.chkMethod.Size = new System.Drawing.Size(102, 16);
+            this.chkMethod.TabIndex = 77;
+            this.chkMethod.Text = "メソッド名を導出";
+            this.toolTip1.SetToolTip(this.chkMethod, "現バージョンではJavaのみをサポート");
+            this.chkMethod.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 607);
+            this.Controls.Add(this.chkMethod);
             this.Controls.Add(this.lblPer);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.chkTagJump);
@@ -306,6 +329,9 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFilePath;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmLine;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmMethodSignature;
+        private System.Windows.Forms.CheckBox chkMethod;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
 

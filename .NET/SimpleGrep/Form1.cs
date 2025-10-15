@@ -945,8 +945,6 @@ namespace SimpleGrep
                 string parameters = candidate.Substring(parenOpen + 1, parenClose - parenOpen - 1).Trim();
 
                 var tokens = SplitTokens(before);
-                tokens = tokens.Where(t => !string.IsNullOrEmpty(t)).ToList();
-                tokens.RemoveAll(t => MethodModifiers.Contains(t));
                 tokens.RemoveAll(t => t.StartsWith("@", StringComparison.Ordinal));
 
                 if (tokens.Count == 0)
@@ -954,22 +952,36 @@ namespace SimpleGrep
                     return false;
                 }
 
-                string methodName = tokens[tokens.Count - 1];
+                var coreTokens = tokens.Where(t => !MethodModifiers.Contains(t)).ToList();
+                if (coreTokens.Count == 0)
+                {
+                    return false;
+                }
+
+                string methodName = coreTokens[coreTokens.Count - 1];
                 if (!IsValidIdentifier(methodName) || DisallowedMethodNames.Contains(methodName))
                 {
                     return false;
                 }
 
-                string returnType = tokens.Count > 1 ? string.Join(" ", tokens.Take(tokens.Count - 1)) : string.Empty;
-                if (string.IsNullOrEmpty(returnType))
-                {
-                    returnType = methodName;
-                }
+                string returnType = coreTokens.Count > 1 ? string.Join(" ", coreTokens.Take(coreTokens.Count - 1)) : string.Empty;
 
                 string normalizedReturnType = NormalizeWhitespace(returnType);
                 string normalizedParameters = NormalizeWhitespace(parameters);
+                string normalizedModifiers = NormalizeWhitespace(string.Join(" ", tokens.Where(MethodModifiers.Contains)));
 
-                signature = $"{normalizedReturnType} {methodName}({normalizedParameters})".Trim();
+                var signatureParts = new List<string>();
+                if (!string.IsNullOrEmpty(normalizedModifiers))
+                {
+                    signatureParts.Add(normalizedModifiers);
+                }
+                if (!string.IsNullOrEmpty(normalizedReturnType))
+                {
+                    signatureParts.Add(normalizedReturnType);
+                }
+                signatureParts.Add(methodName);
+
+                signature = $"{string.Join(" ", signatureParts)}({normalizedParameters})".Trim();
                 return true;
             }
 

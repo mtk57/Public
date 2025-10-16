@@ -48,7 +48,7 @@
             // btnBrowse
             // 
             this.btnBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowse.Location = new System.Drawing.Point(686, 28);
+            this.btnBrowse.Location = new System.Drawing.Point(598, 28);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
             this.btnBrowse.TabIndex = 0;
@@ -81,7 +81,7 @@
             this.cmbKeyword.FormattingEnabled = true;
             this.cmbKeyword.Location = new System.Drawing.Point(48, 125);
             this.cmbKeyword.Name = "cmbKeyword";
-            this.cmbKeyword.Size = new System.Drawing.Size(632, 20);
+            this.cmbKeyword.Size = new System.Drawing.Size(544, 20);
             this.cmbKeyword.TabIndex = 0;
             this.cmbKeyword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.cmbKeyword_KeyDown);
             // 
@@ -93,15 +93,14 @@
             this.cmbFolderPath.FormattingEnabled = true;
             this.cmbFolderPath.Location = new System.Drawing.Point(48, 28);
             this.cmbFolderPath.Name = "cmbFolderPath";
-            this.cmbFolderPath.Size = new System.Drawing.Size(632, 20);
+            this.cmbFolderPath.Size = new System.Drawing.Size(544, 20);
             this.cmbFolderPath.TabIndex = 1;
             // 
             // btnSearch
             // 
-            this.btnSearch.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSearch.Location = new System.Drawing.Point(307, 156);
+            this.btnSearch.Location = new System.Drawing.Point(276, 156);
             this.btnSearch.Name = "btnSearch";
-            this.btnSearch.Size = new System.Drawing.Size(75, 33);
+            this.btnSearch.Size = new System.Drawing.Size(83, 33);
             this.btnSearch.TabIndex = 5;
             this.btnSearch.Text = "検索";
             this.btnSearch.UseVisualStyleBackColor = true;
@@ -130,7 +129,7 @@
             this.dataGridViewResults.Location = new System.Drawing.Point(48, 206);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(660, 292);
+            this.dataGridViewResults.Size = new System.Drawing.Size(572, 164);
             this.dataGridViewResults.TabIndex = 6;
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             // 
@@ -179,17 +178,6 @@
             this.chkSearchSubDir.TabIndex = 68;
             this.chkSearchSubDir.Text = "サブフォルダも対象";
             this.chkSearchSubDir.UseVisualStyleBackColor = true;
-
-            // 
-            // chkDblClickToOpen
-            // 
-            this.chkDblClickToOpen.AutoSize = true;
-            this.chkDblClickToOpen.Location = new System.Drawing.Point(310, 76);
-            this.chkDblClickToOpen.Name = "chkDblClickToOpen";
-            this.chkDblClickToOpen.Size = new System.Drawing.Size(144, 16);
-            this.chkDblClickToOpen.TabIndex = 69;
-            this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
-            this.chkDblClickToOpen.UseVisualStyleBackColor = true;
             // 
             // chkDblClickToOpen
             // 
@@ -205,8 +193,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(767, 510);
-            this.Controls.Add(this.chkDblClickToOpen);
+            this.ClientSize = new System.Drawing.Size(679, 382);
             this.Controls.Add(this.chkDblClickToOpen);
             this.Controls.Add(this.chkSearchSubDir);
             this.Controls.Add(this.labelResult);

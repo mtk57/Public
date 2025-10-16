@@ -20,6 +20,7 @@ namespace SimpleGrep
     {
         private const string SettingsFileName = "SimpleGrep.settings.json";
         private const int MaxHistoryCount = 10;
+        private CancellationTokenSource searchCancellationTokenSource;
 
         public MainForm()
         {
@@ -29,9 +30,11 @@ namespace SimpleGrep
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
+            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
             this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
+            this.cmbKeyword.KeyDown += new KeyEventHandler(this.cmbKeyword_KeyDown);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -42,6 +45,7 @@ namespace SimpleGrep
             dataGridViewResults.Columns["Encoding"].Visible = false;
             LoadSettings();
             UpdateMethodColumnVisibility();
+            btnCancel.Enabled = false;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -238,7 +242,8 @@ namespace SimpleGrep
             dataGridViewResults.Rows.Clear();
             button1.Enabled = false;
             this.Cursor = Cursors.WaitCursor;
-    
+            btnCancel.Enabled = true;
+
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             labelTime.Text = ""; 
 
@@ -264,6 +269,11 @@ namespace SimpleGrep
             progressBar.Value = 0;
             lblPer.Text = "0 %";
 
+            searchCancellationTokenSource?.Cancel();
+            searchCancellationTokenSource?.Dispose();
+            searchCancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = searchCancellationTokenSource.Token;
+
             // IProgress<T> を使ってUIスレッドに進捗を通知
             var progress = new Progress<int>(processedCount =>
             {
@@ -272,9 +282,10 @@ namespace SimpleGrep
             });
 
             IEnumerable<SearchResult> searchResults = null;
+            bool wasCancelled = false;
             try
             {
-                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod));
+                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod, cancellationToken), cancellationToken);
 
                 if (searchResults != null && searchResults.Any())
                 {
@@ -299,6 +310,10 @@ namespace SimpleGrep
                     dataGridViewResults.ResumeLayout();
                 }
             }
+            catch (OperationCanceledException)
+            {
+                wasCancelled = true;
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"エラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -306,14 +321,23 @@ namespace SimpleGrep
             finally
             {
                 stopwatch.Stop();
-                // ★★ここから修正★★
-                labelTime.Text = $"Time: {stopwatch.Elapsed:mm\\:ss}";
-                // ★★ここまで修正★★
+                labelTime.Text = wasCancelled ? $"Time: {stopwatch.Elapsed:mm\\:ss} (中止)" : $"Time: {stopwatch.Elapsed:mm\\:ss}";
         
                 button1.Enabled = true;
                 this.Cursor = Cursors.Default;
-                progressBar.Value = totalFiles; // 最後に100%にする
-                lblPer.Text = "100 %";
+                if (!wasCancelled)
+                {
+                    progressBar.Value = totalFiles; // 最後に100%にする
+                    lblPer.Text = "100 %";
+                }
+                else
+                {
+                    int percentage = totalFiles == 0 ? 0 : (int)((double)progressBar.Value / totalFiles * 100);
+                    lblPer.Text = $"{percentage} % (中止)";
+                }
+                btnCancel.Enabled = false;
+                searchCancellationTokenSource?.Dispose();
+                searchCancellationTokenSource = null;
             }
         }
         
@@ -327,7 +351,29 @@ namespace SimpleGrep
             comboBox.Text = newItem;
         }
 
-        private IEnumerable<SearchResult> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress, bool caseSensitive, bool useRegex, bool deriveMethod)
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            if (searchCancellationTokenSource != null && !searchCancellationTokenSource.IsCancellationRequested)
+            {
+                searchCancellationTokenSource.Cancel();
+                btnCancel.Enabled = false;
+            }
+        }
+
+        private void cmbKeyword_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                if (button1.Enabled)
+                {
+                    button1.PerformClick();
+                }
+            }
+        }
+
+        private IEnumerable<SearchResult> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress, bool caseSensitive, bool useRegex, bool deriveMethod, CancellationToken cancellationToken)
         {
             var results = new ConcurrentBag<SearchResult>(); // スレッドセーフなコレクションを使用
             var regexOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
@@ -336,8 +382,9 @@ namespace SimpleGrep
             try
             {
                 // Parallel.ForEach を使ってファイルを並列処理
-                Parallel.ForEach(filePaths, filePath =>
+                Parallel.ForEach(filePaths, new ParallelOptions { CancellationToken = cancellationToken }, filePath =>
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
                         Encoding encoding = DetectEncoding(filePath); // ファイルごとにエンコーディングを判定
@@ -347,6 +394,7 @@ namespace SimpleGrep
                         using (var reader = new StreamReader(filePath, encoding))
                         {
                             var content = reader.ReadToEnd();
+                            cancellationToken.ThrowIfCancellationRequested();
                             lines = content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
                         }
 
@@ -358,6 +406,7 @@ namespace SimpleGrep
 
                         for (int index = 0; index < lines.Length; index++)
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             string line = lines[index];
                             int lineNumber = index + 1;
                             bool isMatch = false;
@@ -393,6 +442,10 @@ namespace SimpleGrep
                             }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception)
                     {
                         // Skip file read errors
@@ -409,6 +462,10 @@ namespace SimpleGrep
                         }
                     }
                 });
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

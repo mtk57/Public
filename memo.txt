@@ -47,3 +47,11 @@ wslpath -w "$(pwd)" | clip.exe           Windowsのパス形式でコピー
 #mdファイルをプレビュー  (拡張入れなくもOK)
 CTRL + SHIFT + V
 
+
+
+■Visual Studio Community
+#起動できなくなったとき：
+1. %ProgramFiles(x86)%\Microsoft Visual Studio\Installer\InstallCleanup.exe を管理者権限で実行。
+2. コマンド: InstallCleanup.exe -i 17（17 は VS2022 を指定）。
+3. PC を再起動後、再インストール。
+

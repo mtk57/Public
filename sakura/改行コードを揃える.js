@@ -1,4 +1,4 @@
-// 改行コードを揃える
+// 改行コードを揃える  ver1.0.0
 (function(){
     var TAB_WIDTH = 4;
 

@@ -42,13 +42,14 @@
             this.chkPartialMatch = new System.Windows.Forms.CheckBox();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkDblClickToOpen = new System.Windows.Forms.CheckBox();
+            this.btnFileCopy = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
             // btnBrowse
             // 
             this.btnBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowse.Location = new System.Drawing.Point(598, 28);
+            this.btnBrowse.Location = new System.Drawing.Point(617, 25);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
             this.btnBrowse.TabIndex = 0;
@@ -59,7 +60,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(46, 13);
+            this.label1.Location = new System.Drawing.Point(12, 13);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(83, 12);
             this.label1.TabIndex = 2;
@@ -68,7 +69,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(46, 110);
+            this.label2.Location = new System.Drawing.Point(15, 109);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(75, 12);
             this.label2.TabIndex = 3;
@@ -79,9 +80,9 @@
             this.cmbKeyword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbKeyword.FormattingEnabled = true;
-            this.cmbKeyword.Location = new System.Drawing.Point(48, 125);
+            this.cmbKeyword.Location = new System.Drawing.Point(12, 125);
             this.cmbKeyword.Name = "cmbKeyword";
-            this.cmbKeyword.Size = new System.Drawing.Size(544, 20);
+            this.cmbKeyword.Size = new System.Drawing.Size(650, 20);
             this.cmbKeyword.TabIndex = 0;
             this.cmbKeyword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.cmbKeyword_KeyDown);
             // 
@@ -91,9 +92,9 @@
             this.cmbFolderPath.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbFolderPath.FormattingEnabled = true;
-            this.cmbFolderPath.Location = new System.Drawing.Point(48, 28);
+            this.cmbFolderPath.Location = new System.Drawing.Point(12, 28);
             this.cmbFolderPath.Name = "cmbFolderPath";
-            this.cmbFolderPath.Size = new System.Drawing.Size(544, 20);
+            this.cmbFolderPath.Size = new System.Drawing.Size(599, 20);
             this.cmbFolderPath.TabIndex = 1;
             // 
             // btnSearch
@@ -109,7 +110,7 @@
             // chkUseRegex
             // 
             this.chkUseRegex.AutoSize = true;
-            this.chkUseRegex.Location = new System.Drawing.Point(48, 76);
+            this.chkUseRegex.Location = new System.Drawing.Point(17, 75);
             this.chkUseRegex.Name = "chkUseRegex";
             this.chkUseRegex.Size = new System.Drawing.Size(72, 16);
             this.chkUseRegex.TabIndex = 6;
@@ -126,10 +127,10 @@
             this.dataGridViewResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.columnFilePath});
-            this.dataGridViewResults.Location = new System.Drawing.Point(48, 206);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 206);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(572, 164);
+            this.dataGridViewResults.Size = new System.Drawing.Size(655, 164);
             this.dataGridViewResults.TabIndex = 6;
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             // 
@@ -143,7 +144,7 @@
             // chkIncludeFolderNames
             // 
             this.chkIncludeFolderNames.AutoSize = true;
-            this.chkIncludeFolderNames.Location = new System.Drawing.Point(137, 76);
+            this.chkIncludeFolderNames.Location = new System.Drawing.Point(106, 75);
             this.chkIncludeFolderNames.Name = "chkIncludeFolderNames";
             this.chkIncludeFolderNames.Size = new System.Drawing.Size(71, 16);
             this.chkIncludeFolderNames.TabIndex = 7;
@@ -162,7 +163,7 @@
             // chkPartialMatch
             // 
             this.chkPartialMatch.AutoSize = true;
-            this.chkPartialMatch.Location = new System.Drawing.Point(224, 76);
+            this.chkPartialMatch.Location = new System.Drawing.Point(193, 75);
             this.chkPartialMatch.Name = "chkPartialMatch";
             this.chkPartialMatch.Size = new System.Drawing.Size(72, 16);
             this.chkPartialMatch.TabIndex = 9;
@@ -172,7 +173,7 @@
             // chkSearchSubDir
             // 
             this.chkSearchSubDir.AutoSize = true;
-            this.chkSearchSubDir.Location = new System.Drawing.Point(48, 54);
+            this.chkSearchSubDir.Location = new System.Drawing.Point(17, 53);
             this.chkSearchSubDir.Name = "chkSearchSubDir";
             this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
             this.chkSearchSubDir.TabIndex = 68;
@@ -182,18 +183,29 @@
             // chkDblClickToOpen
             // 
             this.chkDblClickToOpen.AutoSize = true;
-            this.chkDblClickToOpen.Location = new System.Drawing.Point(323, 76);
+            this.chkDblClickToOpen.Location = new System.Drawing.Point(292, 75);
             this.chkDblClickToOpen.Name = "chkDblClickToOpen";
             this.chkDblClickToOpen.Size = new System.Drawing.Size(153, 16);
             this.chkDblClickToOpen.TabIndex = 69;
             this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
             this.chkDblClickToOpen.UseVisualStyleBackColor = true;
             // 
+            // btnFileCopy
+            // 
+            this.btnFileCopy.Location = new System.Drawing.Point(579, 156);
+            this.btnFileCopy.Name = "btnFileCopy";
+            this.btnFileCopy.Size = new System.Drawing.Size(83, 33);
+            this.btnFileCopy.TabIndex = 70;
+            this.btnFileCopy.Text = "ファイルをコピー";
+            this.btnFileCopy.UseVisualStyleBackColor = true;
+            this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(679, 382);
+            this.Controls.Add(this.btnFileCopy);
             this.Controls.Add(this.chkDblClickToOpen);
             this.Controls.Add(this.chkSearchSubDir);
             this.Controls.Add(this.labelResult);
@@ -235,6 +247,7 @@
         private System.Windows.Forms.CheckBox chkPartialMatch;
         private System.Windows.Forms.CheckBox chkSearchSubDir;
         private System.Windows.Forms.CheckBox chkDblClickToOpen;
+        private System.Windows.Forms.Button btnFileCopy;
     }
 }
 

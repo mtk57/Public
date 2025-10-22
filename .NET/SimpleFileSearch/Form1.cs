@@ -488,5 +488,10 @@ namespace SimpleFileSearch
         }
 
         #endregion
+
+        private void btnFileCopy_Click ( object sender, EventArgs e )
+        {
+            // TBD
+        }
     }
 }

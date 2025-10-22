@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -491,7 +492,56 @@ namespace SimpleFileSearch
 
         private void btnFileCopy_Click ( object sender, EventArgs e )
         {
-            // TBD
+            try
+            {
+                // 選択済みの行を取得（行選択が無い場合はセル選択から補完）
+                var selectedRows = dataGridViewResults.SelectedRows
+                    .Cast<DataGridViewRow>()
+                    .ToList();
+
+                if (selectedRows.Count == 0)
+                {
+                    selectedRows = dataGridViewResults.SelectedCells
+                        .Cast<DataGridViewCell>()
+                        .Select(cell => dataGridViewResults.Rows[cell.RowIndex])
+                        .Distinct()
+                        .ToList();
+                }
+
+                if (selectedRows.Count == 0)
+                {
+                    MessageBox.Show("コピーするファイルを選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                StringCollection fileList = new StringCollection();
+
+                foreach (var row in selectedRows)
+                {
+                    string filePath = row.Cells[0].Value?.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+                    {
+                        fileList.Add(filePath);
+                    }
+                }
+
+                if (fileList.Count == 0)
+                {
+                    MessageBox.Show("コピー可能なファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Clipboard.SetFileDropList(fileList);
+            }
+            catch (System.Runtime.InteropServices.ExternalException ex)
+            {
+                MessageBox.Show($"クリップボードにコピーできませんでした: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"コピー処理中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

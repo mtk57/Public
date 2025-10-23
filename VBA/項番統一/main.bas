@@ -1,7 +1,7 @@
 Attribute VB_Name = "main"
 Option Explicit
 
-Private Const VER = "1.0.3"
+Private Const VER = "1.0.6"
 
 Public Sub RunRenumbering()
     On Error GoTo ErrHandler
@@ -301,25 +301,85 @@ Private Function ShouldRenumberCell(ByVal targetSheet As Worksheet, ByVal rowInd
         Exit Function
     End If
     
+    Dim targetText As String
+    targetText = GetCellTextForCheck(targetCell)
+    If Not HasNumericPrefix(targetText, allowDots) Then
+        ShouldRenumberCell = False
+        Exit Function
+    End If
+    
     If columnIndex < targetSheet.Columns.Count Then
         Dim rightCell As Range
         Set rightCell = targetSheet.Cells(rowIndex, columnIndex + 1)
-        Dim rightValue As Variant
-        rightValue = rightCell.value
-        If Not IsError(rightValue) Then
-            If VarType(rightValue) <> vbNull And VarType(rightValue) <> vbEmpty Then
-                If HasNumericPrefix(CStr(rightValue), True) Then
-                    ShouldRenumberCell = False
-                    Exit Function
-                End If
-            End If
+        Dim rightText As String
+        rightText = GetCellTextForCheck(rightCell)
+        If ShouldSkipDueToRightCell(rightText, True) Then
+            ShouldRenumberCell = False
+            Exit Function
         End If
     End If
     
-    ShouldRenumberCell = HasNumericPrefix(CStr(targetCell.value), allowDots)
+    ShouldRenumberCell = True
 End Function
 
-Private Function HasNumericPrefix(ByVal cellValue As String, ByVal allowDots As Boolean) As Boolean
+Private Function GetCellTextForCheck(ByVal targetCell As Range) As String
+    Dim cellFormula As String
+    Dim cellText As String
+    Dim rawValue As Variant
+    
+    On Error Resume Next
+    cellFormula = targetCell.Formula
+    On Error GoTo 0
+    
+    If Len(cellFormula) > 0 Then
+        If Left$(cellFormula, 1) = "'" Then
+            cellFormula = Mid$(cellFormula, 2)
+            GetCellTextForCheck = cellFormula
+            Exit Function
+        ElseIf Left$(cellFormula, 1) <> "=" Then
+            GetCellTextForCheck = cellFormula
+            Exit Function
+        End If
+    End If
+    
+    cellText = targetCell.Text
+    If Len(cellText) > 0 Then
+        GetCellTextForCheck = cellText
+        Exit Function
+    End If
+    
+    rawValue = targetCell.value
+    If IsError(rawValue) Then
+        GetCellTextForCheck = ""
+    Else
+        GetCellTextForCheck = CStr(rawValue)
+    End If
+End Function
+
+Private Function ShouldSkipDueToRightCell(ByVal cellText As String, ByVal allowDots As Boolean) As Boolean
+    Dim normalized As String
+    Dim remainder As String
+    
+    If Not ExtractNumericPrefix(cellText, allowDots, normalized, remainder) Then
+        ShouldSkipDueToRightCell = False
+        Exit Function
+    End If
+    
+    If Len(remainder) = 0 Then
+        ShouldSkipDueToRightCell = True
+        Exit Function
+    End If
+    
+    Dim firstChar As String
+    firstChar = Left$(remainder, 1)
+    If firstChar = " " Or firstChar = ChrW$(&H3000) Or firstChar = vbTab Then
+        ShouldSkipDueToRightCell = True
+    Else
+        ShouldSkipDueToRightCell = False
+    End If
+End Function
+
+Private Function ExtractNumericPrefix(ByVal cellValue As String, ByVal allowDots As Boolean, ByRef normalizedValue As String, ByRef remainderValue As String) As Boolean
     Dim workingValue As String
     Dim charValue As String
     Dim index As Long
@@ -333,37 +393,65 @@ Private Function HasNumericPrefix(ByVal cellValue As String, ByVal allowDots As 
     index = 1
     Do While index <= Len(workingValue)
         charValue = Mid$(workingValue, index, 1)
-        If charValue = " " Or charValue = ChrW$(&H3000) Then
+        If charValue = " " Or charValue = ChrW$(&H3000) Or charValue = vbTab Then
+            index = index + 1
+        Else
+            Exit Do
+        End If
+    Loop
+    workingValue = Mid$(workingValue, index)
+    
+    normalizedValue = workingValue
+    If Len(workingValue) = 0 Then
+        remainderValue = ""
+        ExtractNumericPrefix = False
+        Exit Function
+    End If
+    
+    charValue = Left$(workingValue, 1)
+    If charValue < "0" Or charValue > "9" Then
+        remainderValue = workingValue
+        ExtractNumericPrefix = False
+        Exit Function
+    End If
+    
+    index = 1
+    Do While index <= Len(workingValue)
+        charValue = Mid$(workingValue, index, 1)
+        If charValue >= "0" And charValue <= "9" Then
+            index = index + 1
+        ElseIf allowDots And charValue = "." Then
             index = index + 1
         Else
             Exit Do
         End If
     Loop
     
-    workingValue = Mid$(workingValue, index)
-    If Len(workingValue) = 0 Then
+    remainderValue = Mid$(workingValue, index)
+    ExtractNumericPrefix = (index > 1)
+End Function
+
+Private Function HasNumericPrefix(ByVal cellValue As String, ByVal allowDots As Boolean) As Boolean
+    Dim normalized As String
+    Dim remainder As String
+    Dim firstChar As String
+    
+    If Not ExtractNumericPrefix(cellValue, allowDots, normalized, remainder) Then
         HasNumericPrefix = False
         Exit Function
     End If
     
-    charValue = Mid$(workingValue, 1, 1)
-    If charValue < "0" Or charValue > "9" Then
-        HasNumericPrefix = False
+    If Len(remainder) = 0 Then
+        HasNumericPrefix = True
         Exit Function
     End If
     
-    For index = 1 To Len(workingValue)
-        charValue = Mid$(workingValue, index, 1)
-        If charValue >= "0" And charValue <= "9" Then
-            ' keep scanning
-        ElseIf allowDots And charValue = "." Then
-            ' keep scanning
-        Else
-            Exit For
-        End If
-    Next index
-    
-    HasNumericPrefix = True
+    firstChar = Left$(remainder, 1)
+    If firstChar = " " Or firstChar = ChrW$(&H3000) Or firstChar = vbTab Then
+        HasNumericPrefix = True
+    Else
+        HasNumericPrefix = False
+    End If
 End Function
 
 Private Function HasCellValue(ByVal targetCell As Range) As Boolean

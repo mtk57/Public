@@ -1,0 +1,10 @@
+項番統一		
+ver 1.0.2		
+		
+		
+		
+	ファイル名	C:\_git\Public\VBA\項番統一\testdata\test.xlsx
+	シート名	test
+	大項番列名	A
+	中項番列名	B
+	小項番列名	C

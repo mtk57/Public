@@ -1,7 +1,7 @@
 Attribute VB_Name = "main"
 Option Explicit
 
-Private Const VER = "1.0.2"
+Private Const VER = "1.0.3"
 
 Public Sub RunRenumbering()
     On Error GoTo ErrHandler
@@ -189,7 +189,7 @@ Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn A
     expectedMinor = 1
     
     For rowIndex = 1 To lastRow
-        If ShouldRenumberCell(targetSheet.Cells(rowIndex, majorColumn), False) Then
+        If ShouldRenumberCell(targetSheet, rowIndex, majorColumn, False) Then
             WriteNormalizedNumber targetSheet.Cells(rowIndex, majorColumn), CStr(expectedMajor), False
             currentMajor = expectedMajor
             expectedMajor = expectedMajor + 1
@@ -199,7 +199,7 @@ Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn A
         End If
         
         If hasMiddle Then
-            If ShouldRenumberCell(targetSheet.Cells(rowIndex, middleColumn), True) Then
+            If ShouldRenumberCell(targetSheet, rowIndex, middleColumn, True) Then
                 If currentMajor = 0 Then
                     currentMajor = 1
                     If expectedMajor <= currentMajor Then
@@ -216,7 +216,7 @@ Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn A
         End If
         
         If hasMinor Then
-            If ShouldRenumberCell(targetSheet.Cells(rowIndex, minorColumn), True) Then
+            If ShouldRenumberCell(targetSheet, rowIndex, minorColumn, True) Then
                 If currentMajor = 0 Then
                     currentMajor = 1
                     If expectedMajor <= currentMajor Then
@@ -292,10 +292,28 @@ Private Function GetLastUsedRow(ByVal targetSheet As Worksheet, ByVal columnInde
     End If
 End Function
 
-Private Function ShouldRenumberCell(ByVal targetCell As Range, ByVal allowDots As Boolean) As Boolean
+Private Function ShouldRenumberCell(ByVal targetSheet As Worksheet, ByVal rowIndex As Long, ByVal columnIndex As Long, ByVal allowDots As Boolean) As Boolean
+    Dim targetCell As Range
+    Set targetCell = targetSheet.Cells(rowIndex, columnIndex)
+    
     If Not HasCellValue(targetCell) Then
         ShouldRenumberCell = False
         Exit Function
+    End If
+    
+    If columnIndex < targetSheet.Columns.Count Then
+        Dim rightCell As Range
+        Set rightCell = targetSheet.Cells(rowIndex, columnIndex + 1)
+        Dim rightValue As Variant
+        rightValue = rightCell.value
+        If Not IsError(rightValue) Then
+            If VarType(rightValue) <> vbNull And VarType(rightValue) <> vbEmpty Then
+                If HasNumericPrefix(CStr(rightValue), True) Then
+                    ShouldRenumberCell = False
+                    Exit Function
+                End If
+            End If
+        End If
     End If
     
     ShouldRenumberCell = HasNumericPrefix(CStr(targetCell.value), allowDots)

@@ -1,7 +1,7 @@
 Attribute VB_Name = "main"
 Option Explicit
 
-Private Const VER = "1.0.6"
+Private Const VER = "1.0.7"
 
 Public Sub RunRenumbering()
     On Error GoTo ErrHandler
@@ -13,6 +13,9 @@ Public Sub RunRenumbering()
     Dim majorColumnLetter As String
     Dim middleColumnLetter As String
     Dim minorColumnLetter As String
+    Dim startNumber As Long
+    Dim startNumberValue As Variant
+    Dim startNumberDouble As Double
     
     fileInput = Trim$(CStr(configSheet.Range("C6").value))
     sheetName = Trim$(CStr(configSheet.Range("C7").value))
@@ -64,6 +67,25 @@ Public Sub RunRenumbering()
         End If
     End If
     
+    startNumberValue = configSheet.Range("C11").value
+    If Len(Trim$(CStr(startNumberValue))) = 0 Then
+        startNumber = 1
+    ElseIf Not IsNumeric(startNumberValue) Then
+        MsgBox "C11セルには0以上の整数を入力してください。", vbExclamation
+        Exit Sub
+    Else
+        startNumberDouble = CDbl(startNumberValue)
+        If startNumberDouble < 0 Then
+            MsgBox "C11セルには0以上の整数を入力してください。", vbExclamation
+            Exit Sub
+        End If
+        If startNumberDouble <> Fix(startNumberDouble) Then
+            MsgBox "C11セルには0以上の整数を入力してください。", vbExclamation
+            Exit Sub
+        End If
+        startNumber = CLng(startNumberDouble)
+    End If
+    
     Dim targetWorkbook As Workbook
     Set targetWorkbook = LocateWorkbook(fileInput)
     If targetWorkbook Is Nothing Then
@@ -82,7 +104,7 @@ Public Sub RunRenumbering()
     
     targetSheet.Activate
     
-    ApplyRenumbering targetSheet, majorColumn, hasMiddle, middleColumn, hasMinor, minorColumn
+    ApplyRenumbering targetSheet, majorColumn, hasMiddle, middleColumn, hasMinor, minorColumn, startNumber
     
     MsgBox "項番の振り直しが完了しました。", vbInformation
     Exit Sub
@@ -146,7 +168,7 @@ Private Function ExtractFileName(ByVal pathValue As String) As String
     ExtractFileName = result
 End Function
 
-Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn As Long, ByVal hasMiddle As Boolean, ByVal middleColumn As Long, ByVal hasMinor As Boolean, ByVal minorColumn As Long)
+Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn As Long, ByVal hasMiddle As Boolean, ByVal middleColumn As Long, ByVal hasMinor As Boolean, ByVal minorColumn As Long, ByVal startNumber As Long)
     Dim originalScreenUpdating As Boolean
     Dim originalEnableEvents As Boolean
     Dim originalCalculation As XlCalculation
@@ -184,7 +206,7 @@ Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn A
     Dim expectedMiddle As Long
     Dim expectedMinor As Long
     
-    expectedMajor = 1
+    expectedMajor = startNumber
     expectedMiddle = 1
     expectedMinor = 1
     
@@ -201,7 +223,7 @@ Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn A
         If hasMiddle Then
             If ShouldRenumberCell(targetSheet, rowIndex, middleColumn, True) Then
                 If currentMajor = 0 Then
-                    currentMajor = 1
+                    currentMajor = startNumber
                     If expectedMajor <= currentMajor Then
                         expectedMajor = currentMajor + 1
                     End If
@@ -218,7 +240,7 @@ Private Sub ApplyRenumbering(ByVal targetSheet As Worksheet, ByVal majorColumn A
         If hasMinor Then
             If ShouldRenumberCell(targetSheet, rowIndex, minorColumn, True) Then
                 If currentMajor = 0 Then
-                    currentMajor = 1
+                    currentMajor = startNumber
                     If expectedMajor <= currentMajor Then
                         expectedMajor = currentMajor + 1
                     End If

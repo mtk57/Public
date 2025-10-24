@@ -241,56 +241,71 @@ namespace SimpleGrep
 
             dataGridViewResults.Rows.Clear();
             button1.Enabled = false;
-            this.Cursor = Cursors.WaitCursor;
             btnCancel.Enabled = true;
+            this.Cursor = Cursors.WaitCursor;
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            labelTime.Text = ""; 
+            labelTime.Text = "";
 
-            bool searchSubdirectories = chkSearchSubDir.Checked;
-            bool caseSensitive = chkCase.Checked;
-            bool useRegex = chkUseRegex.Checked;
-            bool deriveMethod = chkMethod.Checked;
-
-            var searchOption = searchSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            string[] filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
-            int totalFiles = filesToSearch.Length;
-
-            if (totalFiles == 0)
-            {
-                MessageBox.Show("対象ファイルが見つかりません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                button1.Enabled = true;
-                this.Cursor = Cursors.Default;
-                stopwatch.Stop();
-                return;
-            }
-
-            progressBar.Maximum = totalFiles; // 最大値をファイル総数に設定
-            progressBar.Value = 0;
-            lblPer.Text = "0 %";
-
-            searchCancellationTokenSource?.Cancel();
-            searchCancellationTokenSource?.Dispose();
-            searchCancellationTokenSource = new CancellationTokenSource();
-            var cancellationToken = searchCancellationTokenSource.Token;
-
-            // IProgress<T> を使ってUIスレッドに進捗を通知
-            var progress = new Progress<int>(processedCount =>
-            {
-                progressBar.Value = processedCount;
-                lblPer.Text = $"{(int)((double)processedCount / totalFiles * 100)} %";
-            });
-
-            IEnumerable<SearchResult> searchResults = null;
             bool wasCancelled = false;
+            bool searchStarted = false;
+            int totalFiles = 0;
+            CancellationTokenSource localCancellationTokenSource = null;
+
             try
             {
+                bool searchSubdirectories = chkSearchSubDir.Checked;
+                bool caseSensitive = chkCase.Checked;
+                bool useRegex = chkUseRegex.Checked;
+                bool deriveMethod = chkMethod.Checked;
+
+                var searchOption = searchSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                string[] filesToSearch;
+                try
+                {
+                    filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"ファイル一覧の取得に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                totalFiles = filesToSearch.Length;
+
+                if (totalFiles == 0)
+                {
+                    MessageBox.Show("対象ファイルが見つかりません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    progressBar.Value = 0;
+                    lblPer.Text = "0 %";
+                    return;
+                }
+
+                progressBar.Maximum = totalFiles;
+                progressBar.Value = 0;
+                lblPer.Text = "0 %";
+
+                searchCancellationTokenSource?.Cancel();
+                searchCancellationTokenSource?.Dispose();
+
+                localCancellationTokenSource = new CancellationTokenSource();
+                searchCancellationTokenSource = localCancellationTokenSource;
+                var cancellationToken = localCancellationTokenSource.Token;
+
+                var progress = new Progress<int>(processedCount =>
+                {
+                    progressBar.Value = processedCount;
+                    lblPer.Text = $"{(int)((double)processedCount / totalFiles * 100)} %";
+                });
+
+                IEnumerable<SearchResult> searchResults = null;
+                searchStarted = true;
+
                 searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod, cancellationToken), cancellationToken);
 
                 if (searchResults != null && searchResults.Any())
                 {
                     dataGridViewResults.SuspendLayout();
-                    // 結果をDataGridView用の配列に変換してから追加
                     var rows = searchResults.Select(r =>
                     {
                         object[] cells =
@@ -321,22 +336,28 @@ namespace SimpleGrep
             finally
             {
                 stopwatch.Stop();
-                labelTime.Text = wasCancelled ? $"Time: {stopwatch.Elapsed:mm\\:ss} (中止)" : $"Time: {stopwatch.Elapsed:mm\\:ss}";
-        
+
+                if (searchStarted)
+                {
+                    labelTime.Text = wasCancelled ? $"Time: {stopwatch.Elapsed:mm\\:ss} (中止)" : $"Time: {stopwatch.Elapsed:mm\\:ss}";
+
+                    if (!wasCancelled)
+                    {
+                        progressBar.Value = totalFiles;
+                        lblPer.Text = "100 %";
+                    }
+                    else
+                    {
+                        int percentage = totalFiles == 0 ? 0 : (int)((double)progressBar.Value / totalFiles * 100);
+                        lblPer.Text = $"{percentage} % (中止)";
+                    }
+                }
+
                 button1.Enabled = true;
-                this.Cursor = Cursors.Default;
-                if (!wasCancelled)
-                {
-                    progressBar.Value = totalFiles; // 最後に100%にする
-                    lblPer.Text = "100 %";
-                }
-                else
-                {
-                    int percentage = totalFiles == 0 ? 0 : (int)((double)progressBar.Value / totalFiles * 100);
-                    lblPer.Text = $"{percentage} % (中止)";
-                }
                 btnCancel.Enabled = false;
-                searchCancellationTokenSource?.Dispose();
+                this.Cursor = Cursors.Default;
+
+                localCancellationTokenSource?.Dispose();
                 searchCancellationTokenSource = null;
             }
         }

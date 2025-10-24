@@ -296,16 +296,22 @@ namespace SimpleGrep
 
                 var progress = new Progress<int>(processedCount =>
                 {
-                    progressBar.Value = processedCount;
-                    lblPer.Text = $"{(int)((double)processedCount / totalFiles * 100)} %";
+                    int clamped = Math.Min(processedCount, totalFiles);
+                    progressBar.Value = clamped;
+                    int percentage = totalFiles == 0 ? 0 : (int)((double)clamped / totalFiles * 100);
+                    lblPer.Text = $"{percentage} %";
                 });
 
                 IEnumerable<SearchResult> searchResults = null;
                 searchStarted = true;
 
                 searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod, cancellationToken), cancellationToken);
+                if (localCancellationTokenSource?.IsCancellationRequested == true)
+                {
+                    wasCancelled = true;
+                }
 
-                if (searchResults != null && searchResults.Any())
+                if (!wasCancelled && searchResults != null && searchResults.Any())
                 {
                     dataGridViewResults.SuspendLayout();
                     var rows = searchResults.Select(r =>
@@ -524,10 +530,6 @@ namespace SimpleGrep
                             }
                         }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
                     catch (Exception)
                     {
                         // Skip file read errors
@@ -540,14 +542,18 @@ namespace SimpleGrep
                         // 100ファイルごと、または最後のファイル処理時に進捗を通知
                         if (currentCount % 100 == 0 || currentCount == filePaths.Length)
                         {
-                            progress?.Report(currentCount);
+                            progress?.Report(Math.Min(currentCount, filePaths.Length));
                         }
                     }
                 });
             }
             catch (OperationCanceledException)
             {
-                throw;
+                // キャンセル時は例外を表面化させずに処理終了
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException))
+            {
+                // Parallel.ForEach が AggregateException でキャンセルを通知するケースに備える
             }
             catch (Exception ex)
             {

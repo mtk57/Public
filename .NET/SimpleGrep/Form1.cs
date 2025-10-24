@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent; // ConcurrentBagのために追加
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -31,6 +32,7 @@ namespace SimpleGrep
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
             this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
@@ -391,6 +393,57 @@ namespace SimpleGrep
                 {
                     button1.PerformClick();
                 }
+            }
+        }
+
+        private void btnFileCopy_Click(object sender, EventArgs e)
+        {
+            var selectedIndices = dataGridViewResults.SelectedCells.Cast<DataGridViewCell>()
+                .Select(cell => cell.RowIndex)
+                .Concat(dataGridViewResults.SelectedRows.Cast<DataGridViewRow>().Select(row => row.Index))
+                .Distinct()
+                .ToList();
+
+            if (selectedIndices.Count == 0)
+            {
+                MessageBox.Show("ファイルをコピーする行を選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var files = new StringCollection();
+            foreach (var index in selectedIndices)
+            {
+                if (index < 0 || index >= dataGridViewResults.Rows.Count)
+                {
+                    continue;
+                }
+
+                var cellValue = dataGridViewResults.Rows[index].Cells[0].Value;
+                if (cellValue == null)
+                {
+                    continue;
+                }
+
+                var filePath = cellValue.ToString();
+                if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+                {
+                    files.Add(filePath);
+                }
+            }
+
+            if (files.Count == 0)
+            {
+                MessageBox.Show("実在するファイルが選択されていません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                Clipboard.SetFileDropList(files);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

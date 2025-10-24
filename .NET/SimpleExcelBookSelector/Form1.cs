@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Windows.Forms;
 
 
@@ -296,13 +297,28 @@ namespace SimpleExcelBookSelector
                 return;
             }
 
+            AppSettings loadedSettings = null;
+
             try
             {
-                // Try to load the new format first
-                using (var stream = File.OpenRead(_settingsFilePath))
+                var jsonText = File.ReadAllText(_settingsFilePath, Encoding.UTF8);
+                bool hasHistoryOpenSetting = jsonText.IndexOf("\"IsHistoryOpenFolderOnDoubleClickEnabled\"", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool hasFilterHistorySetting = jsonText.IndexOf("\"HistoryFilterKeywords\"", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonText)))
                 {
                     var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                    _settings = (AppSettings)serializer.ReadObject(stream);
+                    loadedSettings = (AppSettings)serializer.ReadObject(stream);
+                }
+
+                if (loadedSettings != null && !hasHistoryOpenSetting)
+                {
+                    loadedSettings.IsHistoryOpenFolderOnDoubleClickEnabled = loadedSettings.IsOpenFolderOnDoubleClickEnabled;
+                }
+
+                if (loadedSettings != null && !hasFilterHistorySetting)
+                {
+                    loadedSettings.HistoryFilterKeywords = new List<string>();
                 }
             }
             catch (SerializationException)
@@ -315,35 +331,46 @@ namespace SimpleExcelBookSelector
                         var serializer = new DataContractJsonSerializer(typeof(AppSettings_Old));
                         var oldSettings = (AppSettings_Old)serializer.ReadObject(stream);
 
-                        _settings = new AppSettings
+                        loadedSettings = new AppSettings
                         {
                             IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
                             IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
                             RefreshInterval = oldSettings.RefreshInterval,
-                            FileHistory = oldSettings.FileHistory.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList()
+                            FileHistory = oldSettings.FileHistory?.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList() ?? new List<HistoryItem>(),
+                            HistoryFilterKeywords = new List<string>()
                         };
+                        loadedSettings.IsOpenFolderOnDoubleClickEnabled = true;
+                        loadedSettings.IsHistoryOpenFolderOnDoubleClickEnabled = loadedSettings.IsOpenFolderOnDoubleClickEnabled;
                     }
-                    // Immediately save the settings in the new format
-                    // SaveSettings(); // BUG: This overwrites migrated settings with default UI values.
                 }
                 catch
                 {
                     // If migration also fails, create default settings
-                    _settings = new AppSettings();
+                    loadedSettings = new AppSettings();
                 }
             }
             catch
             {
                 // For any other error, create default settings
-                _settings = new AppSettings();
+                loadedSettings = new AppSettings();
             }
+
+            _settings = loadedSettings ?? new AppSettings();
+            if (_settings.FileHistory == null)
+            {
+                _settings.FileHistory = new List<HistoryItem>();
+            }
+            if (_settings.HistoryFilterKeywords == null)
+            {
+                _settings.HistoryFilterKeywords = new List<string>();
+            }
+            _settings.IsHistoryOpenFolderOnDoubleClickEnabled = loadedSettings?.IsHistoryOpenFolderOnDoubleClickEnabled ?? _settings.IsHistoryOpenFolderOnDoubleClickEnabled;
 
             // Reflect settings on the UI
             chkEnableSheetSelectMode.Checked = _settings.IsSheetSelectionEnabled;
             chkEnableAutoUpdateMode.Checked = _settings.IsAutoRefreshEnabled;
             textAutoUpdateSec.Text = _settings.RefreshInterval.ToString();
             chkIsOpenDir.Checked = _settings.IsOpenFolderOnDoubleClickEnabled;
-
         }
 
 
@@ -586,6 +613,8 @@ namespace SimpleExcelBookSelector
                         _excludedHistoryPaths.Add(removedPath);
                     }
 
+                    _settings.IsHistoryOpenFolderOnDoubleClickEnabled = historyForm.IsOpenFolderOnDoubleClickEnabled;
+                    _settings.HistoryFilterKeywords = historyForm.FilterHistory.ToList();
                     _settings.FileHistory = updatedHistory;
                     SaveSettings();
                     RefreshExcelFileList(forceUpdate: true);

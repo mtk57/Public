@@ -37,6 +37,10 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.labelTime = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
@@ -49,10 +53,7 @@
             this.lblPer = new System.Windows.Forms.Label();
             this.chkMethod = new System.Windows.Forms.CheckBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnFileCopy = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -142,6 +143,34 @@
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 311);
             this.dataGridViewResults.TabIndex = 6;
+            // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmLine
+            // 
+            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmLine.HeaderText = "行";
+            this.clmLine.Name = "clmLine";
+            this.clmLine.ReadOnly = true;
+            // 
+            // clmGrepResult
+            // 
+            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmGrepResult.HeaderText = "Grep結果";
+            this.clmGrepResult.Name = "clmGrepResult";
+            this.clmGrepResult.ReadOnly = true;
+            // 
+            // clmMethodSignature
+            // 
+            this.clmMethodSignature.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmMethodSignature.HeaderText = "メソッド";
+            this.clmMethodSignature.Name = "clmMethodSignature";
+            this.clmMethodSignature.ReadOnly = true;
             // 
             // labelTime
             // 
@@ -246,39 +275,21 @@
             this.toolTip1.SetToolTip(this.chkMethod, "現バージョンではJavaのみをサポート");
             this.chkMethod.UseVisualStyleBackColor = true;
             // 
-            // clmFilePath
+            // btnFileCopy
             // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
-            // 
-            // clmLine
-            // 
-            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmLine.HeaderText = "行";
-            this.clmLine.Name = "clmLine";
-            this.clmLine.ReadOnly = true;
-            // 
-            // clmGrepResult
-            // 
-            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmGrepResult.HeaderText = "Grep結果";
-            this.clmGrepResult.Name = "clmGrepResult";
-            this.clmGrepResult.ReadOnly = true;
-            // 
-            // clmMethodSignature
-            // 
-            this.clmMethodSignature.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmMethodSignature.HeaderText = "メソッド";
-            this.clmMethodSignature.Name = "clmMethodSignature";
-            this.clmMethodSignature.ReadOnly = true;
+            this.btnFileCopy.Location = new System.Drawing.Point(605, 212);
+            this.btnFileCopy.Name = "btnFileCopy";
+            this.btnFileCopy.Size = new System.Drawing.Size(75, 33);
+            this.btnFileCopy.TabIndex = 78;
+            this.btnFileCopy.Text = "ファイルコピー";
+            this.btnFileCopy.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 607);
+            this.Controls.Add(this.btnFileCopy);
             this.Controls.Add(this.chkMethod);
             this.Controls.Add(this.lblPer);
             this.Controls.Add(this.progressBar);
@@ -333,6 +344,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmLine;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmMethodSignature;
+        private System.Windows.Forms.Button btnFileCopy;
     }
 }
 

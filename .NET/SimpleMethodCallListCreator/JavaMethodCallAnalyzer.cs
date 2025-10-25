@@ -255,7 +255,7 @@ namespace SimpleMethodCallListCreator
                         throw new JavaParseException("メソッド定義の括弧が閉じられていません。", line);
                     }
 
-                    var next = SkipWhitespaceForward(text, closeParen + 1);
+                    var next = SkipPossibleThrowsClause(text, closeParen + 1);
                     if (next >= text.Length || text[next] != '{')
                     {
                         index++;
@@ -483,6 +483,48 @@ namespace SimpleMethodCallListCreator
             }
 
             return current;
+        }
+
+        private static int SkipPossibleThrowsClause(string text, int index)
+        {
+            var current = SkipWhitespaceForward(text, index);
+            const string throwsKeyword = "throws";
+            if (current >= text.Length)
+            {
+                return current;
+            }
+
+            if (current + throwsKeyword.Length > text.Length ||
+                !string.Equals(text.Substring(current, throwsKeyword.Length), throwsKeyword, StringComparison.Ordinal) ||
+                !IsStandaloneKeyword(text, current, throwsKeyword))
+            {
+                return current;
+            }
+
+            current += throwsKeyword.Length;
+            while (current < text.Length)
+            {
+                if (text[current] == '{' || text[current] == ';')
+                {
+                    break;
+                }
+
+                if (text[current] == '(')
+                {
+                    var closeParen = FindMatchingParenthesis(text, current);
+                    if (closeParen == -1)
+                    {
+                        return text.Length;
+                    }
+
+                    current = closeParen + 1;
+                    continue;
+                }
+
+                current++;
+            }
+
+            return SkipWhitespaceForward(text, current);
         }
 
         private static int FindNextChar(string text, int startIndex, char target)

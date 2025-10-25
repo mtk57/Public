@@ -62,4 +62,12 @@ class Utility {
     public static void logFormatted(String format, String value) {
         log(String.format(format, value));
     }
+
+    public static void check(
+		String format,
+		String value) throws Exception {
+
+        Utility.log("step:" + index);
+    }
+
 }

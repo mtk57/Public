@@ -358,6 +358,7 @@ namespace SimpleMethodCallListCreator
 
                     var callText = text.Substring(methodNameInfo.MethodNameStart,
                         closeParen - methodNameInfo.MethodNameStart + 1).Trim();
+                    callText = NormalizeCallText(callText);
 
                     var calleeClass = methodNameInfo.Callee;
                     if (string.Equals(calleeClass, "this", StringComparison.Ordinal))
@@ -630,6 +631,44 @@ namespace SimpleMethodCallListCreator
             }
 
             return backslashCount % 2 == 1;
+        }
+
+        private static string NormalizeCallText(string callText)
+        {
+            if (string.IsNullOrEmpty(callText))
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(callText.Length);
+            var skipWhitespace = false;
+
+            for (var i = 0; i < callText.Length; i++)
+            {
+                var c = callText[i];
+                if (c == '\r' || c == '\n' || c == '\t')
+                {
+                    skipWhitespace = true;
+                    continue;
+                }
+
+                if (skipWhitespace)
+                {
+                    if (!char.IsWhiteSpace(c))
+                    {
+                        builder.Append(' ');
+                        skipWhitespace = false;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+
+                builder.Append(c);
+            }
+
+            return builder.ToString();
         }
 
         private sealed class JavaClassInfo

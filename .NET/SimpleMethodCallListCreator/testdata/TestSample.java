@@ -14,6 +14,10 @@ public class FooController {
         String message = buildMessage("ready");
         // comments should be ignored by analyzer
         System.out.println(message);
+        Utility.logFormatted(
+        	"prepared: %s",
+        	message
+        );
     }
 
     private String buildMessage(String text) {
@@ -53,5 +57,9 @@ class Utility {
 
     public static void log(String message) {
         System.out.println(message);
+    }
+
+    public static void logFormatted(String format, String value) {
+        log(String.format(format, value));
     }
 }

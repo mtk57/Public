@@ -30,6 +30,14 @@
         {
             this.components = new System.ComponentModel.Container();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmClassName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmCallerMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmCalleeClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmCalleeMethodParams = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmRowNumCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.btnBrowse = new System.Windows.Forms.Button();
             this.cmbIgnoreKeyword = new System.Windows.Forms.ComboBox();
@@ -41,14 +49,8 @@
             this.btnRun = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.cmbIgnoreRules = new System.Windows.Forms.ComboBox();
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmClassName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmCallerMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmCalleeClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmCalleeMethodParams = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmRowNumCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnExport = new System.Windows.Forms.Button();
+            this.btnImport = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -74,6 +76,62 @@
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 175);
             this.dataGridViewResults.TabIndex = 6;
+            // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmFileName
+            // 
+            this.clmFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFileName.HeaderText = "ファイル名";
+            this.clmFileName.Name = "clmFileName";
+            this.clmFileName.ReadOnly = true;
+            // 
+            // clmClassName
+            // 
+            this.clmClassName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmClassName.HeaderText = "クラス";
+            this.clmClassName.Name = "clmClassName";
+            this.clmClassName.ReadOnly = true;
+            // 
+            // clmCallerMethod
+            // 
+            this.clmCallerMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmCallerMethod.HeaderText = "呼出元メソッド";
+            this.clmCallerMethod.Name = "clmCallerMethod";
+            this.clmCallerMethod.ReadOnly = true;
+            // 
+            // clmCalleeClass
+            // 
+            this.clmCalleeClass.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmCalleeClass.HeaderText = "呼出先クラス";
+            this.clmCalleeClass.Name = "clmCalleeClass";
+            this.clmCalleeClass.ReadOnly = true;
+            // 
+            // clmCalleeMethod
+            // 
+            this.clmCalleeMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmCalleeMethod.HeaderText = "呼出先メソッド";
+            this.clmCalleeMethod.Name = "clmCalleeMethod";
+            this.clmCalleeMethod.ReadOnly = true;
+            // 
+            // clmCalleeMethodParams
+            // 
+            this.clmCalleeMethodParams.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmCalleeMethodParams.HeaderText = "呼出先メソッド引数";
+            this.clmCalleeMethodParams.Name = "clmCalleeMethodParams";
+            this.clmCalleeMethodParams.ReadOnly = true;
+            // 
+            // clmRowNumCalleeMethod
+            // 
+            this.clmRowNumCalleeMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmRowNumCalleeMethod.HeaderText = "行番号";
+            this.clmRowNumCalleeMethod.Name = "clmRowNumCalleeMethod";
+            this.clmRowNumCalleeMethod.ReadOnly = true;
             // 
             // btnBrowse
             // 
@@ -177,67 +235,31 @@
             this.cmbIgnoreRules.Size = new System.Drawing.Size(84, 20);
             this.cmbIgnoreRules.TabIndex = 80;
             // 
-            // clmFilePath
+            // btnExport
             // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
+            this.btnExport.Location = new System.Drawing.Point(463, 160);
+            this.btnExport.Name = "btnExport";
+            this.btnExport.Size = new System.Drawing.Size(75, 21);
+            this.btnExport.TabIndex = 81;
+            this.btnExport.Text = "結果出力";
+            this.btnExport.UseVisualStyleBackColor = true;
             // 
-            // clmFileName
+            // btnImport
             // 
-            this.clmFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFileName.HeaderText = "ファイル名";
-            this.clmFileName.Name = "clmFileName";
-            this.clmFileName.ReadOnly = true;
-            // 
-            // clmClassName
-            // 
-            this.clmClassName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmClassName.HeaderText = "クラス";
-            this.clmClassName.Name = "clmClassName";
-            this.clmClassName.ReadOnly = true;
-            // 
-            // clmCallerMethod
-            // 
-            this.clmCallerMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmCallerMethod.HeaderText = "呼出元メソッド";
-            this.clmCallerMethod.Name = "clmCallerMethod";
-            this.clmCallerMethod.ReadOnly = true;
-            // 
-            // clmCalleeClass
-            // 
-            this.clmCalleeClass.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmCalleeClass.HeaderText = "呼出先クラス";
-            this.clmCalleeClass.Name = "clmCalleeClass";
-            this.clmCalleeClass.ReadOnly = true;
-            // 
-            // clmCalleeMethod
-            // 
-            this.clmCalleeMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmCalleeMethod.HeaderText = "呼出先メソッド";
-            this.clmCalleeMethod.Name = "clmCalleeMethod";
-            this.clmCalleeMethod.ReadOnly = true;
-            // 
-            // clmCalleeMethodParams
-            // 
-            this.clmCalleeMethodParams.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmCalleeMethodParams.HeaderText = "呼出先メソッド引数";
-            this.clmCalleeMethodParams.Name = "clmCalleeMethodParams";
-            this.clmCalleeMethodParams.ReadOnly = true;
-            // 
-            // clmRowNumCalleeMethod
-            // 
-            this.clmRowNumCalleeMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmRowNumCalleeMethod.HeaderText = "行番号";
-            this.clmRowNumCalleeMethod.Name = "clmRowNumCalleeMethod";
-            this.clmRowNumCalleeMethod.ReadOnly = true;
+            this.btnImport.Location = new System.Drawing.Point(544, 160);
+            this.btnImport.Name = "btnImport";
+            this.btnImport.Size = new System.Drawing.Size(75, 21);
+            this.btnImport.TabIndex = 82;
+            this.btnImport.Text = "結果入力";
+            this.btnImport.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 400);
+            this.Controls.Add(this.btnImport);
+            this.Controls.Add(this.btnExport);
             this.Controls.Add(this.cmbIgnoreRules);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.btnRun);
@@ -278,6 +300,8 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmCalleeMethod;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmCalleeMethodParams;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmRowNumCalleeMethod;
+        private System.Windows.Forms.Button btnExport;
+        private System.Windows.Forms.Button btnImport;
     }
 }
 

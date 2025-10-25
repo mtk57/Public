@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -59,6 +60,8 @@ namespace SimpleMethodCallListCreator
         {
             btnBrowse.Click += BtnBrowse_Click;
             btnRun.Click += BtnRun_Click;
+            btnExport.Click += BtnExport_Click;
+            btnImport.Click += BtnImport_Click;
             cmbFilePath.DragEnter += CmbFilePath_DragEnter;
             cmbFilePath.DragDrop += CmbFilePath_DragDrop;
             cmbIgnoreKeyword.KeyDown += CmbIgnoreKeyword_KeyDown;
@@ -144,6 +147,61 @@ namespace SimpleMethodCallListCreator
         private void BtnRun_Click(object sender, EventArgs e)
         {
             ExecuteAnalysis();
+        }
+
+        private void BtnExport_Click(object sender, EventArgs e)
+        {
+            if (_bindingSource.Count == 0)
+            {
+                MessageBox.Show(this, "出力対象がありません。", "情報",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory ?? Environment.CurrentDirectory;
+            var fileName = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture) + ".tsv";
+            var exportPath = Path.Combine(baseDirectory, fileName);
+
+            try
+            {
+                WriteResultsToTsv(exportPath);
+                MessageBox.Show(this, $"結果を出力しました。\n{exportPath}", "結果出力",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"結果出力に失敗しました。\n{ex.Message}", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.LogException(ex);
+            }
+        }
+
+        private void BtnImport_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "TSV ファイル (*.tsv)|*.tsv|すべてのファイル (*.*)|*.*";
+                dialog.Multiselect = false;
+                dialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory ?? Environment.CurrentDirectory;
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                try
+                {
+                    var imported = ReadResultsFromTsv(dialog.FileName);
+                    UpdateGrid(imported);
+                    MessageBox.Show(this, "結果を読み込みました。", "結果入力",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, $"結果入力に失敗しました。\n{ex.Message}", "エラー",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.LogException(ex);
+                }
+            }
         }
 
         private void ExecuteAnalysis()
@@ -300,6 +358,174 @@ namespace SimpleMethodCallListCreator
             }
 
             return filtered;
+        }
+
+        private void WriteResultsToTsv(string exportPath)
+        {
+            if (string.IsNullOrEmpty(exportPath))
+            {
+                throw new ArgumentException("出力先パスが不正です。", nameof(exportPath));
+            }
+
+            var headers = new[]
+            {
+                "FilePath",
+                "FileName",
+                "ClassName",
+                "CallerMethod",
+                "CalleeClass",
+                "CalleeMethod",
+                "CalleeMethodArguments",
+                "LineNumber"
+            };
+
+            using (var writer = new StreamWriter(exportPath, false, Encoding.UTF8))
+            {
+                writer.WriteLine(string.Join("\t", headers));
+                foreach (var detail in _bindingSource)
+                {
+                    var fields = new[]
+                    {
+                        EscapeForTsv(detail.FilePath),
+                        EscapeForTsv(detail.FileName),
+                        EscapeForTsv(detail.ClassName),
+                        EscapeForTsv(detail.CallerMethod),
+                        EscapeForTsv(detail.CalleeClass),
+                        EscapeForTsv(detail.CalleeMethodName),
+                        EscapeForTsv(detail.CalleeMethodArguments),
+                        detail.LineNumber.ToString(CultureInfo.InvariantCulture)
+                    };
+
+                    writer.WriteLine(string.Join("\t", fields));
+                }
+            }
+        }
+
+        private List<MethodCallDetail> ReadResultsFromTsv(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                throw new ArgumentException("読み込み対象のパスが不正です。", nameof(path));
+            }
+
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("指定されたファイルが存在しません。", path);
+            }
+
+            var lines = File.ReadAllLines(path, Encoding.UTF8);
+            if (lines.Length == 0)
+            {
+                return new List<MethodCallDetail>();
+            }
+
+            var results = new List<MethodCallDetail>();
+            var startIndex = 0;
+            if (IsHeaderLine(lines[0]))
+            {
+                startIndex = 1;
+            }
+
+            for (var i = startIndex; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var columns = line.Split('\t');
+                if (columns.Length < 8)
+                {
+                    throw new InvalidDataException($"列数が不足しています。(行番号: {i + 1})");
+                }
+
+                var filePath = columns[0].Trim();
+                var className = columns[2].Trim();
+                var callerMethod = columns[3].Trim();
+                var calleeClass = columns[4].Trim();
+                var calleeMethod = columns[5].Trim();
+                var calleeArguments = columns[6].Trim();
+
+                if (!int.TryParse(columns[7].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var lineNumber))
+                {
+                    throw new InvalidDataException($"行番号の値が不正です。(行番号: {i + 1})");
+                }
+
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    throw new InvalidDataException($"ファイルパスが空です。(行番号: {i + 1})");
+                }
+
+                var detail = new MethodCallDetail(filePath, className, callerMethod, calleeClass,
+                    calleeMethod, calleeArguments, lineNumber);
+                results.Add(detail);
+            }
+
+            return results;
+        }
+
+        private bool IsHeaderLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return false;
+            }
+
+            var expectedHeaders = new[]
+            {
+                "FilePath",
+                "FileName",
+                "ClassName",
+                "CallerMethod",
+                "CalleeClass",
+                "CalleeMethod",
+                "CalleeMethodArguments",
+                "LineNumber"
+            };
+
+            var columns = line.Split('\t');
+            if (columns.Length != expectedHeaders.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < expectedHeaders.Length; i++)
+            {
+                if (!string.Equals(columns[i].Trim(), expectedHeaders[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private string EscapeForTsv(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(value.Length);
+            foreach (var ch in value)
+            {
+                if (ch == '\t')
+                {
+                    builder.Append(' ');
+                }
+                else if (ch == '\r' || ch == '\n')
+                {
+                    builder.Append(' ');
+                }
+                else
+                {
+                    builder.Append(ch);
+                }
+            }
+
+            return builder.ToString();
         }
 
         private bool MatchesRule(string target, string keyword, IgnoreRule rule, StringComparison comparison)

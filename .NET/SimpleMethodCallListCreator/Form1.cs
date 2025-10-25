@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -28,6 +29,9 @@ namespace SimpleMethodCallListCreator
         {
             base.OnLoad(e);
             LoadSettings();
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
         }
 
         private void InitializeGrid()

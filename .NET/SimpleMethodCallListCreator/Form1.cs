@@ -61,6 +61,7 @@ namespace SimpleMethodCallListCreator
             btnRun.Click += BtnRun_Click;
             cmbFilePath.DragEnter += CmbFilePath_DragEnter;
             cmbFilePath.DragDrop += CmbFilePath_DragDrop;
+            cmbIgnoreKeyword.KeyDown += CmbIgnoreKeyword_KeyDown;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
             dataGridViewResults.KeyDown += DataGridViewResults_KeyDown;
             FormClosing += MainForm_FormClosing;
@@ -87,10 +88,32 @@ namespace SimpleMethodCallListCreator
             }
 
             cmbIgnoreKeyword.Items.Clear();
-            cmbIgnoreKeyword.Items.AddRange(_settings.RecentIgnoreKeywords.ToArray());
-            if (_settings.RecentIgnoreKeywords.Count > 0)
+            foreach (var keyword in _settings.RecentIgnoreKeywords)
             {
-                cmbIgnoreKeyword.Text = _settings.RecentIgnoreKeywords[0];
+                cmbIgnoreKeyword.Items.Add((keyword ?? string.Empty).Trim());
+            }
+
+            if (_settings.SelectedIgnoreKeywordIndex >= 0 &&
+                _settings.SelectedIgnoreKeywordIndex < cmbIgnoreKeyword.Items.Count)
+            {
+                cmbIgnoreKeyword.SelectedIndex = _settings.SelectedIgnoreKeywordIndex;
+            }
+            else
+            {
+                cmbIgnoreKeyword.SelectedIndex = -1;
+                var lastIgnoreKeyword = (_settings.LastIgnoreKeyword ?? string.Empty).Trim();
+                if (!string.IsNullOrEmpty(lastIgnoreKeyword))
+                {
+                    cmbIgnoreKeyword.Text = lastIgnoreKeyword;
+                }
+                else if (cmbIgnoreKeyword.Items.Count > 0)
+                {
+                    cmbIgnoreKeyword.SelectedIndex = 0;
+                }
+                else
+                {
+                    cmbIgnoreKeyword.Text = string.Empty;
+                }
             }
 
             chkUseRegex.Checked = _settings.UseRegex;
@@ -327,6 +350,11 @@ namespace SimpleMethodCallListCreator
             {
                 UpdateHistoryList(_settings.RecentIgnoreKeywords, ignoreKeyword, false);
                 RefreshComboItems(cmbIgnoreKeyword, _settings.RecentIgnoreKeywords, ignoreKeyword);
+                _settings.SelectedIgnoreKeywordIndex = 0;
+                if (cmbIgnoreKeyword.Items.Count > 0)
+                {
+                    cmbIgnoreKeyword.SelectedIndex = 0;
+                }
             }
         }
 
@@ -389,6 +417,43 @@ namespace SimpleMethodCallListCreator
             _settings.UseRegex = chkUseRegex.Checked;
             _settings.MatchCase = chkCase.Checked;
             _settings.IgnoreRule = GetSelectedIgnoreRule();
+            _settings.RecentFilePaths = CaptureHistoryFromCombo(cmbFilePath, true);
+            var currentIgnoreKeyword = (cmbIgnoreKeyword.Text ?? string.Empty).Trim();
+            var ignoreHistory = CaptureHistoryFromCombo(cmbIgnoreKeyword, false, allowEmpty: true);
+            var comparer = StringComparer.Ordinal;
+            for (var i = ignoreHistory.Count - 1; i >= 0; i--)
+            {
+                if (comparer.Equals(ignoreHistory[i] ?? string.Empty, currentIgnoreKeyword))
+                {
+                    ignoreHistory.RemoveAt(i);
+                }
+            }
+
+            ignoreHistory.Insert(0, currentIgnoreKeyword);
+            if (ignoreHistory.Count > MaxHistoryCount)
+            {
+                ignoreHistory.RemoveRange(MaxHistoryCount, ignoreHistory.Count - MaxHistoryCount);
+            }
+
+            _settings.RecentIgnoreKeywords = ignoreHistory;
+            _settings.LastIgnoreKeyword = currentIgnoreKeyword;
+            _settings.SelectedIgnoreKeywordIndex = ignoreHistory.Count > 0 ? 0 : -1;
+
+            var selectedValue = _settings.SelectedIgnoreKeywordIndex >= 0 &&
+                                _settings.SelectedIgnoreKeywordIndex < ignoreHistory.Count
+                ? ignoreHistory[_settings.SelectedIgnoreKeywordIndex]
+                : string.Empty;
+            RefreshComboItems(cmbIgnoreKeyword, ignoreHistory, selectedValue);
+            if (_settings.SelectedIgnoreKeywordIndex >= 0 &&
+                _settings.SelectedIgnoreKeywordIndex < cmbIgnoreKeyword.Items.Count)
+            {
+                cmbIgnoreKeyword.SelectedIndex = _settings.SelectedIgnoreKeywordIndex;
+            }
+            else
+            {
+                cmbIgnoreKeyword.SelectedIndex = -1;
+                cmbIgnoreKeyword.Text = selectedValue;
+            }
 
             try
             {
@@ -491,6 +556,29 @@ namespace SimpleMethodCallListCreator
             SaveSettings();
         }
 
+        private void CmbIgnoreKeyword_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete)
+            {
+                return;
+            }
+
+            var index = cmbIgnoreKeyword.SelectedIndex;
+            if (index < 0 || index >= cmbIgnoreKeyword.Items.Count)
+            {
+                return;
+            }
+
+            var removed = cmbIgnoreKeyword.Items[index] as string;
+            cmbIgnoreKeyword.Items.RemoveAt(index);
+            if (!string.IsNullOrEmpty(removed) && _settings?.RecentIgnoreKeywords != null)
+            {
+                _settings.RecentIgnoreKeywords.RemoveAll(x => string.Equals(x, removed, StringComparison.Ordinal));
+            }
+
+            e.Handled = true;
+        }
+
         private void LaunchSakura(string filePath, int lineNumber)
         {
             var sakuraPath = FindSakuraPath();
@@ -562,6 +650,49 @@ namespace SimpleMethodCallListCreator
             }
 
             return null;
+        }
+
+        private List<string> CaptureHistoryFromCombo(ComboBox comboBox, bool caseInsensitive, bool allowEmpty = false)
+        {
+            var result = new List<string>();
+            if (comboBox == null)
+            {
+                return result;
+            }
+
+            var comparer = caseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var seen = new HashSet<string>(comparer);
+            foreach (var item in comboBox.Items)
+            {
+                if (!(item is string text))
+                {
+                    continue;
+                }
+
+                var trimmed = text.Trim();
+                if (trimmed.Length == 0)
+                {
+                    if (!allowEmpty)
+                    {
+                        continue;
+                    }
+
+                    trimmed = string.Empty;
+                }
+
+                if (!seen.Add(trimmed))
+                {
+                    continue;
+                }
+
+                result.Add(trimmed);
+                if (result.Count >= MaxHistoryCount)
+                {
+                    break;
+                }
+            }
+
+            return result;
         }
     }
 }

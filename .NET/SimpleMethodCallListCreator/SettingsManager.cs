@@ -54,9 +54,8 @@ namespace SimpleMethodCallListCreator
 
         private static string GetSettingsFilePath()
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var directory = Path.Combine(appData, "SimpleMethodCallListCreator");
-            return Path.Combine(directory, SettingsFileName);
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            return Path.Combine(baseDirectory ?? string.Empty, SettingsFileName);
         }
     }
 }

@@ -16,9 +16,15 @@ namespace SimpleMethodCallListCreator
         public bool UseRegex { get; set; }
 
         [DataMember]
+        public string LastIgnoreKeyword { get; set; } = string.Empty;
+
+        [DataMember]
         public bool MatchCase { get; set; }
 
         [DataMember]
         public IgnoreRule IgnoreRule { get; set; } = IgnoreRule.StartsWith;
+
+        [DataMember]
+        public int SelectedIgnoreKeywordIndex { get; set; } = -1;
     }
 }

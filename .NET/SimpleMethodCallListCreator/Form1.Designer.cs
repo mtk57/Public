@@ -47,6 +47,7 @@
             this.clmCallerMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmCalleeClass = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmCalleeMethodParams = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmRowNumCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
@@ -66,6 +67,7 @@
             this.clmCallerMethod,
             this.clmCalleeClass,
             this.clmCalleeMethod,
+            this.clmCalleeMethodParams,
             this.clmRowNumCalleeMethod});
             this.dataGridViewResults.Location = new System.Drawing.Point(48, 197);
             this.dataGridViewResults.Name = "dataGridViewResults";
@@ -217,6 +219,13 @@
             this.clmCalleeMethod.Name = "clmCalleeMethod";
             this.clmCalleeMethod.ReadOnly = true;
             // 
+            // clmCalleeMethodParams
+            // 
+            this.clmCalleeMethodParams.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmCalleeMethodParams.HeaderText = "呼出先メソッド引数";
+            this.clmCalleeMethodParams.Name = "clmCalleeMethodParams";
+            this.clmCalleeMethodParams.ReadOnly = true;
+            // 
             // clmRowNumCalleeMethod
             // 
             this.clmRowNumCalleeMethod.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
@@ -267,6 +276,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmCallerMethod;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmCalleeClass;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmCalleeMethod;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmCalleeMethodParams;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmRowNumCalleeMethod;
     }
 }

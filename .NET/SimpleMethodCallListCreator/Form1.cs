@@ -46,7 +46,8 @@ namespace SimpleMethodCallListCreator
             clmClassName.DataPropertyName = nameof(MethodCallDetail.ClassName);
             clmCallerMethod.DataPropertyName = nameof(MethodCallDetail.CallerMethod);
             clmCalleeClass.DataPropertyName = nameof(MethodCallDetail.CalleeClass);
-            clmCalleeMethod.DataPropertyName = nameof(MethodCallDetail.CalleeMethod);
+            clmCalleeMethod.DataPropertyName = nameof(MethodCallDetail.CalleeMethodName);
+            clmCalleeMethodParams.DataPropertyName = nameof(MethodCallDetail.CalleeMethodArguments);
             clmRowNumCalleeMethod.DataPropertyName = nameof(MethodCallDetail.LineNumber);
         }
 
@@ -229,7 +230,8 @@ namespace SimpleMethodCallListCreator
             {
                 foreach (var item in source)
                 {
-                    if (!ignoreRegex.IsMatch(item.CalleeMethod))
+                    var methodName = item.CalleeMethodName ?? string.Empty;
+                    if (!ignoreRegex.IsMatch(methodName))
                     {
                         filtered.Add(item);
                     }
@@ -248,7 +250,7 @@ namespace SimpleMethodCallListCreator
             foreach (var item in source)
             {
                 var exclude = false;
-                var methodName = ExtractMethodName(item.CalleeMethod);
+                var methodName = item.CalleeMethodName ?? string.Empty;
                 foreach (var raw in tokens)
                 {
                     var keyword = raw.Trim();
@@ -478,23 +480,6 @@ namespace SimpleMethodCallListCreator
                 dataGridViewResults.SelectAll();
                 e.Handled = true;
             }
-        }
-
-        private string ExtractMethodName(string calleeMethod)
-        {
-            if (string.IsNullOrEmpty(calleeMethod))
-            {
-                return string.Empty;
-            }
-
-            var trimmed = calleeMethod.Trim();
-            var parenIndex = trimmed.IndexOf('(');
-            if (parenIndex > 0)
-            {
-                trimmed = trimmed.Substring(0, parenIndex);
-            }
-
-            return trimmed;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

@@ -359,6 +359,8 @@ namespace SimpleMethodCallListCreator
                     var callText = text.Substring(methodNameInfo.MethodNameStart,
                         closeParen - methodNameInfo.MethodNameStart + 1).Trim();
                     callText = NormalizeCallText(callText);
+                    var methodNameOnly = methodNameInfo.MethodName;
+                    var methodArguments = ExtractArguments(callText);
 
                     var calleeClass = methodNameInfo.Callee;
                     if (string.Equals(calleeClass, "this", StringComparison.Ordinal))
@@ -372,7 +374,8 @@ namespace SimpleMethodCallListCreator
                         javaClass.Name,
                         method.Name,
                         calleeClass,
-                        callText,
+                        methodNameOnly,
+                        methodArguments,
                         lineNumber));
 
                     index = closeParen + 1;
@@ -631,6 +634,22 @@ namespace SimpleMethodCallListCreator
             }
 
             return backslashCount % 2 == 1;
+        }
+
+        private static string ExtractArguments(string callText)
+        {
+            if (string.IsNullOrEmpty(callText))
+            {
+                return string.Empty;
+            }
+
+            var index = callText.IndexOf('(');
+            if (index < 0)
+            {
+                return string.Empty;
+            }
+
+            return callText.Substring(index);
         }
 
         private static string NormalizeCallText(string callText)

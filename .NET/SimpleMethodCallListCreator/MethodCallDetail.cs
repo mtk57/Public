@@ -6,14 +6,15 @@ namespace SimpleMethodCallListCreator
     public class MethodCallDetail
     {
         public MethodCallDetail(string filePath, string className, string callerMethod,
-            string calleeClass, string calleeMethod, int lineNumber)
+            string calleeClass, string calleeMethodName, string calleeMethodArguments, int lineNumber)
         {
             FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             FileName = Path.GetFileName(filePath);
             ClassName = className;
             CallerMethod = callerMethod;
             CalleeClass = calleeClass;
-            CalleeMethod = calleeMethod;
+            CalleeMethodName = calleeMethodName;
+            CalleeMethodArguments = calleeMethodArguments;
             LineNumber = lineNumber;
         }
 
@@ -27,7 +28,14 @@ namespace SimpleMethodCallListCreator
 
         public string CalleeClass { get; }
 
-        public string CalleeMethod { get; }
+        public string CalleeMethodName { get; }
+
+        public string CalleeMethodArguments { get; }
+
+        public string CalleeMethodFull
+        {
+            get { return string.Concat(CalleeMethodName, CalleeMethodArguments); }
+        }
 
         public int LineNumber { get; }
     }

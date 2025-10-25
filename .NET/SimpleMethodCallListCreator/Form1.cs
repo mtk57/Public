@@ -35,7 +35,7 @@ namespace SimpleMethodCallListCreator
             dataGridViewResults.AutoGenerateColumns = false;
             dataGridViewResults.DataSource = _bindingSource;
             dataGridViewResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridViewResults.MultiSelect = false;
+            dataGridViewResults.MultiSelect = true;
             dataGridViewResults.RowHeadersVisible = false;
             dataGridViewResults.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
             dataGridViewResults.AllowUserToAddRows = false;
@@ -57,6 +57,7 @@ namespace SimpleMethodCallListCreator
             cmbFilePath.DragEnter += CmbFilePath_DragEnter;
             cmbFilePath.DragDrop += CmbFilePath_DragDrop;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
+            dataGridViewResults.KeyDown += DataGridViewResults_KeyDown;
             FormClosing += MainForm_FormClosing;
         }
 
@@ -247,6 +248,7 @@ namespace SimpleMethodCallListCreator
             foreach (var item in source)
             {
                 var exclude = false;
+                var methodName = ExtractMethodName(item.CalleeMethod);
                 foreach (var raw in tokens)
                 {
                     var keyword = raw.Trim();
@@ -255,7 +257,7 @@ namespace SimpleMethodCallListCreator
                         continue;
                     }
 
-                    if (MatchesRule(item.CalleeMethod, keyword, rule, comparison))
+                    if (MatchesRule(methodName, keyword, rule, comparison))
                     {
                         exclude = true;
                         break;
@@ -273,6 +275,11 @@ namespace SimpleMethodCallListCreator
 
         private bool MatchesRule(string target, string keyword, IgnoreRule rule, StringComparison comparison)
         {
+            if (target == null)
+            {
+                target = string.Empty;
+            }
+
             switch (rule)
             {
                 case IgnoreRule.StartsWith:
@@ -462,6 +469,32 @@ namespace SimpleMethodCallListCreator
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ErrorLogger.LogException(ex);
             }
+        }
+
+        private void DataGridViewResults_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.A)
+            {
+                dataGridViewResults.SelectAll();
+                e.Handled = true;
+            }
+        }
+
+        private string ExtractMethodName(string calleeMethod)
+        {
+            if (string.IsNullOrEmpty(calleeMethod))
+            {
+                return string.Empty;
+            }
+
+            var trimmed = calleeMethod.Trim();
+            var parenIndex = trimmed.IndexOf('(');
+            if (parenIndex > 0)
+            {
+                trimmed = trimmed.Substring(0, parenIndex);
+            }
+
+            return trimmed;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

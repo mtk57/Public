@@ -7,6 +7,7 @@ namespace SimpleMethodCallListCreator
 {
     public static class JavaMethodCallAnalyzer
     {
+        private const bool ExcludeConstructors = true;
         private static readonly HashSet<string> ReservedKeywords = new HashSet<string>(StringComparer.Ordinal)
         {
             "if",
@@ -287,6 +288,13 @@ namespace SimpleMethodCallListCreator
                     {
                         var line = lineIndexer.GetLineNumber(next);
                         throw new JavaParseException("メソッド定義の終端が見つかりません。", line, methodName);
+                    }
+
+                    if (ExcludeConstructors && string.Equals(methodName, javaClass.Name, StringComparison.Ordinal))
+                    {
+                        index = bodyEnd + 1;
+                        braceDepth = 0;
+                        continue;
                     }
 
                     methods.Add(new JavaMethodInfo

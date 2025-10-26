@@ -26,5 +26,11 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public int SelectedIgnoreKeywordIndex { get; set; } = -1;
+
+        [DataMember]
+        public List<string> RecentCallerMethods { get; set; } = new List<string>();
+
+        [DataMember]
+        public string LastCallerMethod { get; set; } = string.Empty;
     }
 }

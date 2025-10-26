@@ -61,6 +61,14 @@
             this.txtClassNameFilter = new System.Windows.Forms.TextBox();
             this.txtFileNameFilter = new System.Windows.Forms.TextBox();
             this.txtFilePathFilter = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.label8 = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -81,10 +89,10 @@
             this.clmCalleeMethod,
             this.clmCalleeMethodParams,
             this.clmRowNumCalleeMethod});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 257);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 272);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(743, 223);
+            this.dataGridViewResults.Size = new System.Drawing.Size(780, 190);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmFilePath
@@ -146,7 +154,7 @@
             // btnBrowse
             // 
             this.btnBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowse.Location = new System.Drawing.Point(686, 28);
+            this.btnBrowse.Location = new System.Drawing.Point(723, 28);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
             this.btnBrowse.TabIndex = 0;
@@ -160,7 +168,7 @@
             this.cmbIgnoreKeyword.FormattingEnabled = true;
             this.cmbIgnoreKeyword.Location = new System.Drawing.Point(48, 133);
             this.cmbIgnoreKeyword.Name = "cmbIgnoreKeyword";
-            this.cmbIgnoreKeyword.Size = new System.Drawing.Size(632, 20);
+            this.cmbIgnoreKeyword.Size = new System.Drawing.Size(669, 20);
             this.cmbIgnoreKeyword.TabIndex = 0;
             // 
             // cmbFilePath
@@ -171,7 +179,7 @@
             this.cmbFilePath.FormattingEnabled = true;
             this.cmbFilePath.Location = new System.Drawing.Point(48, 28);
             this.cmbFilePath.Name = "cmbFilePath";
-            this.cmbFilePath.Size = new System.Drawing.Size(632, 20);
+            this.cmbFilePath.Size = new System.Drawing.Size(669, 20);
             this.cmbFilePath.TabIndex = 1;
             // 
             // label1
@@ -232,17 +240,15 @@
             // 
             // cmbIgnoreRules
             // 
-            this.cmbIgnoreRules.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbIgnoreRules.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbIgnoreRules.FormattingEnabled = true;
             this.cmbIgnoreRules.Items.AddRange(new object[] {
             "始まる",
             "終わる",
             "含む"});
-            this.cmbIgnoreRules.Location = new System.Drawing.Point(298, 157);
+            this.cmbIgnoreRules.Location = new System.Drawing.Point(298, 156);
             this.cmbIgnoreRules.Name = "cmbIgnoreRules";
-            this.cmbIgnoreRules.Size = new System.Drawing.Size(84, 20);
+            this.cmbIgnoreRules.Size = new System.Drawing.Size(78, 20);
             this.cmbIgnoreRules.TabIndex = 80;
             // 
             // btnExport
@@ -271,7 +277,7 @@
             this.cmbCallerMethod.FormattingEnabled = true;
             this.cmbCallerMethod.Location = new System.Drawing.Point(48, 76);
             this.cmbCallerMethod.Name = "cmbCallerMethod";
-            this.cmbCallerMethod.Size = new System.Drawing.Size(632, 20);
+            this.cmbCallerMethod.Size = new System.Drawing.Size(669, 20);
             this.cmbCallerMethod.TabIndex = 83;
             // 
             // label4
@@ -285,65 +291,145 @@
             // 
             // txtCallerMethodNameFilter
             // 
-            this.txtCallerMethodNameFilter.Location = new System.Drawing.Point(317, 232);
+            this.txtCallerMethodNameFilter.Location = new System.Drawing.Point(318, 247);
             this.txtCallerMethodNameFilter.Name = "txtCallerMethodNameFilter";
             this.txtCallerMethodNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtCallerMethodNameFilter.TabIndex = 85;
             // 
             // txtCalleeClassNameFilter
             // 
-            this.txtCalleeClassNameFilter.Location = new System.Drawing.Point(406, 232);
+            this.txtCalleeClassNameFilter.Location = new System.Drawing.Point(407, 247);
             this.txtCalleeClassNameFilter.Name = "txtCalleeClassNameFilter";
             this.txtCalleeClassNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtCalleeClassNameFilter.TabIndex = 86;
             // 
             // txtCalleeMethodNameFitter
             // 
-            this.txtCalleeMethodNameFitter.Location = new System.Drawing.Point(496, 232);
+            this.txtCalleeMethodNameFitter.Location = new System.Drawing.Point(497, 247);
             this.txtCalleeMethodNameFitter.Name = "txtCalleeMethodNameFitter";
             this.txtCalleeMethodNameFitter.Size = new System.Drawing.Size(84, 19);
             this.txtCalleeMethodNameFitter.TabIndex = 87;
             // 
             // txtCalleeMethodParamFilter
             // 
-            this.txtCalleeMethodParamFilter.Location = new System.Drawing.Point(586, 232);
+            this.txtCalleeMethodParamFilter.Location = new System.Drawing.Point(587, 247);
             this.txtCalleeMethodParamFilter.Name = "txtCalleeMethodParamFilter";
             this.txtCalleeMethodParamFilter.Size = new System.Drawing.Size(76, 19);
             this.txtCalleeMethodParamFilter.TabIndex = 88;
             // 
             // txtRowNumFilter
             // 
-            this.txtRowNumFilter.Location = new System.Drawing.Point(668, 232);
+            this.txtRowNumFilter.Location = new System.Drawing.Point(669, 247);
             this.txtRowNumFilter.Name = "txtRowNumFilter";
             this.txtRowNumFilter.Size = new System.Drawing.Size(76, 19);
             this.txtRowNumFilter.TabIndex = 89;
             // 
             // txtClassNameFilter
             // 
-            this.txtClassNameFilter.Location = new System.Drawing.Point(231, 232);
+            this.txtClassNameFilter.Location = new System.Drawing.Point(232, 247);
             this.txtClassNameFilter.Name = "txtClassNameFilter";
             this.txtClassNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtClassNameFilter.TabIndex = 90;
             // 
             // txtFileNameFilter
             // 
-            this.txtFileNameFilter.Location = new System.Drawing.Point(144, 232);
+            this.txtFileNameFilter.Location = new System.Drawing.Point(145, 247);
             this.txtFileNameFilter.Name = "txtFileNameFilter";
             this.txtFileNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtFileNameFilter.TabIndex = 91;
             // 
             // txtFilePathFilter
             // 
-            this.txtFilePathFilter.Location = new System.Drawing.Point(54, 232);
+            this.txtFilePathFilter.Location = new System.Drawing.Point(55, 247);
             this.txtFilePathFilter.Name = "txtFilePathFilter";
             this.txtFilePathFilter.Size = new System.Drawing.Size(84, 19);
             this.txtFilePathFilter.TabIndex = 92;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(53, 232);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(58, 12);
+            this.label5.TabIndex = 93;
+            this.label5.Text = "ファイルパス";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(143, 232);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(51, 12);
+            this.label6.TabIndex = 94;
+            this.label6.Text = "ファイル名";
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(233, 232);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(30, 12);
+            this.label7.TabIndex = 95;
+            this.label7.Text = "クラス";
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(316, 232);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(74, 12);
+            this.label8.TabIndex = 96;
+            this.label8.Text = "呼出元メソッド";
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(405, 232);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(66, 12);
+            this.label9.TabIndex = 97;
+            this.label9.Text = "呼出先クラス";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(495, 232);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(74, 12);
+            this.label10.TabIndex = 98;
+            this.label10.Text = "呼出先メソッド";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(585, 232);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(29, 12);
+            this.label11.TabIndex = 99;
+            this.label11.Text = "引数";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(667, 232);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(41, 12);
+            this.label12.TabIndex = 100;
+            this.label12.Text = "行番号";
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(767, 492);
+            this.ClientSize = new System.Drawing.Size(804, 459);
+            this.Controls.Add(this.label12);
+            this.Controls.Add(this.label11);
+            this.Controls.Add(this.label10);
+            this.Controls.Add(this.label9);
+            this.Controls.Add(this.label8);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.txtFilePathFilter);
             this.Controls.Add(this.txtFileNameFilter);
             this.Controls.Add(this.txtClassNameFilter);
@@ -368,7 +454,7 @@
             this.Controls.Add(this.cmbIgnoreKeyword);
             this.Controls.Add(this.btnBrowse);
             this.Name = "MainForm";
-            this.Text = "Simple Grep";
+            this.Text = "Simple Method CallList Creator";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -408,6 +494,14 @@
         private System.Windows.Forms.TextBox txtClassNameFilter;
         private System.Windows.Forms.TextBox txtFileNameFilter;
         private System.Windows.Forms.TextBox txtFilePathFilter;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label12;
     }
 }
 

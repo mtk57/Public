@@ -18,6 +18,7 @@ namespace SimpleMethodCallListCreator
 
         private AppSettings _settings;
         private readonly BindingList<MethodCallDetail> _bindingSource = new BindingList<MethodCallDetail>();
+        private List<MethodCallDetail> _allResults = new List<MethodCallDetail>();
 
         public MainForm()
         {
@@ -65,6 +66,15 @@ namespace SimpleMethodCallListCreator
             cmbFilePath.DragEnter += CmbFilePath_DragEnter;
             cmbFilePath.DragDrop += CmbFilePath_DragDrop;
             cmbIgnoreKeyword.KeyDown += CmbIgnoreKeyword_KeyDown;
+            cmbCallerMethod.KeyDown += CmbCallerMethod_KeyDown;
+            txtFilePathFilter.TextChanged += FilterTextBox_TextChanged;
+            txtFileNameFilter.TextChanged += FilterTextBox_TextChanged;
+            txtClassNameFilter.TextChanged += FilterTextBox_TextChanged;
+            txtCallerMethodNameFilter.TextChanged += FilterTextBox_TextChanged;
+            txtCalleeClassNameFilter.TextChanged += FilterTextBox_TextChanged;
+            txtCalleeMethodNameFitter.TextChanged += FilterTextBox_TextChanged;
+            txtCalleeMethodParamFilter.TextChanged += FilterTextBox_TextChanged;
+            txtRowNumFilter.TextChanged += FilterTextBox_TextChanged;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
             dataGridViewResults.KeyDown += DataGridViewResults_KeyDown;
             FormClosing += MainForm_FormClosing;
@@ -81,6 +91,11 @@ namespace SimpleMethodCallListCreator
             if (_settings.RecentIgnoreKeywords == null)
             {
                 _settings.RecentIgnoreKeywords = new List<string>();
+            }
+
+            if (_settings.RecentCallerMethods == null)
+            {
+                _settings.RecentCallerMethods = new List<string>();
             }
 
             cmbFilePath.Items.Clear();
@@ -117,6 +132,36 @@ namespace SimpleMethodCallListCreator
                 {
                     cmbIgnoreKeyword.Text = string.Empty;
                 }
+            }
+
+            cmbCallerMethod.Items.Clear();
+            foreach (var method in _settings.RecentCallerMethods)
+            {
+                cmbCallerMethod.Items.Add((method ?? string.Empty).Trim());
+            }
+
+            var lastCallerMethod = (_settings.LastCallerMethod ?? string.Empty).Trim();
+            if (!string.IsNullOrEmpty(lastCallerMethod))
+            {
+                var index = cmbCallerMethod.FindStringExact(lastCallerMethod);
+                if (index >= 0)
+                {
+                    cmbCallerMethod.SelectedIndex = index;
+                }
+                else
+                {
+                    cmbCallerMethod.SelectedIndex = -1;
+                    cmbCallerMethod.Text = lastCallerMethod;
+                }
+            }
+            else if (cmbCallerMethod.Items.Count > 0)
+            {
+                cmbCallerMethod.SelectedIndex = 0;
+            }
+            else
+            {
+                cmbCallerMethod.SelectedIndex = -1;
+                cmbCallerMethod.Text = string.Empty;
             }
 
             chkUseRegex.Checked = _settings.UseRegex;
@@ -232,6 +277,7 @@ namespace SimpleMethodCallListCreator
             var useRegex = chkUseRegex.Checked;
             var matchCase = chkCase.Checked;
             var ignoreRule = GetSelectedIgnoreRule();
+            var callerMethodFilter = (cmbCallerMethod.Text ?? string.Empty).Trim();
 
             Regex ignoreRegex = null;
             if (useRegex && !string.IsNullOrEmpty(ignoreKeyword))
@@ -254,9 +300,23 @@ namespace SimpleMethodCallListCreator
             try
             {
                 var analysisResults = JavaMethodCallAnalyzer.Analyze(filePath);
+                if (!string.IsNullOrEmpty(callerMethodFilter))
+                {
+                    var callerFiltered = new List<MethodCallDetail>();
+                    foreach (var detail in analysisResults)
+                    {
+                        if (string.Equals(detail.CallerMethod, callerMethodFilter, StringComparison.Ordinal))
+                        {
+                            callerFiltered.Add(detail);
+                        }
+                    }
+
+                    analysisResults = callerFiltered;
+                }
+
                 var filteredResults = FilterResults(analysisResults, ignoreKeyword, ignoreRegex, matchCase, ignoreRule, useRegex);
                 UpdateGrid(filteredResults);
-                UpdateHistories(filePath, ignoreKeyword);
+                UpdateHistories(filePath, ignoreKeyword, callerMethodFilter);
                 SaveSettings();
             }
             catch (JavaParseException ex)
@@ -550,19 +610,86 @@ namespace SimpleMethodCallListCreator
 
         private void UpdateGrid(List<MethodCallDetail> results)
         {
+            _allResults = results ?? new List<MethodCallDetail>();
+            ApplyTextFilters();
+        }
+
+        private void ApplyTextFilters()
+        {
+            var filePathFilter = (txtFilePathFilter.Text ?? string.Empty).Trim();
+            var fileNameFilter = (txtFileNameFilter.Text ?? string.Empty).Trim();
+            var classNameFilter = (txtClassNameFilter.Text ?? string.Empty).Trim();
+            var callerMethodFilter = (txtCallerMethodNameFilter.Text ?? string.Empty).Trim();
+            var calleeClassFilter = (txtCalleeClassNameFilter.Text ?? string.Empty).Trim();
+            var calleeMethodFilter = (txtCalleeMethodNameFitter.Text ?? string.Empty).Trim();
+            var calleeParamFilter = (txtCalleeMethodParamFilter.Text ?? string.Empty).Trim();
+            var rowNumberFilter = (txtRowNumFilter.Text ?? string.Empty).Trim();
+
             _bindingSource.Clear();
-            if (results == null)
+            if (_allResults == null || _allResults.Count == 0)
             {
                 return;
             }
 
-            foreach (var item in results)
+            foreach (var detail in _allResults)
             {
-                _bindingSource.Add(item);
+                if (!MatchesFilter(detail.FilePath, filePathFilter))
+                {
+                    continue;
+                }
+
+                if (!MatchesFilter(detail.FileName, fileNameFilter))
+                {
+                    continue;
+                }
+
+                if (!MatchesFilter(detail.ClassName, classNameFilter))
+                {
+                    continue;
+                }
+
+                if (!MatchesFilter(detail.CallerMethod, callerMethodFilter))
+                {
+                    continue;
+                }
+
+                if (!MatchesFilter(detail.CalleeClass, calleeClassFilter))
+                {
+                    continue;
+                }
+
+                if (!MatchesFilter(detail.CalleeMethodName, calleeMethodFilter))
+                {
+                    continue;
+                }
+
+                if (!MatchesFilter(detail.CalleeMethodArguments, calleeParamFilter))
+                {
+                    continue;
+                }
+
+                var lineNumberText = detail.LineNumber.ToString(CultureInfo.InvariantCulture);
+                if (!MatchesFilter(lineNumberText, rowNumberFilter))
+                {
+                    continue;
+                }
+
+                _bindingSource.Add(detail);
             }
         }
 
-        private void UpdateHistories(string filePath, string ignoreKeyword)
+        private bool MatchesFilter(string source, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+            {
+                return true;
+            }
+
+            source = source ?? string.Empty;
+            return source.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void UpdateHistories(string filePath, string ignoreKeyword, string callerMethod)
         {
             if (_settings == null)
             {
@@ -580,6 +707,27 @@ namespace SimpleMethodCallListCreator
                 if (cmbIgnoreKeyword.Items.Count > 0)
                 {
                     cmbIgnoreKeyword.SelectedIndex = 0;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(callerMethod))
+            {
+                if (_settings.RecentCallerMethods == null)
+                {
+                    _settings.RecentCallerMethods = new List<string>();
+                }
+
+                UpdateHistoryList(_settings.RecentCallerMethods, callerMethod, false);
+                RefreshComboItems(cmbCallerMethod, _settings.RecentCallerMethods, callerMethod);
+                var index = cmbCallerMethod.FindStringExact(callerMethod);
+                if (index >= 0)
+                {
+                    cmbCallerMethod.SelectedIndex = index;
+                }
+                else
+                {
+                    cmbCallerMethod.SelectedIndex = -1;
+                    cmbCallerMethod.Text = callerMethod;
                 }
             }
         }
@@ -679,6 +827,40 @@ namespace SimpleMethodCallListCreator
             {
                 cmbIgnoreKeyword.SelectedIndex = -1;
                 cmbIgnoreKeyword.Text = selectedValue;
+            }
+
+            var currentCallerMethod = (cmbCallerMethod.Text ?? string.Empty).Trim();
+            var callerHistory = CaptureHistoryFromCombo(cmbCallerMethod, false);
+            for (var i = callerHistory.Count - 1; i >= 0; i--)
+            {
+                if (string.Equals(callerHistory[i], currentCallerMethod, StringComparison.Ordinal))
+                {
+                    callerHistory.RemoveAt(i);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(currentCallerMethod))
+            {
+                callerHistory.Insert(0, currentCallerMethod);
+            }
+
+            if (callerHistory.Count > MaxHistoryCount)
+            {
+                callerHistory.RemoveRange(MaxHistoryCount, callerHistory.Count - MaxHistoryCount);
+            }
+
+            _settings.RecentCallerMethods = callerHistory;
+            _settings.LastCallerMethod = currentCallerMethod;
+            RefreshComboItems(cmbCallerMethod, callerHistory, currentCallerMethod);
+            var callerIndex = cmbCallerMethod.FindStringExact(currentCallerMethod);
+            if (callerIndex >= 0)
+            {
+                cmbCallerMethod.SelectedIndex = callerIndex;
+            }
+            else
+            {
+                cmbCallerMethod.SelectedIndex = -1;
+                cmbCallerMethod.Text = currentCallerMethod;
             }
 
             try
@@ -803,6 +985,34 @@ namespace SimpleMethodCallListCreator
             }
 
             e.Handled = true;
+        }
+
+        private void CmbCallerMethod_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete)
+            {
+                return;
+            }
+
+            var index = cmbCallerMethod.SelectedIndex;
+            if (index < 0 || index >= cmbCallerMethod.Items.Count)
+            {
+                return;
+            }
+
+            var removed = cmbCallerMethod.Items[index] as string;
+            cmbCallerMethod.Items.RemoveAt(index);
+            if (!string.IsNullOrEmpty(removed) && _settings?.RecentCallerMethods != null)
+            {
+                _settings.RecentCallerMethods.RemoveAll(x => string.Equals(x, removed, StringComparison.Ordinal));
+            }
+
+            e.Handled = true;
+        }
+
+        private void FilterTextBox_TextChanged(object sender, EventArgs e)
+        {
+            ApplyTextFilters();
         }
 
         private void LaunchSakura(string filePath, int lineNumber)

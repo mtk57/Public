@@ -214,6 +214,7 @@ namespace SimpleMethodCallListCreator
                 WriteResultsToTsv(exportPath);
                 MessageBox.Show(this, $"結果を出力しました。\n{exportPath}", "結果出力",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
+                OpenExportFolder(exportPath);
             }
             catch (Exception ex)
             {
@@ -1164,6 +1165,33 @@ namespace SimpleMethodCallListCreator
             }
 
             return builder.ToString();
+        }
+
+        private void OpenExportFolder(string exportPath)
+        {
+            try
+            {
+                var directory = Path.GetDirectoryName(exportPath);
+                if (string.IsNullOrEmpty(directory))
+                {
+                    return;
+                }
+
+                if (!Directory.Exists(directory))
+                {
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = directory,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.LogException(ex);
+            }
         }
 
         private void LaunchSakura(string filePath, int lineNumber)

@@ -142,7 +142,12 @@ namespace SimpleMethodCallListCreator
             }
 
             var lastCallerMethod = (_settings.LastCallerMethod ?? string.Empty).Trim();
-            if (!string.IsNullOrEmpty(lastCallerMethod))
+            if (_settings.SelectedCallerMethodIndex >= 0 &&
+                _settings.SelectedCallerMethodIndex < cmbCallerMethod.Items.Count)
+            {
+                cmbCallerMethod.SelectedIndex = _settings.SelectedCallerMethodIndex;
+            }
+            else if (!string.IsNullOrEmpty(lastCallerMethod))
             {
                 var index = cmbCallerMethod.FindStringExact(lastCallerMethod);
                 if (index >= 0)
@@ -154,10 +159,6 @@ namespace SimpleMethodCallListCreator
                     cmbCallerMethod.SelectedIndex = -1;
                     cmbCallerMethod.Text = lastCallerMethod;
                 }
-            }
-            else if (cmbCallerMethod.Items.Count > 0)
-            {
-                cmbCallerMethod.SelectedIndex = 0;
             }
             else
             {
@@ -766,12 +767,18 @@ namespace SimpleMethodCallListCreator
                 if (index >= 0)
                 {
                     cmbCallerMethod.SelectedIndex = index;
+                    _settings.SelectedCallerMethodIndex = index;
                 }
                 else
                 {
                     cmbCallerMethod.SelectedIndex = -1;
                     cmbCallerMethod.Text = callerMethod;
+                    _settings.SelectedCallerMethodIndex = -1;
                 }
+            }
+            else
+            {
+                _settings.SelectedCallerMethodIndex = -1;
             }
         }
 
@@ -899,11 +906,13 @@ namespace SimpleMethodCallListCreator
             if (callerIndex >= 0)
             {
                 cmbCallerMethod.SelectedIndex = callerIndex;
+                _settings.SelectedCallerMethodIndex = callerIndex;
             }
             else
             {
                 cmbCallerMethod.SelectedIndex = -1;
                 cmbCallerMethod.Text = currentCallerMethod;
+                _settings.SelectedCallerMethodIndex = -1;
             }
 
             try

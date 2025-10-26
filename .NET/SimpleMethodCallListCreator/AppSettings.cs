@@ -32,5 +32,8 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public string LastCallerMethod { get; set; } = string.Empty;
+
+        [DataMember]
+        public int SelectedCallerMethodIndex { get; set; } = -1;
     }
 }

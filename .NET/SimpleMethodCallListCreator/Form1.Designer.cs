@@ -40,15 +40,9 @@
             this.clmRowNumCalleeMethod = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.btnBrowse = new System.Windows.Forms.Button();
-            this.cmbIgnoreKeyword = new System.Windows.Forms.ComboBox();
             this.cmbFilePath = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.chkUseRegex = new System.Windows.Forms.CheckBox();
-            this.chkCase = new System.Windows.Forms.CheckBox();
             this.btnRun = new System.Windows.Forms.Button();
-            this.label3 = new System.Windows.Forms.Label();
-            this.cmbIgnoreRules = new System.Windows.Forms.ComboBox();
             this.btnExport = new System.Windows.Forms.Button();
             this.btnImport = new System.Windows.Forms.Button();
             this.cmbCallerMethod = new System.Windows.Forms.ComboBox();
@@ -69,6 +63,7 @@
             this.label10 = new System.Windows.Forms.Label();
             this.label11 = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
+            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -89,10 +84,10 @@
             this.clmCalleeMethod,
             this.clmCalleeMethodParams,
             this.clmRowNumCalleeMethod});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 272);
+            this.dataGridViewResults.Location = new System.Drawing.Point(21, 206);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(780, 190);
+            this.dataGridViewResults.Size = new System.Drawing.Size(771, 241);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmFilePath
@@ -161,16 +156,6 @@
             this.btnBrowse.Text = "参照";
             this.btnBrowse.UseVisualStyleBackColor = true;
             // 
-            // cmbIgnoreKeyword
-            // 
-            this.cmbIgnoreKeyword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.cmbIgnoreKeyword.FormattingEnabled = true;
-            this.cmbIgnoreKeyword.Location = new System.Drawing.Point(48, 133);
-            this.cmbIgnoreKeyword.Name = "cmbIgnoreKeyword";
-            this.cmbIgnoreKeyword.Size = new System.Drawing.Size(669, 20);
-            this.cmbIgnoreKeyword.TabIndex = 0;
-            // 
             // cmbFilePath
             // 
             this.cmbFilePath.AllowDrop = true;
@@ -191,69 +176,18 @@
             this.label1.TabIndex = 2;
             this.label1.Text = "対象ファイルパス";
             // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(46, 118);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(77, 12);
-            this.label2.TabIndex = 3;
-            this.label2.Text = "除外キーワード";
-            // 
-            // chkUseRegex
-            // 
-            this.chkUseRegex.AutoSize = true;
-            this.chkUseRegex.Location = new System.Drawing.Point(48, 159);
-            this.chkUseRegex.Name = "chkUseRegex";
-            this.chkUseRegex.Size = new System.Drawing.Size(72, 16);
-            this.chkUseRegex.TabIndex = 6;
-            this.chkUseRegex.Text = "正規表現";
-            this.chkUseRegex.UseVisualStyleBackColor = true;
-            // 
-            // chkCase
-            // 
-            this.chkCase.AutoSize = true;
-            this.chkCase.Location = new System.Drawing.Point(144, 159);
-            this.chkCase.Name = "chkCase";
-            this.chkCase.Size = new System.Drawing.Size(72, 16);
-            this.chkCase.TabIndex = 69;
-            this.chkCase.Text = "大小区別";
-            this.chkCase.UseVisualStyleBackColor = true;
-            // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(298, 183);
+            this.btnRun.Location = new System.Drawing.Point(307, 117);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 33);
             this.btnRun.TabIndex = 70;
             this.btnRun.Text = "実行";
             this.btnRun.UseVisualStyleBackColor = true;
             // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(233, 160);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(59, 12);
-            this.label3.TabIndex = 79;
-            this.label3.Text = "除外ルール";
-            // 
-            // cmbIgnoreRules
-            // 
-            this.cmbIgnoreRules.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbIgnoreRules.FormattingEnabled = true;
-            this.cmbIgnoreRules.Items.AddRange(new object[] {
-            "始まる",
-            "終わる",
-            "含む"});
-            this.cmbIgnoreRules.Location = new System.Drawing.Point(298, 156);
-            this.cmbIgnoreRules.Name = "cmbIgnoreRules";
-            this.cmbIgnoreRules.Size = new System.Drawing.Size(78, 20);
-            this.cmbIgnoreRules.TabIndex = 80;
-            // 
             // btnExport
             // 
-            this.btnExport.Location = new System.Drawing.Point(575, 189);
+            this.btnExport.Location = new System.Drawing.Point(584, 123);
             this.btnExport.Name = "btnExport";
             this.btnExport.Size = new System.Drawing.Size(75, 21);
             this.btnExport.TabIndex = 81;
@@ -262,7 +196,7 @@
             // 
             // btnImport
             // 
-            this.btnImport.Location = new System.Drawing.Point(656, 189);
+            this.btnImport.Location = new System.Drawing.Point(665, 123);
             this.btnImport.Name = "btnImport";
             this.btnImport.Size = new System.Drawing.Size(75, 21);
             this.btnImport.TabIndex = 82;
@@ -291,56 +225,56 @@
             // 
             // txtCallerMethodNameFilter
             // 
-            this.txtCallerMethodNameFilter.Location = new System.Drawing.Point(318, 247);
+            this.txtCallerMethodNameFilter.Location = new System.Drawing.Point(285, 181);
             this.txtCallerMethodNameFilter.Name = "txtCallerMethodNameFilter";
-            this.txtCallerMethodNameFilter.Size = new System.Drawing.Size(84, 19);
+            this.txtCallerMethodNameFilter.Size = new System.Drawing.Size(131, 19);
             this.txtCallerMethodNameFilter.TabIndex = 85;
             // 
             // txtCalleeClassNameFilter
             // 
-            this.txtCalleeClassNameFilter.Location = new System.Drawing.Point(407, 247);
+            this.txtCalleeClassNameFilter.Location = new System.Drawing.Point(422, 181);
             this.txtCalleeClassNameFilter.Name = "txtCalleeClassNameFilter";
             this.txtCalleeClassNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtCalleeClassNameFilter.TabIndex = 86;
             // 
             // txtCalleeMethodNameFitter
             // 
-            this.txtCalleeMethodNameFitter.Location = new System.Drawing.Point(497, 247);
+            this.txtCalleeMethodNameFitter.Location = new System.Drawing.Point(512, 181);
             this.txtCalleeMethodNameFitter.Name = "txtCalleeMethodNameFitter";
-            this.txtCalleeMethodNameFitter.Size = new System.Drawing.Size(84, 19);
+            this.txtCalleeMethodNameFitter.Size = new System.Drawing.Size(110, 19);
             this.txtCalleeMethodNameFitter.TabIndex = 87;
             // 
             // txtCalleeMethodParamFilter
             // 
-            this.txtCalleeMethodParamFilter.Location = new System.Drawing.Point(587, 247);
+            this.txtCalleeMethodParamFilter.Location = new System.Drawing.Point(628, 181);
             this.txtCalleeMethodParamFilter.Name = "txtCalleeMethodParamFilter";
             this.txtCalleeMethodParamFilter.Size = new System.Drawing.Size(76, 19);
             this.txtCalleeMethodParamFilter.TabIndex = 88;
             // 
             // txtRowNumFilter
             // 
-            this.txtRowNumFilter.Location = new System.Drawing.Point(669, 247);
+            this.txtRowNumFilter.Location = new System.Drawing.Point(710, 181);
             this.txtRowNumFilter.Name = "txtRowNumFilter";
-            this.txtRowNumFilter.Size = new System.Drawing.Size(76, 19);
+            this.txtRowNumFilter.Size = new System.Drawing.Size(49, 19);
             this.txtRowNumFilter.TabIndex = 89;
             // 
             // txtClassNameFilter
             // 
-            this.txtClassNameFilter.Location = new System.Drawing.Point(232, 247);
+            this.txtClassNameFilter.Location = new System.Drawing.Point(195, 181);
             this.txtClassNameFilter.Name = "txtClassNameFilter";
             this.txtClassNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtClassNameFilter.TabIndex = 90;
             // 
             // txtFileNameFilter
             // 
-            this.txtFileNameFilter.Location = new System.Drawing.Point(145, 247);
+            this.txtFileNameFilter.Location = new System.Drawing.Point(108, 181);
             this.txtFileNameFilter.Name = "txtFileNameFilter";
             this.txtFileNameFilter.Size = new System.Drawing.Size(84, 19);
             this.txtFileNameFilter.TabIndex = 91;
             // 
             // txtFilePathFilter
             // 
-            this.txtFilePathFilter.Location = new System.Drawing.Point(55, 247);
+            this.txtFilePathFilter.Location = new System.Drawing.Point(18, 181);
             this.txtFilePathFilter.Name = "txtFilePathFilter";
             this.txtFilePathFilter.Size = new System.Drawing.Size(84, 19);
             this.txtFilePathFilter.TabIndex = 92;
@@ -348,7 +282,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(53, 232);
+            this.label5.Location = new System.Drawing.Point(16, 166);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(58, 12);
             this.label5.TabIndex = 93;
@@ -357,7 +291,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(143, 232);
+            this.label6.Location = new System.Drawing.Point(106, 166);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(51, 12);
             this.label6.TabIndex = 94;
@@ -366,7 +300,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(233, 232);
+            this.label7.Location = new System.Drawing.Point(196, 166);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(30, 12);
             this.label7.TabIndex = 95;
@@ -375,7 +309,7 @@
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(316, 232);
+            this.label8.Location = new System.Drawing.Point(283, 166);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(74, 12);
             this.label8.TabIndex = 96;
@@ -384,7 +318,7 @@
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(405, 232);
+            this.label9.Location = new System.Drawing.Point(420, 166);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(66, 12);
             this.label9.TabIndex = 97;
@@ -393,7 +327,7 @@
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(495, 232);
+            this.label10.Location = new System.Drawing.Point(510, 166);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(74, 12);
             this.label10.TabIndex = 98;
@@ -402,7 +336,7 @@
             // label11
             // 
             this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(585, 232);
+            this.label11.Location = new System.Drawing.Point(626, 166);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(29, 12);
             this.label11.TabIndex = 99;
@@ -411,17 +345,27 @@
             // label12
             // 
             this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(667, 232);
+            this.label12.Location = new System.Drawing.Point(708, 166);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(41, 12);
             this.label12.TabIndex = 100;
             this.label12.Text = "行番号";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(48, 117);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(80, 24);
+            this.button1.TabIndex = 101;
+            this.button1.Text = "除外指定";
+            this.button1.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(804, 459);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.label12);
             this.Controls.Add(this.label11);
             this.Controls.Add(this.label10);
@@ -442,16 +386,10 @@
             this.Controls.Add(this.cmbCallerMethod);
             this.Controls.Add(this.btnImport);
             this.Controls.Add(this.btnExport);
-            this.Controls.Add(this.cmbIgnoreRules);
-            this.Controls.Add(this.label3);
             this.Controls.Add(this.btnRun);
-            this.Controls.Add(this.chkCase);
             this.Controls.Add(this.dataGridViewResults);
-            this.Controls.Add(this.chkUseRegex);
-            this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.cmbFilePath);
-            this.Controls.Add(this.cmbIgnoreKeyword);
             this.Controls.Add(this.btnBrowse);
             this.Name = "MainForm";
             this.Text = "Simple Method CallList Creator";
@@ -465,15 +403,9 @@
         private System.Windows.Forms.DataGridView dataGridViewResults;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Button btnBrowse;
-        private System.Windows.Forms.ComboBox cmbIgnoreKeyword;
         private System.Windows.Forms.ComboBox cmbFilePath;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.CheckBox chkUseRegex;
-        private System.Windows.Forms.CheckBox chkCase;
         private System.Windows.Forms.Button btnRun;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.ComboBox cmbIgnoreRules;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFilePath;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFileName;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmClassName;
@@ -502,6 +434,7 @@
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Button button1;
     }
 }
 

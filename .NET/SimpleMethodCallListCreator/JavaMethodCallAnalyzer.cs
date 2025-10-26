@@ -356,6 +356,12 @@ namespace SimpleMethodCallListCreator
                         continue;
                     }
 
+                    if (methodNameInfo.IsConstructorCall)
+                    {
+                        index = closeParen + 1;
+                        continue;
+                    }
+
                     var callText = text.Substring(methodNameInfo.MethodNameStart,
                         closeParen - methodNameInfo.MethodNameStart + 1).Trim();
                     callText = NormalizeCallText(callText);
@@ -443,7 +449,26 @@ namespace SimpleMethodCallListCreator
                 callee = text.Substring(calleeStart, calleeEnd - calleeStart + 1);
             }
 
-            return new MethodNameInfo(methodName, methodNameStart, callee);
+            var isConstructorCall = false;
+            if (string.IsNullOrEmpty(callee))
+            {
+                var keywordEnd = SkipWhitespaceBackward(text, methodNameStart - 1);
+                if (keywordEnd >= lowerBound && keywordEnd >= 0 && IsIdentifierChar(text[keywordEnd]))
+                {
+                    var keywordStart = FindIdentifierStart(text, keywordEnd);
+                    if (keywordStart >= lowerBound)
+                    {
+                        var keyword = text.Substring(keywordStart, keywordEnd - keywordStart + 1);
+                        if (string.Equals(keyword, "new", StringComparison.Ordinal) &&
+                            IsStandaloneKeyword(text, keywordStart, "new"))
+                        {
+                            isConstructorCall = true;
+                        }
+                    }
+                }
+            }
+
+            return new MethodNameInfo(methodName, methodNameStart, callee, isConstructorCall);
         }
 
         private static bool IsStandaloneKeyword(string text, int index, string keyword)
@@ -751,16 +776,18 @@ namespace SimpleMethodCallListCreator
 
         private sealed class MethodNameInfo
         {
-            public MethodNameInfo(string methodName, int methodNameStart, string callee)
+            public MethodNameInfo(string methodName, int methodNameStart, string callee, bool isConstructorCall)
             {
                 MethodName = methodName;
                 MethodNameStart = methodNameStart;
                 Callee = callee;
+                IsConstructorCall = isConstructorCall;
             }
 
             public string MethodName { get; }
             public int MethodNameStart { get; }
             public string Callee { get; }
+            public bool IsConstructorCall { get; }
         }
 
         private sealed class StringState

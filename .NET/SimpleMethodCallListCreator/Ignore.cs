@@ -117,6 +117,13 @@ namespace SimpleMethodCallListCreator
 
         private bool TryCollectConditions(out List<IgnoreConditionSetting> result)
         {
+            if (dataGridView1.IsCurrentCellInEditMode)
+            {
+                dataGridView1.EndEdit();
+            }
+            dataGridView1.CurrentCell = null;
+            dataGridView1.EndEdit();
+
             result = new List<IgnoreConditionSetting>();
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {

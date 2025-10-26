@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="AppSettings.cs" />
     <Compile Include="ErrorLogger.cs" />
+    <Compile Include="IgnoreConditionSetting.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -19,6 +19,7 @@ namespace SimpleMethodCallListCreator
 
         private AppSettings _settings;
         private readonly BindingList<MethodCallDetail> _bindingSource = new BindingList<MethodCallDetail>();
+        private List<MethodCallDetail> _sourceResults = new List<MethodCallDetail>();
         private List<MethodCallDetail> _allResults = new List<MethodCallDetail>();
 
         public MainForm()
@@ -66,7 +67,6 @@ namespace SimpleMethodCallListCreator
             btnImport.Click += BtnImport_Click;
             cmbFilePath.DragEnter += CmbFilePath_DragEnter;
             cmbFilePath.DragDrop += CmbFilePath_DragDrop;
-            cmbIgnoreKeyword.KeyDown += CmbIgnoreKeyword_KeyDown;
             cmbCallerMethod.KeyDown += CmbCallerMethod_KeyDown;
             txtFilePathFilter.TextChanged += FilterTextBox_TextChanged;
             txtFileNameFilter.TextChanged += FilterTextBox_TextChanged;
@@ -76,6 +76,7 @@ namespace SimpleMethodCallListCreator
             txtCalleeMethodNameFitter.TextChanged += FilterTextBox_TextChanged;
             txtCalleeMethodParamFilter.TextChanged += FilterTextBox_TextChanged;
             txtRowNumFilter.TextChanged += FilterTextBox_TextChanged;
+            button1.Click += BtnEditIgnoreConditions_Click;
             dataGridViewResults.CellDoubleClick += DataGridViewResults_CellDoubleClick;
             dataGridViewResults.KeyDown += DataGridViewResults_KeyDown;
             FormClosing += MainForm_FormClosing;
@@ -89,14 +90,39 @@ namespace SimpleMethodCallListCreator
                 _settings.RecentFilePaths = new List<string>();
             }
 
-            if (_settings.RecentIgnoreKeywords == null)
-            {
-                _settings.RecentIgnoreKeywords = new List<string>();
-            }
-
             if (_settings.RecentCallerMethods == null)
             {
                 _settings.RecentCallerMethods = new List<string>();
+            }
+
+            if (_settings.IgnoreConditions == null)
+            {
+                _settings.IgnoreConditions = new List<IgnoreConditionSetting>();
+            }
+
+            if (_settings.IgnoreConditions.Count == 0 && _settings.RecentIgnoreKeywords != null &&
+                _settings.RecentIgnoreKeywords.Count > 0)
+            {
+                foreach (var keyword in _settings.RecentIgnoreKeywords)
+                {
+                    var trimmed = (keyword ?? string.Empty).Trim();
+                    if (trimmed.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    _settings.IgnoreConditions.Add(new IgnoreConditionSetting
+                    {
+                        Keyword = trimmed,
+                        Rule = _settings.IgnoreRule,
+                        UseRegex = _settings.UseRegex,
+                        MatchCase = _settings.MatchCase
+                    });
+                }
+
+                _settings.RecentIgnoreKeywords = new List<string>();
+                _settings.LastIgnoreKeyword = string.Empty;
+                _settings.SelectedIgnoreKeywordIndex = -1;
             }
 
             cmbFilePath.Items.Clear();
@@ -104,35 +130,6 @@ namespace SimpleMethodCallListCreator
             if (_settings.RecentFilePaths.Count > 0)
             {
                 cmbFilePath.Text = _settings.RecentFilePaths[0];
-            }
-
-            cmbIgnoreKeyword.Items.Clear();
-            foreach (var keyword in _settings.RecentIgnoreKeywords)
-            {
-                cmbIgnoreKeyword.Items.Add((keyword ?? string.Empty).Trim());
-            }
-
-            if (_settings.SelectedIgnoreKeywordIndex >= 0 &&
-                _settings.SelectedIgnoreKeywordIndex < cmbIgnoreKeyword.Items.Count)
-            {
-                cmbIgnoreKeyword.SelectedIndex = _settings.SelectedIgnoreKeywordIndex;
-            }
-            else
-            {
-                cmbIgnoreKeyword.SelectedIndex = -1;
-                var lastIgnoreKeyword = (_settings.LastIgnoreKeyword ?? string.Empty).Trim();
-                if (!string.IsNullOrEmpty(lastIgnoreKeyword))
-                {
-                    cmbIgnoreKeyword.Text = lastIgnoreKeyword;
-                }
-                else if (cmbIgnoreKeyword.Items.Count > 0)
-                {
-                    cmbIgnoreKeyword.SelectedIndex = 0;
-                }
-                else
-                {
-                    cmbIgnoreKeyword.Text = string.Empty;
-                }
             }
 
             cmbCallerMethod.Items.Clear();
@@ -166,16 +163,6 @@ namespace SimpleMethodCallListCreator
                 cmbCallerMethod.Text = string.Empty;
             }
 
-            chkUseRegex.Checked = _settings.UseRegex;
-            chkCase.Checked = _settings.MatchCase;
-
-            var ruleIndex = (int)_settings.IgnoreRule;
-            if (ruleIndex < 0 || ruleIndex >= cmbIgnoreRules.Items.Count)
-            {
-                ruleIndex = 0;
-            }
-
-            cmbIgnoreRules.SelectedIndex = ruleIndex;
         }
 
         private void BtnBrowse_Click(object sender, EventArgs e)
@@ -239,7 +226,9 @@ namespace SimpleMethodCallListCreator
                 try
                 {
                     var imported = ReadResultsFromTsv(dialog.FileName);
-                    UpdateGrid(imported);
+                    _sourceResults = new List<MethodCallDetail>(imported);
+                    var filtered = ApplyIgnoreConditions(_sourceResults);
+                    UpdateGrid(filtered);
                     MessageBox.Show(this, "結果を読み込みました。", "結果入力",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -250,6 +239,33 @@ namespace SimpleMethodCallListCreator
                     ErrorLogger.LogException(ex);
                 }
             }
+        }
+
+        private void BtnEditIgnoreConditions_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new IgnoreForm())
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.SetConditions(_settings?.IgnoreConditions);
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    _settings.IgnoreConditions = dialog.GetConditions();
+                    SaveSettings();
+                    ReapplyIgnoreConditions();
+                }
+            }
+        }
+
+        private void ReapplyIgnoreConditions()
+        {
+            if (_sourceResults == null || _sourceResults.Count == 0)
+            {
+                UpdateGrid(new List<MethodCallDetail>());
+                return;
+            }
+
+            var filtered = ApplyIgnoreConditions(_sourceResults);
+            UpdateGrid(filtered);
         }
 
         private void ExecuteAnalysis()
@@ -276,28 +292,7 @@ namespace SimpleMethodCallListCreator
                 return;
             }
 
-            var ignoreKeyword = (cmbIgnoreKeyword.Text ?? string.Empty).Trim();
-            var useRegex = chkUseRegex.Checked;
-            var matchCase = chkCase.Checked;
-            var ignoreRule = GetSelectedIgnoreRule();
             var callerMethodFilter = (cmbCallerMethod.Text ?? string.Empty).Trim();
-
-            Regex ignoreRegex = null;
-            if (useRegex && !string.IsNullOrEmpty(ignoreKeyword))
-            {
-                try
-                {
-                    var options = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
-                    ignoreRegex = new Regex(ignoreKeyword, options);
-                }
-                catch (ArgumentException ex)
-                {
-                    MessageBox.Show(this, $"正規表現が不正です。\n{ex.Message}", "入力エラー",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    ErrorLogger.LogError($"除外キーワードの正規表現エラー: {ex.Message}");
-                    return;
-                }
-            }
 
             Cursor = Cursors.WaitCursor;
             try
@@ -317,9 +312,10 @@ namespace SimpleMethodCallListCreator
                     analysisResults = callerFiltered;
                 }
 
-                var filteredResults = FilterResults(analysisResults, ignoreKeyword, ignoreRegex, matchCase, ignoreRule, useRegex);
+                _sourceResults = new List<MethodCallDetail>(analysisResults);
+                var filteredResults = ApplyIgnoreConditions(_sourceResults);
                 UpdateGrid(filteredResults);
-                UpdateHistories(filePath, ignoreKeyword, callerMethodFilter);
+                UpdateHistories(filePath, callerMethodFilter);
                 SaveSettings();
             }
             catch (JavaParseException ex)
@@ -360,54 +356,73 @@ namespace SimpleMethodCallListCreator
             MessageBox.Show(this, builder.ToString(), "解析エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        private List<MethodCallDetail> FilterResults(List<MethodCallDetail> source, string ignoreKeyword,
-            Regex ignoreRegex, bool matchCase, IgnoreRule rule, bool useRegex)
+        private List<MethodCallDetail> ApplyIgnoreConditions(List<MethodCallDetail> source)
         {
             if (source == null || source.Count == 0)
             {
                 return new List<MethodCallDetail>();
             }
 
-            if (string.IsNullOrEmpty(ignoreKeyword))
+            var conditions = _settings?.IgnoreConditions;
+            if (conditions == null || conditions.Count == 0)
             {
-                return source;
+                return new List<MethodCallDetail>(source);
             }
 
-            var filtered = new List<MethodCallDetail>(source.Count);
-            if (useRegex && ignoreRegex != null)
+            var compiled = new List<CompiledIgnoreCondition>();
+            foreach (var condition in conditions)
             {
-                foreach (var item in source)
+                var keyword = (condition.Keyword ?? string.Empty).Trim();
+                if (keyword.Length == 0)
                 {
-                    var methodName = item.CalleeMethodName ?? string.Empty;
-                    if (!ignoreRegex.IsMatch(methodName))
+                    continue;
+                }
+
+                Regex regex = null;
+                if (condition.UseRegex)
+                {
+                    try
                     {
-                        filtered.Add(item);
+                        var options = condition.MatchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
+                        regex = new Regex(keyword, options);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        ErrorLogger.LogError($"除外条件の正規表現が不正です (keyword: {keyword}): {ex.Message}");
+                        continue;
                     }
                 }
 
-                return filtered;
+                compiled.Add(new CompiledIgnoreCondition
+                {
+                    Keyword = keyword,
+                    Rule = condition.Rule,
+                    Comparison = condition.MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase,
+                    Regex = regex
+                });
             }
 
-            var tokens = ignoreKeyword.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-            if (tokens.Length == 0)
+            if (compiled.Count == 0)
             {
-                return source;
+                return new List<MethodCallDetail>(source);
             }
 
-            var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var filtered = new List<MethodCallDetail>(source.Count);
             foreach (var item in source)
             {
-                var exclude = false;
                 var methodName = item.CalleeMethodName ?? string.Empty;
-                foreach (var raw in tokens)
+                var exclude = false;
+                foreach (var condition in compiled)
                 {
-                    var keyword = raw.Trim();
-                    if (keyword.Length == 0)
+                    if (condition.Regex != null)
                     {
-                        continue;
+                        if (condition.Regex.IsMatch(methodName))
+                        {
+                            exclude = true;
+                            break;
+                        }
                     }
-
-                    if (MatchesRule(methodName, keyword, rule, comparison))
+                    else if (MatchesRule(methodName, condition.Keyword, condition.Rule, condition.Comparison))
                     {
                         exclude = true;
                         break;
@@ -653,9 +668,17 @@ namespace SimpleMethodCallListCreator
             }
         }
 
+        private sealed class CompiledIgnoreCondition
+        {
+            public string Keyword { get; set; }
+            public IgnoreRule Rule { get; set; }
+            public StringComparison Comparison { get; set; }
+            public Regex Regex { get; set; }
+        }
+
         private void UpdateGrid(List<MethodCallDetail> results)
         {
-            _allResults = results ?? new List<MethodCallDetail>();
+            _allResults = results != null ? new List<MethodCallDetail>(results) : new List<MethodCallDetail>();
             ApplyTextFilters();
         }
 
@@ -734,7 +757,7 @@ namespace SimpleMethodCallListCreator
             return source.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private void UpdateHistories(string filePath, string ignoreKeyword, string callerMethod)
+        private void UpdateHistories(string filePath, string callerMethod)
         {
             if (_settings == null)
             {
@@ -743,17 +766,6 @@ namespace SimpleMethodCallListCreator
 
             UpdateHistoryList(_settings.RecentFilePaths, filePath, true);
             RefreshComboItems(cmbFilePath, _settings.RecentFilePaths, filePath);
-
-            if (!string.IsNullOrEmpty(ignoreKeyword))
-            {
-                UpdateHistoryList(_settings.RecentIgnoreKeywords, ignoreKeyword, false);
-                RefreshComboItems(cmbIgnoreKeyword, _settings.RecentIgnoreKeywords, ignoreKeyword);
-                _settings.SelectedIgnoreKeywordIndex = 0;
-                if (cmbIgnoreKeyword.Items.Count > 0)
-                {
-                    cmbIgnoreKeyword.SelectedIndex = 0;
-                }
-            }
 
             if (!string.IsNullOrEmpty(callerMethod))
             {
@@ -821,17 +833,6 @@ namespace SimpleMethodCallListCreator
             }
         }
 
-        private IgnoreRule GetSelectedIgnoreRule()
-        {
-            var index = cmbIgnoreRules.SelectedIndex;
-            if (index < 0)
-            {
-                index = 0;
-            }
-
-            return (IgnoreRule)index;
-        }
-
         private void SaveSettings()
         {
             if (_settings == null)
@@ -839,47 +840,7 @@ namespace SimpleMethodCallListCreator
                 _settings = new AppSettings();
             }
 
-            _settings.UseRegex = chkUseRegex.Checked;
-            _settings.MatchCase = chkCase.Checked;
-            _settings.IgnoreRule = GetSelectedIgnoreRule();
             _settings.RecentFilePaths = CaptureHistoryFromCombo(cmbFilePath, true);
-            var currentIgnoreKeyword = (cmbIgnoreKeyword.Text ?? string.Empty).Trim();
-            var ignoreHistory = CaptureHistoryFromCombo(cmbIgnoreKeyword, false, allowEmpty: true);
-            var comparer = StringComparer.Ordinal;
-            for (var i = ignoreHistory.Count - 1; i >= 0; i--)
-            {
-                if (comparer.Equals(ignoreHistory[i] ?? string.Empty, currentIgnoreKeyword))
-                {
-                    ignoreHistory.RemoveAt(i);
-                }
-            }
-
-            ignoreHistory.Insert(0, currentIgnoreKeyword);
-            if (ignoreHistory.Count > MaxHistoryCount)
-            {
-                ignoreHistory.RemoveRange(MaxHistoryCount, ignoreHistory.Count - MaxHistoryCount);
-            }
-
-            _settings.RecentIgnoreKeywords = ignoreHistory;
-            _settings.LastIgnoreKeyword = currentIgnoreKeyword;
-            _settings.SelectedIgnoreKeywordIndex = ignoreHistory.Count > 0 ? 0 : -1;
-
-            var selectedValue = _settings.SelectedIgnoreKeywordIndex >= 0 &&
-                                _settings.SelectedIgnoreKeywordIndex < ignoreHistory.Count
-                ? ignoreHistory[_settings.SelectedIgnoreKeywordIndex]
-                : string.Empty;
-            RefreshComboItems(cmbIgnoreKeyword, ignoreHistory, selectedValue);
-            if (_settings.SelectedIgnoreKeywordIndex >= 0 &&
-                _settings.SelectedIgnoreKeywordIndex < cmbIgnoreKeyword.Items.Count)
-            {
-                cmbIgnoreKeyword.SelectedIndex = _settings.SelectedIgnoreKeywordIndex;
-            }
-            else
-            {
-                cmbIgnoreKeyword.SelectedIndex = -1;
-                cmbIgnoreKeyword.Text = selectedValue;
-            }
-
             var currentCallerMethod = (cmbCallerMethod.Text ?? string.Empty).Trim();
             var callerHistory = CaptureHistoryFromCombo(cmbCallerMethod, false);
             for (var i = callerHistory.Count - 1; i >= 0; i--)
@@ -1022,29 +983,6 @@ namespace SimpleMethodCallListCreator
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveSettings();
-        }
-
-        private void CmbIgnoreKeyword_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode != Keys.Delete)
-            {
-                return;
-            }
-
-            var index = cmbIgnoreKeyword.SelectedIndex;
-            if (index < 0 || index >= cmbIgnoreKeyword.Items.Count)
-            {
-                return;
-            }
-
-            var removed = cmbIgnoreKeyword.Items[index] as string;
-            cmbIgnoreKeyword.Items.RemoveAt(index);
-            if (!string.IsNullOrEmpty(removed) && _settings?.RecentIgnoreKeywords != null)
-            {
-                _settings.RecentIgnoreKeywords.RemoveAll(x => string.Equals(x, removed, StringComparison.Ordinal));
-            }
-
-            e.Handled = true;
         }
 
         private void CmbCallerMethod_KeyDown(object sender, KeyEventArgs e)

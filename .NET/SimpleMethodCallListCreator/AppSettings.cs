@@ -35,5 +35,8 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public int SelectedCallerMethodIndex { get; set; } = -1;
+
+        [DataMember]
+        public List<IgnoreConditionSetting> IgnoreConditions { get; set; } = new List<IgnoreConditionSetting>();
     }
 }

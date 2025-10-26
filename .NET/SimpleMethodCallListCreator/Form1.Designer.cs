@@ -51,6 +51,16 @@
             this.cmbIgnoreRules = new System.Windows.Forms.ComboBox();
             this.btnExport = new System.Windows.Forms.Button();
             this.btnImport = new System.Windows.Forms.Button();
+            this.cmbCallerMethod = new System.Windows.Forms.ComboBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.txtCallerMethodNameFilter = new System.Windows.Forms.TextBox();
+            this.txtCalleeClassNameFilter = new System.Windows.Forms.TextBox();
+            this.txtCalleeMethodNameFitter = new System.Windows.Forms.TextBox();
+            this.txtCalleeMethodParamFilter = new System.Windows.Forms.TextBox();
+            this.txtRowNumFilter = new System.Windows.Forms.TextBox();
+            this.txtClassNameFilter = new System.Windows.Forms.TextBox();
+            this.txtFileNameFilter = new System.Windows.Forms.TextBox();
+            this.txtFilePathFilter = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -71,10 +81,10 @@
             this.clmCalleeMethod,
             this.clmCalleeMethodParams,
             this.clmRowNumCalleeMethod});
-            this.dataGridViewResults.Location = new System.Drawing.Point(48, 197);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 257);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(660, 175);
+            this.dataGridViewResults.Size = new System.Drawing.Size(743, 223);
             this.dataGridViewResults.TabIndex = 6;
             // 
             // clmFilePath
@@ -148,7 +158,7 @@
             this.cmbIgnoreKeyword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbIgnoreKeyword.FormattingEnabled = true;
-            this.cmbIgnoreKeyword.Location = new System.Drawing.Point(48, 83);
+            this.cmbIgnoreKeyword.Location = new System.Drawing.Point(48, 133);
             this.cmbIgnoreKeyword.Name = "cmbIgnoreKeyword";
             this.cmbIgnoreKeyword.Size = new System.Drawing.Size(632, 20);
             this.cmbIgnoreKeyword.TabIndex = 0;
@@ -176,7 +186,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(46, 68);
+            this.label2.Location = new System.Drawing.Point(46, 118);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(77, 12);
             this.label2.TabIndex = 3;
@@ -185,7 +195,7 @@
             // chkUseRegex
             // 
             this.chkUseRegex.AutoSize = true;
-            this.chkUseRegex.Location = new System.Drawing.Point(48, 109);
+            this.chkUseRegex.Location = new System.Drawing.Point(48, 159);
             this.chkUseRegex.Name = "chkUseRegex";
             this.chkUseRegex.Size = new System.Drawing.Size(72, 16);
             this.chkUseRegex.TabIndex = 6;
@@ -195,7 +205,7 @@
             // chkCase
             // 
             this.chkCase.AutoSize = true;
-            this.chkCase.Location = new System.Drawing.Point(144, 109);
+            this.chkCase.Location = new System.Drawing.Point(144, 159);
             this.chkCase.Name = "chkCase";
             this.chkCase.Size = new System.Drawing.Size(72, 16);
             this.chkCase.TabIndex = 69;
@@ -204,7 +214,7 @@
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(298, 148);
+            this.btnRun.Location = new System.Drawing.Point(298, 183);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 33);
             this.btnRun.TabIndex = 70;
@@ -214,7 +224,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(233, 110);
+            this.label3.Location = new System.Drawing.Point(233, 160);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(59, 12);
             this.label3.TabIndex = 79;
@@ -230,14 +240,14 @@
             "始まる",
             "終わる",
             "含む"});
-            this.cmbIgnoreRules.Location = new System.Drawing.Point(298, 107);
+            this.cmbIgnoreRules.Location = new System.Drawing.Point(298, 157);
             this.cmbIgnoreRules.Name = "cmbIgnoreRules";
             this.cmbIgnoreRules.Size = new System.Drawing.Size(84, 20);
             this.cmbIgnoreRules.TabIndex = 80;
             // 
             // btnExport
             // 
-            this.btnExport.Location = new System.Drawing.Point(463, 160);
+            this.btnExport.Location = new System.Drawing.Point(575, 189);
             this.btnExport.Name = "btnExport";
             this.btnExport.Size = new System.Drawing.Size(75, 21);
             this.btnExport.TabIndex = 81;
@@ -246,18 +256,104 @@
             // 
             // btnImport
             // 
-            this.btnImport.Location = new System.Drawing.Point(544, 160);
+            this.btnImport.Location = new System.Drawing.Point(656, 189);
             this.btnImport.Name = "btnImport";
             this.btnImport.Size = new System.Drawing.Size(75, 21);
             this.btnImport.TabIndex = 82;
             this.btnImport.Text = "結果入力";
             this.btnImport.UseVisualStyleBackColor = true;
             // 
+            // cmbCallerMethod
+            // 
+            this.cmbCallerMethod.AllowDrop = true;
+            this.cmbCallerMethod.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.cmbCallerMethod.FormattingEnabled = true;
+            this.cmbCallerMethod.Location = new System.Drawing.Point(48, 76);
+            this.cmbCallerMethod.Name = "cmbCallerMethod";
+            this.cmbCallerMethod.Size = new System.Drawing.Size(632, 20);
+            this.cmbCallerMethod.TabIndex = 83;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(46, 61);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(74, 12);
+            this.label4.TabIndex = 84;
+            this.label4.Text = "呼出元メソッド";
+            // 
+            // txtCallerMethodNameFilter
+            // 
+            this.txtCallerMethodNameFilter.Location = new System.Drawing.Point(317, 232);
+            this.txtCallerMethodNameFilter.Name = "txtCallerMethodNameFilter";
+            this.txtCallerMethodNameFilter.Size = new System.Drawing.Size(84, 19);
+            this.txtCallerMethodNameFilter.TabIndex = 85;
+            // 
+            // txtCalleeClassNameFilter
+            // 
+            this.txtCalleeClassNameFilter.Location = new System.Drawing.Point(406, 232);
+            this.txtCalleeClassNameFilter.Name = "txtCalleeClassNameFilter";
+            this.txtCalleeClassNameFilter.Size = new System.Drawing.Size(84, 19);
+            this.txtCalleeClassNameFilter.TabIndex = 86;
+            // 
+            // txtCalleeMethodNameFitter
+            // 
+            this.txtCalleeMethodNameFitter.Location = new System.Drawing.Point(496, 232);
+            this.txtCalleeMethodNameFitter.Name = "txtCalleeMethodNameFitter";
+            this.txtCalleeMethodNameFitter.Size = new System.Drawing.Size(84, 19);
+            this.txtCalleeMethodNameFitter.TabIndex = 87;
+            // 
+            // txtCalleeMethodParamFilter
+            // 
+            this.txtCalleeMethodParamFilter.Location = new System.Drawing.Point(586, 232);
+            this.txtCalleeMethodParamFilter.Name = "txtCalleeMethodParamFilter";
+            this.txtCalleeMethodParamFilter.Size = new System.Drawing.Size(76, 19);
+            this.txtCalleeMethodParamFilter.TabIndex = 88;
+            // 
+            // txtRowNumFilter
+            // 
+            this.txtRowNumFilter.Location = new System.Drawing.Point(668, 232);
+            this.txtRowNumFilter.Name = "txtRowNumFilter";
+            this.txtRowNumFilter.Size = new System.Drawing.Size(76, 19);
+            this.txtRowNumFilter.TabIndex = 89;
+            // 
+            // txtClassNameFilter
+            // 
+            this.txtClassNameFilter.Location = new System.Drawing.Point(231, 232);
+            this.txtClassNameFilter.Name = "txtClassNameFilter";
+            this.txtClassNameFilter.Size = new System.Drawing.Size(84, 19);
+            this.txtClassNameFilter.TabIndex = 90;
+            // 
+            // txtFileNameFilter
+            // 
+            this.txtFileNameFilter.Location = new System.Drawing.Point(144, 232);
+            this.txtFileNameFilter.Name = "txtFileNameFilter";
+            this.txtFileNameFilter.Size = new System.Drawing.Size(84, 19);
+            this.txtFileNameFilter.TabIndex = 91;
+            // 
+            // txtFilePathFilter
+            // 
+            this.txtFilePathFilter.Location = new System.Drawing.Point(54, 232);
+            this.txtFilePathFilter.Name = "txtFilePathFilter";
+            this.txtFilePathFilter.Size = new System.Drawing.Size(84, 19);
+            this.txtFilePathFilter.TabIndex = 92;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(767, 400);
+            this.ClientSize = new System.Drawing.Size(767, 492);
+            this.Controls.Add(this.txtFilePathFilter);
+            this.Controls.Add(this.txtFileNameFilter);
+            this.Controls.Add(this.txtClassNameFilter);
+            this.Controls.Add(this.txtRowNumFilter);
+            this.Controls.Add(this.txtCalleeMethodParamFilter);
+            this.Controls.Add(this.txtCalleeMethodNameFitter);
+            this.Controls.Add(this.txtCalleeClassNameFilter);
+            this.Controls.Add(this.txtCallerMethodNameFilter);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.cmbCallerMethod);
             this.Controls.Add(this.btnImport);
             this.Controls.Add(this.btnExport);
             this.Controls.Add(this.cmbIgnoreRules);
@@ -302,6 +398,16 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmRowNumCalleeMethod;
         private System.Windows.Forms.Button btnExport;
         private System.Windows.Forms.Button btnImport;
+        private System.Windows.Forms.ComboBox cmbCallerMethod;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.TextBox txtCallerMethodNameFilter;
+        private System.Windows.Forms.TextBox txtCalleeClassNameFilter;
+        private System.Windows.Forms.TextBox txtCalleeMethodNameFitter;
+        private System.Windows.Forms.TextBox txtCalleeMethodParamFilter;
+        private System.Windows.Forms.TextBox txtRowNumFilter;
+        private System.Windows.Forms.TextBox txtClassNameFilter;
+        private System.Windows.Forms.TextBox txtFileNameFilter;
+        private System.Windows.Forms.TextBox txtFilePathFilter;
     }
 }
 

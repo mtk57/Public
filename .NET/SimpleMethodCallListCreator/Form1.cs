@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace SimpleMethodCallListCreator
 {
@@ -473,7 +474,7 @@ namespace SimpleMethodCallListCreator
                 throw new FileNotFoundException("指定されたファイルが存在しません。", path);
             }
 
-            var lines = File.ReadAllLines(path, Encoding.UTF8);
+            var lines = ReadAllLinesWithEncoding(path);
             if (lines.Length == 0)
             {
                 return new List<MethodCallDetail>();
@@ -586,6 +587,48 @@ namespace SimpleMethodCallListCreator
             }
 
             return builder.ToString();
+        }
+
+        private string[] ReadAllLinesWithEncoding(string path)
+        {
+            var encodings = new[]
+            {
+                new UTF8Encoding(false, true),
+                Encoding.GetEncoding("Shift_JIS")
+            };
+
+            foreach (var encoding in encodings)
+            {
+                try
+                {
+                    return ReadAllLinesInternal(path, encoding);
+                }
+                catch (DecoderFallbackException)
+                {
+                    // 次のエンコーディング候補を試す
+                }
+                catch (ArgumentException)
+                {
+                    // 次のエンコーディング候補を試す
+                }
+            }
+
+            return File.ReadAllLines(path);
+        }
+
+        private string[] ReadAllLinesInternal(string path, Encoding encoding)
+        {
+            var lines = new List<string>();
+            using (var reader = new StreamReader(path, encoding, detectEncodingFromByteOrderMarks: true))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    lines.Add(line);
+                }
+            }
+
+            return lines.ToArray();
         }
 
         private bool MatchesRule(string target, string keyword, IgnoreRule rule, StringComparison comparison)
@@ -956,6 +999,13 @@ namespace SimpleMethodCallListCreator
             {
                 dataGridViewResults.SelectAll();
                 e.Handled = true;
+                return;
+            }
+
+            if (e.Control && e.KeyCode == Keys.C)
+            {
+                CopySelectionToClipboard();
+                e.Handled = true;
             }
         }
 
@@ -1013,6 +1063,98 @@ namespace SimpleMethodCallListCreator
         private void FilterTextBox_TextChanged(object sender, EventArgs e)
         {
             ApplyTextFilters();
+        }
+
+        private void CopySelectionToClipboard()
+        {
+            if (dataGridViewResults.SelectedRows == null || dataGridViewResults.SelectedRows.Count == 0)
+            {
+                return;
+            }
+
+            var selectedRows = new List<DataGridViewRow>();
+            foreach (DataGridViewRow row in dataGridViewResults.SelectedRows)
+            {
+                if (!row.IsNewRow)
+                {
+                    selectedRows.Add(row);
+                }
+            }
+
+            if (selectedRows.Count == 0)
+            {
+                return;
+            }
+
+            selectedRows.Sort((x, y) => x.Index.CompareTo(y.Index));
+
+            var visibleColumns = new List<DataGridViewColumn>();
+            foreach (DataGridViewColumn column in dataGridViewResults.Columns)
+            {
+                if (column.Visible)
+                {
+                    visibleColumns.Add(column);
+                }
+            }
+
+            if (visibleColumns.Count == 0)
+            {
+                return;
+            }
+
+            var builder = new StringBuilder();
+            for (var rowIndex = 0; rowIndex < selectedRows.Count; rowIndex++)
+            {
+                var row = selectedRows[rowIndex];
+                for (var colIndex = 0; colIndex < visibleColumns.Count; colIndex++)
+                {
+                    var column = visibleColumns[colIndex];
+                    var cell = row.Cells[column.Index];
+                    var raw = cell?.Value?.ToString() ?? string.Empty;
+                    builder.Append(SanitizeForClipboard(raw));
+                    if (colIndex < visibleColumns.Count - 1)
+                    {
+                        builder.Append('\t');
+                    }
+                }
+
+                if (rowIndex < selectedRows.Count - 1)
+                {
+                    builder.Append("\r\n");
+                }
+            }
+
+            try
+            {
+                Clipboard.SetText(builder.ToString());
+            }
+            catch (ExternalException ex)
+            {
+                ErrorLogger.LogException(ex);
+            }
+        }
+
+        private string SanitizeForClipboard(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(value.Length);
+            foreach (var ch in value)
+            {
+                if (ch == '\r' || ch == '\n' || ch == '\t')
+                {
+                    builder.Append(' ');
+                }
+                else
+                {
+                    builder.Append(ch);
+                }
+            }
+
+            return builder.ToString();
         }
 
         private void LaunchSakura(string filePath, int lineNumber)

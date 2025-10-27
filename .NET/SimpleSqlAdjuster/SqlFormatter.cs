@@ -70,6 +70,8 @@ namespace SimpleSqlAdjuster
             ClauseStopper.Keyword("ON")
         };
 
+        private static readonly ClauseStopper[] FromClauseStops = FromStops;
+
         public string Format(string sql, int lineNumber)
         {
             try
@@ -217,12 +219,8 @@ namespace SimpleSqlAdjuster
 
             private void FormatFromClause()
             {
-                var tokens = CollectTokensUntil(FromStops);
-                var lines = SplitFromClause(tokens);
-                foreach (var line in lines)
-                {
-                    _writer.WriteLine(1, line);
-                }
+                var tokens = CollectTokensUntil(FromClauseStops);
+                WriteFromItems(tokens);
             }
 
             private void FormatWhereClause()
@@ -292,6 +290,20 @@ namespace SimpleSqlAdjuster
                     }
 
                     WriteClauseItem(1, segment.Tokens);
+                }
+            }
+
+            private void WriteFromItems(List<SqlToken> tokens)
+            {
+                var items = SplitFromClause(tokens);
+                foreach (var item in items)
+                {
+                    if (item == null || item.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    WriteClauseItem(1, item);
                 }
             }
 
@@ -864,9 +876,9 @@ namespace SimpleSqlAdjuster
                 return result;
             }
 
-            private List<string> SplitFromClause(List<SqlToken> tokens)
+            private List<List<SqlToken>> SplitFromClause(List<SqlToken> tokens)
             {
-                var lines = new List<string>();
+                var items = new List<List<SqlToken>>();
                 var buffer = new List<SqlToken>();
                 var depth = 0;
 
@@ -890,16 +902,8 @@ namespace SimpleSqlAdjuster
 
                     if (depth == 0 && IsJoinKeyword(tokens, i, out var joinLength))
                     {
-                        if (buffer.Count > 0)
-                        {
-                            var current = RenderTokens(buffer);
-                            if (!string.IsNullOrEmpty(current))
-                            {
-                                lines.Add(current);
-                            }
-
-                            buffer = new List<SqlToken>();
-                        }
+                        AddFromBuffer(items, buffer);
+                        buffer = new List<SqlToken>();
 
                         for (var j = 0; j < joinLength; j++)
                         {
@@ -913,12 +917,7 @@ namespace SimpleSqlAdjuster
                     if (depth == 0 && token.IsSymbol(","))
                     {
                         buffer.Add(token);
-                        var text = RenderTokens(buffer);
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            lines.Add(text);
-                        }
-
+                        AddFromBuffer(items, buffer);
                         buffer = new List<SqlToken>();
                         continue;
                     }
@@ -926,13 +925,24 @@ namespace SimpleSqlAdjuster
                     buffer.Add(token);
                 }
 
-                var remaining = RenderTokens(buffer);
-                if (!string.IsNullOrEmpty(remaining))
+                AddFromBuffer(items, buffer);
+                return items;
+            }
+
+            private static void AddFromBuffer(List<List<SqlToken>> items, List<SqlToken> buffer)
+            {
+                if (buffer == null || buffer.Count == 0)
                 {
-                    lines.Add(remaining);
+                    return;
                 }
 
-                return lines;
+                var text = RenderTokens(buffer);
+                if (string.IsNullOrEmpty(text))
+                {
+                    return;
+                }
+
+                items.Add(new List<SqlToken>(buffer));
             }
 
             private bool MatchesStopper(int index, ClauseStopper[] stops)

@@ -40,6 +40,7 @@
             // txtBeforeSQL
             // 
             this.txtBeforeSQL.Location = new System.Drawing.Point(31, 46);
+            this.txtBeforeSQL.MaxLength = 0;
             this.txtBeforeSQL.Multiline = true;
             this.txtBeforeSQL.Name = "txtBeforeSQL";
             this.txtBeforeSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
@@ -50,6 +51,7 @@
             // txtAfterSQL
             // 
             this.txtAfterSQL.Location = new System.Drawing.Point(27, 283);
+            this.txtAfterSQL.MaxLength = 0;
             this.txtAfterSQL.Multiline = true;
             this.txtAfterSQL.Name = "txtAfterSQL";
             this.txtAfterSQL.ReadOnly = true;

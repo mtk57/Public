@@ -258,11 +258,7 @@ namespace SimpleSqlAdjuster
                         _writer.WriteLine(1, segment.Operator);
                     }
 
-                    var text = RenderTokens(segment.Tokens);
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        _writer.WriteLine(1, text);
-                    }
+                    WriteClauseItem(1, segment.Tokens);
                 }
             }
 
@@ -306,11 +302,7 @@ namespace SimpleSqlAdjuster
                     if (depth == 0 && token.IsSymbol(","))
                     {
                         itemTokens.Add(token);
-                        var text = RenderTokens(itemTokens);
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            _writer.WriteLine(1, text);
-                        }
+                        WriteClauseItem(1, itemTokens);
 
                         itemTokens = new List<SqlToken>();
                         _index++;
@@ -321,10 +313,9 @@ namespace SimpleSqlAdjuster
                     _index++;
                 }
 
-                var tail = RenderTokens(itemTokens);
-                if (!string.IsNullOrEmpty(tail))
+                if (itemTokens.Count > 0)
                 {
-                    _writer.WriteLine(1, tail);
+                    WriteClauseItem(1, itemTokens);
                 }
             }
 
@@ -360,6 +351,247 @@ namespace SimpleSqlAdjuster
                 {
                     _writer.WriteLine(0, text);
                 }
+            }
+
+            private void WriteClauseItem(int indentLevel, List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0)
+                {
+                    return;
+                }
+
+                if (TryWriteSpecialExpression(indentLevel, tokens))
+                {
+                    return;
+                }
+
+                var text = RenderTokens(tokens);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    _writer.WriteLine(indentLevel, text);
+                }
+            }
+
+            private bool TryWriteSpecialExpression(int indentLevel, List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                if (tokens[0].IsKeyword("NOT") && tokens.Count > 1 && tokens[1].IsKeyword("EXISTS"))
+                {
+                    _writer.WriteLine(indentLevel, "NOT EXISTS");
+                    var remainingCount = tokens.Count - 2;
+                    if (remainingCount > 0)
+                    {
+                        var remaining = tokens.GetRange(2, remainingCount);
+                        if (TryWriteParenthesizedSubquery(indentLevel, remaining))
+                        {
+                            return true;
+                        }
+
+                        var text = RenderTokens(remaining);
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            _writer.WriteLine(indentLevel, text);
+                        }
+                    }
+
+                    return true;
+                }
+
+                if (tokens[0].IsKeyword("EXISTS"))
+                {
+                    _writer.WriteLine(indentLevel, "EXISTS");
+                    var remainingCount = tokens.Count - 1;
+                    if (remainingCount > 0)
+                    {
+                        var remaining = tokens.GetRange(1, remainingCount);
+                        if (TryWriteParenthesizedSubquery(indentLevel, remaining))
+                        {
+                            return true;
+                        }
+
+                        var text = RenderTokens(remaining);
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            _writer.WriteLine(indentLevel, text);
+                        }
+                    }
+
+                    return true;
+                }
+
+                if (TryWriteParenthesizedSubquery(indentLevel, tokens))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            private bool TryWriteParenthesizedSubquery(int indentLevel, List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0 || !tokens[0].IsSymbol("("))
+                {
+                    return false;
+                }
+
+                var closingIndex = FindMatchingParenthesis(tokens, 0);
+                if (closingIndex <= 0)
+                {
+                    return false;
+                }
+
+                var innerCount = closingIndex - 1;
+                var innerTokens = innerCount > 0 ? tokens.GetRange(1, innerCount) : new List<SqlToken>();
+
+                if (!ContainsTopLevelSelect(tokens, 1, closingIndex - 1) &&
+                    !LooksLikeSubquery(innerTokens))
+                {
+                    return false;
+                }
+
+                _writer.WriteLine(indentLevel, "(");
+
+                if (innerTokens.Count > 0)
+                {
+                    var innerSql = RenderTokens(innerTokens);
+                    if (!string.IsNullOrEmpty(innerSql))
+                    {
+                        WriteNestedSql(indentLevel + 1, innerSql);
+                    }
+                }
+
+                var tailCount = tokens.Count - closingIndex - 1;
+                var closingText = ")";
+                if (tailCount > 0)
+                {
+                    var tailTokens = tokens.GetRange(closingIndex + 1, tailCount);
+                    var tailText = RenderTokens(tailTokens);
+                    if (!string.IsNullOrEmpty(tailText))
+                    {
+                        closingText += " " + tailText;
+                    }
+                }
+
+                _writer.WriteLine(indentLevel, closingText);
+                return true;
+            }
+
+            private void WriteNestedSql(int indentLevel, string sql)
+            {
+                try
+                {
+                    var nestedFormatter = new SqlFormatter();
+                    var formattedInner = nestedFormatter.Format(sql, 0);
+                    var innerLines = formattedInner.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                    foreach (var line in innerLines)
+                    {
+                        if (!string.IsNullOrEmpty(line))
+                        {
+                            _writer.WriteLine(indentLevel, line);
+                        }
+                    }
+                }
+                catch
+                {
+                    if (!string.IsNullOrEmpty(sql))
+                    {
+                        _writer.WriteLine(indentLevel, sql);
+                    }
+                }
+            }
+
+            private static int FindMatchingParenthesis(List<SqlToken> tokens, int startIndex)
+            {
+                var depth = 0;
+                for (var i = startIndex; i < tokens.Count; i++)
+                {
+                    var token = tokens[i];
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                    }
+                    else if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                        if (depth == 0)
+                        {
+                            return i;
+                        }
+                    }
+                }
+
+                return -1;
+            }
+
+            private static bool ContainsTopLevelSelect(List<SqlToken> tokens, int startIndex, int length)
+            {
+                if (length <= 0)
+                {
+                    return false;
+                }
+
+                var depth = 0;
+                for (var i = startIndex; i < startIndex + length && i < tokens.Count; i++)
+                {
+                    var token = tokens[i];
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                        continue;
+                    }
+
+                    if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                        continue;
+                    }
+
+                    if (depth == 0 && token.IsKeyword("SELECT"))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            private static bool LooksLikeSubquery(List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                foreach (var token in tokens)
+                {
+                    if (token == null)
+                    {
+                        continue;
+                    }
+
+                    if (token.Kind == TokenKind.Comment)
+                    {
+                        continue;
+                    }
+
+                    if (token.IsKeyword("SELECT") ||
+                        token.IsKeyword("WITH") ||
+                        token.IsKeyword("UPDATE") ||
+                        token.IsKeyword("INSERT") ||
+                        token.IsKeyword("DELETE") ||
+                        token.IsKeyword("MERGE"))
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                return false;
             }
 
             private List<SqlToken> CollectTokensUntil(ClauseStopper[] stops)
@@ -759,6 +991,7 @@ namespace SimpleSqlAdjuster
             "AND",
             "OR",
             "NOT",
+            "EXISTS",
             "INNER",
             "LEFT",
             "RIGHT",

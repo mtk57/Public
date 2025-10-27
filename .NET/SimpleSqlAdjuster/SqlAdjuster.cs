@@ -79,8 +79,9 @@ namespace SimpleSqlAdjuster
 
             var columnBase = sqlStartIndex + 1;
 
-            var expanded = MacroExpander.Expand(sqlText, lineNumber, columnBase);
-            var formatted = _formatter.Format(expanded, lineNumber);
+            var expansion = MacroExpander.Expand(sqlText, lineNumber, columnBase);
+            var formatted = _formatter.Format(expansion.Sql, lineNumber);
+            formatted = MacroExpander.ApplyMacroFormatting(formatted, expansion.Macros);
 
             if (string.IsNullOrEmpty(variableName))
             {
@@ -195,20 +196,34 @@ namespace SimpleSqlAdjuster
 
     internal static class MacroExpander
     {
-        public static string Expand(string sql, int lineNumber, int columnOffset)
+        public static MacroExpansionResult Expand(string sql, int lineNumber, int columnOffset)
         {
             if (string.IsNullOrEmpty(sql))
             {
-                return sql;
+                return new MacroExpansionResult(sql ?? string.Empty, new List<WhereMacroReplacement>());
             }
 
             var builder = new StringBuilder(sql.Length);
+            var macros = new List<WhereMacroReplacement>();
             var index = 0;
+            var placeholderIndex = 0;
+
             while (index < sql.Length)
             {
-                if (IsWhereMacro(sql, index, lineNumber, columnOffset, out var macro))
+                if (TryParseWhereMacro(sql, index, lineNumber, columnOffset, out var macro))
                 {
-                    builder.Append(macro.ExpandedText);
+                    var placeholder = "__SIMPLE_SQL_ADJUSTER_MACRO_" + placeholderIndex + "__";
+                    placeholderIndex++;
+
+                    if (builder.Length > 0 && !char.IsWhiteSpace(builder[builder.Length - 1]))
+                    {
+                        builder.Append(' ');
+                    }
+
+                    builder.Append("WHERE ");
+                    builder.Append(placeholder);
+
+                    macros.Add(new WhereMacroReplacement(placeholder, macro.MacroType, macro.Segments));
                     index = macro.EndIndex;
                     continue;
                 }
@@ -217,12 +232,65 @@ namespace SimpleSqlAdjuster
                 index++;
             }
 
-            return builder.ToString();
+            return new MacroExpansionResult(builder.ToString(), macros);
         }
 
-        private static bool IsWhereMacro(string sql, int startIndex, int lineNumber, int columnOffset, out WhereMacro macro)
+        public static string ApplyMacroFormatting(string formattedSql, IList<WhereMacroReplacement> macros)
         {
-            macro = default(WhereMacro);
+            if (string.IsNullOrEmpty(formattedSql) || macros == null || macros.Count == 0)
+            {
+                return formattedSql;
+            }
+
+            var lookup = new Dictionary<string, WhereMacroReplacement>(StringComparer.Ordinal);
+            foreach (var macro in macros)
+            {
+                lookup[macro.Placeholder] = macro;
+            }
+
+            var lines = formattedSql.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            var resultLines = new List<string>(lines.Length);
+
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (string.Equals(line.Trim(), "WHERE", StringComparison.OrdinalIgnoreCase) && i + 1 < lines.Length)
+                {
+                    var nextLine = lines[i + 1];
+                    var placeholderKey = nextLine.Trim();
+                    if (lookup.TryGetValue(placeholderKey, out var replacement))
+                    {
+                        AppendMacroLines(resultLines, replacement);
+                        i++; // skip placeholder line
+                        continue;
+                    }
+                }
+
+                resultLines.Add(line);
+            }
+
+            return string.Join(Environment.NewLine, resultLines).TrimEnd();
+        }
+
+        private static void AppendMacroLines(List<string> lines, WhereMacroReplacement replacement)
+        {
+            lines.Add(":_WHERE_" + replacement.MacroType);
+            lines.Add("(");
+
+            var count = replacement.Segments.Count;
+            for (var i = 0; i < count; i++)
+            {
+                var segment = replacement.Segments[i];
+                var suffix = i < count - 1 ? "," : string.Empty;
+                lines.Add("  " + segment + suffix);
+            }
+
+            lines.Add(")");
+        }
+
+        private static bool TryParseWhereMacro(string sql, int startIndex, int lineNumber, int columnOffset, out WhereMacroParseResult macro)
+        {
+            macro = default(WhereMacroParseResult);
 
             if (startIndex + 8 > sql.Length)
             {
@@ -293,10 +361,7 @@ namespace SimpleSqlAdjuster
                 throw new SqlProcessingException("WHEREマクロの引数が空です。", lineNumber, columnOffset + contentStart);
             }
 
-            var joiner = " " + macroType + " ";
-            var expanded = "WHERE " + string.Join(joiner, segments);
-
-            macro = new WhereMacro(startIndex, index, expanded);
+            macro = new WhereMacroParseResult(index, macroType, segments);
             return true;
         }
 
@@ -345,20 +410,49 @@ namespace SimpleSqlAdjuster
             return results;
         }
 
-        private struct WhereMacro
+        private struct WhereMacroParseResult
         {
-            public WhereMacro(int startIndex, int endIndex, string expanded)
+            public WhereMacroParseResult(int endIndex, string macroType, List<string> segments)
             {
-                StartIndex = startIndex;
                 EndIndex = endIndex;
-                ExpandedText = expanded;
+                MacroType = macroType;
+                Segments = segments ?? new List<string>();
             }
-
-            public int StartIndex { get; }
 
             public int EndIndex { get; }
 
-            public string ExpandedText { get; }
+            public string MacroType { get; }
+
+            public List<string> Segments { get; }
+        }
+
+        public sealed class MacroExpansionResult
+        {
+            public MacroExpansionResult(string sql, List<WhereMacroReplacement> macros)
+            {
+                Sql = sql ?? string.Empty;
+                Macros = macros ?? new List<WhereMacroReplacement>();
+            }
+
+            public string Sql { get; }
+
+            public IList<WhereMacroReplacement> Macros { get; }
+        }
+
+        public sealed class WhereMacroReplacement
+        {
+            public WhereMacroReplacement(string placeholder, string macroType, List<string> segments)
+            {
+                Placeholder = placeholder;
+                MacroType = macroType;
+                Segments = segments ?? new List<string>();
+            }
+
+            public string Placeholder { get; }
+
+            public string MacroType { get; }
+
+            public List<string> Segments { get; }
         }
     }
 }

@@ -90,5 +90,10 @@ namespace SimpleSqlAdjuster
             }
 
         }
+
+        private void txtAfterSQL_TextChanged ( object sender, EventArgs e )
+        {
+
+        }
     }
 }

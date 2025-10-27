@@ -39,24 +39,25 @@
             // 
             // txtBeforeSQL
             // 
-            this.txtBeforeSQL.Location = new System.Drawing.Point(33, 47);
+            this.txtBeforeSQL.Location = new System.Drawing.Point(31, 46);
             this.txtBeforeSQL.Multiline = true;
             this.txtBeforeSQL.Name = "txtBeforeSQL";
-            this.txtBeforeSQL.Size = new System.Drawing.Size(419, 146);
-            this.txtBeforeSQL.TabIndex = 0;
             this.txtBeforeSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtBeforeSQL.Size = new System.Drawing.Size(491, 187);
+            this.txtBeforeSQL.TabIndex = 0;
             this.txtBeforeSQL.WordWrap = false;
             // 
             // txtAfterSQL
             // 
-            this.txtAfterSQL.Location = new System.Drawing.Point(33, 264);
+            this.txtAfterSQL.Location = new System.Drawing.Point(27, 283);
             this.txtAfterSQL.Multiline = true;
             this.txtAfterSQL.Name = "txtAfterSQL";
-            this.txtAfterSQL.Size = new System.Drawing.Size(419, 146);
-            this.txtAfterSQL.TabIndex = 1;
             this.txtAfterSQL.ReadOnly = true;
             this.txtAfterSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtAfterSQL.Size = new System.Drawing.Size(496, 182);
+            this.txtAfterSQL.TabIndex = 1;
             this.txtAfterSQL.WordWrap = false;
+            this.txtAfterSQL.TextChanged += new System.EventHandler(this.txtAfterSQL_TextChanged);
             // 
             // label1
             // 
@@ -89,7 +90,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(478, 438);
+            this.ClientSize = new System.Drawing.Size(542, 486);
             this.Controls.Add(this.btnRun);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);

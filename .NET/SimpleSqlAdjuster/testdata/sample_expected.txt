@@ -125,3 +125,20 @@ WHERE
     WHERE
       STATUS = 'LOCKED'
   )
+
+FromSubquery
+SELECT
+  T.ORDER_ID,
+  T.AMOUNT
+FROM
+  (
+    SELECT
+      ORDER_ID,
+      AMOUNT
+    FROM
+      ORDERS
+    WHERE
+      STATUS = 'PAID'
+  ) T
+WHERE
+  T.AMOUNT > 1000

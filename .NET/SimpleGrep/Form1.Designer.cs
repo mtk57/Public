@@ -54,6 +54,7 @@
             this.chkMethod = new System.Windows.Forms.CheckBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.btnFileCopy = new System.Windows.Forms.Button();
+            this.chkIgnoreComment = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -284,11 +285,23 @@
             this.btnFileCopy.Text = "ファイルコピー";
             this.btnFileCopy.UseVisualStyleBackColor = true;
             // 
+            // chkIgnoreComment
+            // 
+            this.chkIgnoreComment.AutoSize = true;
+            this.chkIgnoreComment.Location = new System.Drawing.Point(451, 182);
+            this.chkIgnoreComment.Name = "chkIgnoreComment";
+            this.chkIgnoreComment.Size = new System.Drawing.Size(81, 16);
+            this.chkIgnoreComment.TabIndex = 79;
+            this.chkIgnoreComment.Text = "コメント無視";
+            this.toolTip1.SetToolTip(this.chkIgnoreComment, "現バージョンではJavaのみをサポート");
+            this.chkIgnoreComment.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(767, 607);
+            this.Controls.Add(this.chkIgnoreComment);
             this.Controls.Add(this.btnFileCopy);
             this.Controls.Add(this.chkMethod);
             this.Controls.Add(this.lblPer);
@@ -345,6 +358,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmMethodSignature;
         private System.Windows.Forms.Button btnFileCopy;
+        private System.Windows.Forms.CheckBox chkIgnoreComment;
     }
 }
 

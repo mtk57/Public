@@ -61,7 +61,11 @@ namespace SimpleGrep
 
             try
             {
-                string filePath = dataGridViewResults.Rows[e.RowIndex].Cells[0].Value.ToString();
+                var row = dataGridViewResults.Rows[e.RowIndex];
+                int filePathColumnIndex = dataGridViewResults.Columns["clmFilePath"].Index;
+                int lineColumnIndex = dataGridViewResults.Columns["clmLine"].Index;
+
+                string filePath = row.Cells[filePathColumnIndex].Value?.ToString() ?? string.Empty;
 
                 if (!File.Exists(filePath))
                 {
@@ -71,7 +75,7 @@ namespace SimpleGrep
 
                 if (chkTagJump.Checked)
                 {
-                    string lineNumber = dataGridViewResults.Rows[e.RowIndex].Cells[1].Value.ToString();
+                    string lineNumber = row.Cells[lineColumnIndex].Value?.ToString() ?? "1";
                     string sakuraPath = FindSakuraPath();
 
                     if (sakuraPath != null)
@@ -322,6 +326,7 @@ namespace SimpleGrep
                         object[] cells =
                         {
                             r.FilePath,
+                            r.FileName,
                             r.LineNumber,
                             r.LineText,
                             r.MethodSignature,
@@ -420,6 +425,7 @@ namespace SimpleGrep
             }
 
             var files = new StringCollection();
+            int filePathColumnIndex = dataGridViewResults.Columns["clmFilePath"].Index;
             foreach (var index in selectedIndices)
             {
                 if (index < 0 || index >= dataGridViewResults.Rows.Count)
@@ -427,7 +433,7 @@ namespace SimpleGrep
                     continue;
                 }
 
-                var cellValue = dataGridViewResults.Rows[index].Cells[0].Value;
+                var cellValue = dataGridViewResults.Rows[index].Cells[filePathColumnIndex].Value;
                 if (cellValue == null)
                 {
                     continue;
@@ -470,6 +476,7 @@ namespace SimpleGrep
                     cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
+                        string fileName = Path.GetFileName(filePath);
                         Encoding encoding = DetectEncoding(filePath); // ファイルごとにエンコーディングを判定
                         string encodingName = GetEncodingName(encoding);
 
@@ -543,6 +550,7 @@ namespace SimpleGrep
                                 results.Add(new SearchResult
                                 {
                                     FilePath = filePath,
+                                    FileName = fileName,
                                     LineNumber = lineNumber,
                                     LineText = line,
                                     MethodSignature = methodSignature,
@@ -614,11 +622,15 @@ namespace SimpleGrep
             {
                 using (var writer = new StreamWriter(fileName, false, Encoding.UTF8))
                 {
+                    int filePathColumnIndex = dataGridViewResults.Columns["clmFilePath"].Index;
+                    int lineColumnIndex = dataGridViewResults.Columns["clmLine"].Index;
+                    int resultColumnIndex = dataGridViewResults.Columns["clmGrepResult"].Index;
+
                     foreach (DataGridViewRow row in dataGridViewResults.Rows)
                     {
-                        string filePath = row.Cells[0].Value.ToString();
-                        string lineNumber = row.Cells[1].Value.ToString();
-                        string lineContent = row.Cells[2].Value.ToString();
+                        string filePath = row.Cells[filePathColumnIndex].Value?.ToString() ?? string.Empty;
+                        string lineNumber = row.Cells[lineColumnIndex].Value?.ToString() ?? string.Empty;
+                        string lineContent = row.Cells[resultColumnIndex].Value?.ToString() ?? string.Empty;
                         var encodingCell = row.Cells["Encoding"];
                         string encoding = encodingCell != null && encodingCell.Value != null ? encodingCell.Value.ToString() : "UTF-8";
                         
@@ -779,6 +791,7 @@ namespace SimpleGrep
         private sealed class SearchResult
         {
             public string FilePath { get; set; }
+            public string FileName { get; set; }
             public int LineNumber { get; set; }
             public string LineText { get; set; }
             public string MethodSignature { get; set; }

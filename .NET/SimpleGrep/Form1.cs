@@ -157,6 +157,7 @@ namespace SimpleGrep
                     chkUseRegex.Checked = settings.UseRegex;
                     chkTagJump.Checked = settings.TagJump;
                     chkMethod.Checked = settings.DeriveMethod;
+                    chkIgnoreComment.Checked = settings.IgnoreComment;
                 }
             }
             catch (Exception ex)
@@ -176,7 +177,8 @@ namespace SimpleGrep
                 CaseSensitive = chkCase.Checked,
                 UseRegex = chkUseRegex.Checked,
                 TagJump = chkTagJump.Checked,
-                DeriveMethod = chkMethod.Checked
+                DeriveMethod = chkMethod.Checked,
+                IgnoreComment = chkIgnoreComment.Checked
             };
 
             try
@@ -260,6 +262,7 @@ namespace SimpleGrep
                 bool caseSensitive = chkCase.Checked;
                 bool useRegex = chkUseRegex.Checked;
                 bool deriveMethod = chkMethod.Checked;
+                bool ignoreComment = chkIgnoreComment.Checked;
 
                 var searchOption = searchSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
                 string[] filesToSearch;
@@ -305,7 +308,7 @@ namespace SimpleGrep
                 IEnumerable<SearchResult> searchResults = null;
                 searchStarted = true;
 
-                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod, cancellationToken), cancellationToken);
+                searchResults = await Task.Run(() => SearchFiles(filesToSearch, grepPattern, progress, caseSensitive, useRegex, deriveMethod, ignoreComment, cancellationToken), cancellationToken);
                 if (localCancellationTokenSource?.IsCancellationRequested == true)
                 {
                     wasCancelled = true;
@@ -453,7 +456,7 @@ namespace SimpleGrep
             }
         }
 
-        private IEnumerable<SearchResult> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress, bool caseSensitive, bool useRegex, bool deriveMethod, CancellationToken cancellationToken)
+        private IEnumerable<SearchResult> SearchFiles(string[] filePaths, string grepPattern, IProgress<int> progress, bool caseSensitive, bool useRegex, bool deriveMethod, bool ignoreComment, CancellationToken cancellationToken)
         {
             var results = new ConcurrentBag<SearchResult>(); // スレッドセーフなコレクションを使用
             var regexOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
@@ -492,18 +495,36 @@ namespace SimpleGrep
                             }
                         }
 
+                        ICommentFilter commentFilter = null;
+                        if (ignoreComment)
+                        {
+                            commentFilter = CommentFilterFactory.Create(filePath);
+                        }
+
                         for (int index = 0; index < lines.Length; index++)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-                            string line = lines[index];
+                            string line = lines[index] ?? string.Empty;
                             int lineNumber = index + 1;
                             bool isMatch = false;
+                            string lineToEvaluate = line;
+                            bool commentOnlyLine = false;
+
+                            if (commentFilter != null)
+                            {
+                                lineToEvaluate = commentFilter.RemoveComments(lineToEvaluate) ?? string.Empty;
+                                commentOnlyLine = !string.IsNullOrWhiteSpace(line) && string.IsNullOrWhiteSpace(lineToEvaluate);
+                                if (commentOnlyLine)
+                                {
+                                    continue;
+                                }
+                            }
 
                             if (useRegex)
                             {
                                 try
                                 {
-                                    isMatch = Regex.IsMatch(line, grepPattern, regexOptions);
+                                    isMatch = Regex.IsMatch(lineToEvaluate, grepPattern, regexOptions);
                                 }
                                 catch (ArgumentException)
                                 {
@@ -513,7 +534,7 @@ namespace SimpleGrep
                             else
                             {
                                 var comparisonType = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                                isMatch = line.IndexOf(grepPattern, comparisonType) >= 0;
+                                isMatch = lineToEvaluate.IndexOf(grepPattern, comparisonType) >= 0;
                             }
 
                             if (isMatch)
@@ -762,6 +783,133 @@ namespace SimpleGrep
             public string LineText { get; set; }
             public string MethodSignature { get; set; }
             public string EncodingName { get; set; }
+        }
+
+        private interface ICommentFilter
+        {
+            string RemoveComments(string line);
+        }
+
+        private static class CommentFilterFactory
+        {
+            public static ICommentFilter Create(string filePath)
+            {
+                var extension = Path.GetExtension(filePath);
+                if (string.Equals(extension, ".java", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new JavaCommentFilter();
+                }
+
+                return null;
+            }
+        }
+
+        private sealed class JavaCommentFilter : ICommentFilter
+        {
+            private bool inBlockComment;
+
+            public string RemoveComments(string line)
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    return string.Empty;
+                }
+
+                var sb = new StringBuilder();
+                bool inString = false;
+                bool inChar = false;
+                bool escape = false;
+
+                for (int i = 0; i < line.Length; i++)
+                {
+                    char current = line[i];
+                    char next = i + 1 < line.Length ? line[i + 1] : '\0';
+
+                    if (inBlockComment)
+                    {
+                        if (current == '*' && next == '/')
+                        {
+                            inBlockComment = false;
+                            i++;
+                        }
+                        continue;
+                    }
+
+                    if (inString)
+                    {
+                        sb.Append(current);
+                        if (escape)
+                        {
+                            escape = false;
+                        }
+                        else
+                        {
+                            if (current == '\\')
+                            {
+                                escape = true;
+                            }
+                            else if (current == '"')
+                            {
+                                inString = false;
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (inChar)
+                    {
+                        sb.Append(current);
+                        if (escape)
+                        {
+                            escape = false;
+                        }
+                        else
+                        {
+                            if (current == '\\')
+                            {
+                                escape = true;
+                            }
+                            else if (current == '\'')
+                            {
+                                inChar = false;
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (current == '/' && next == '/')
+                    {
+                        break;
+                    }
+
+                    if (current == '/' && next == '*')
+                    {
+                        inBlockComment = true;
+                        i++;
+                        continue;
+                    }
+
+                    if (current == '"')
+                    {
+                        inString = true;
+                        sb.Append(current);
+                        escape = false;
+                        continue;
+                    }
+
+                    if (current == '\'')
+                    {
+                        inChar = true;
+                        sb.Append(current);
+                        escape = false;
+                        continue;
+                    }
+
+                    sb.Append(current);
+                }
+
+                return sb.ToString();
+            }
         }
 
         private interface IMethodSignatureResolver
@@ -1998,6 +2146,9 @@ namespace SimpleGrep
 
             [DataMember]
             public bool DeriveMethod { get; set; }
+
+            [DataMember]
+            public bool IgnoreComment { get; set; }
         }
     }
 }

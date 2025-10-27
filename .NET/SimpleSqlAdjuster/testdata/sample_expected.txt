@@ -24,7 +24,8 @@ FROM
 :_WHERE_AND
 (
   ORDER_DATE >= :fromDate,
-  ORDER_DATE <= :toDate
+  ORDER_DATE <= :toDate,
+  GCOM = :GCOM
 )
 
 -- コメント行はそのまま出力される

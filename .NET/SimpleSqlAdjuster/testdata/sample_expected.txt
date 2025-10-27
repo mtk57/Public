@@ -28,3 +28,32 @@ FROM
 )
 
 -- コメント行はそのまま出力される
+
+SubQueryExample
+SELECT
+  C.CUSTOMER_ID,
+  (
+    SELECT
+      COUNT(*)
+    FROM
+      ORDERS O
+    WHERE
+      O.CUSTOMER_ID = C.CUSTOMER_ID
+      AND
+      O.STATUS IN('NEW', 'HOLD')
+  ) AS ORDER_COUNT
+FROM
+  CUSTOMERS C
+WHERE
+  EXISTS
+  (
+    SELECT
+      1
+    FROM
+      PAYMENTS P
+    WHERE
+      P.CUSTOMER_ID = C.CUSTOMER_ID
+      AND
+      P.AMOUNT > 1000
+  )
+

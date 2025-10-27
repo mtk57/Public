@@ -22,6 +22,7 @@ namespace SimpleGrep
         private const string SettingsFileName = "SimpleGrep.settings.json";
         private const int MaxHistoryCount = 10;
         private CancellationTokenSource searchCancellationTokenSource;
+        private List<SearchResult> currentSearchResults = new List<SearchResult>();
 
         public MainForm()
         {
@@ -37,6 +38,11 @@ namespace SimpleGrep
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
             this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
             this.cmbKeyword.KeyDown += new KeyEventHandler(this.cmbKeyword_KeyDown);
+            this.txtFilePathFilter.TextChanged += new EventHandler(this.FilterTextChanged);
+            this.txtFileNameFilter.TextChanged += new EventHandler(this.FilterTextChanged);
+            this.txtRowNumFilter.TextChanged += new EventHandler(this.FilterTextChanged);
+            this.txtGrepResultFilter.TextChanged += new EventHandler(this.FilterTextChanged);
+            this.txtMethodFilter.TextChanged += new EventHandler(this.FilterTextChanged);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -248,6 +254,7 @@ namespace SimpleGrep
             UpdateHistory(cmbKeyword, grepPattern);
 
             dataGridViewResults.Rows.Clear();
+            currentSearchResults.Clear();
             button1.Enabled = false;
             btnCancel.Enabled = true;
             this.Cursor = Cursors.WaitCursor;
@@ -318,27 +325,10 @@ namespace SimpleGrep
                     wasCancelled = true;
                 }
 
-                if (!wasCancelled && searchResults != null && searchResults.Any())
+                if (!wasCancelled && searchResults != null)
                 {
-                    dataGridViewResults.SuspendLayout();
-                    var rows = searchResults.Select(r =>
-                    {
-                        object[] cells =
-                        {
-                            r.FilePath,
-                            r.FileName,
-                            r.LineNumber,
-                            r.LineText,
-                            r.MethodSignature,
-                            r.EncodingName
-                        };
-
-                        var row = new DataGridViewRow();
-                        row.CreateCells(dataGridViewResults, cells);
-                        return row;
-                    }).ToArray();
-                    dataGridViewResults.Rows.AddRange(rows);
-                    dataGridViewResults.ResumeLayout();
+                    currentSearchResults = searchResults.ToList();
+                    ApplyFilters();
                 }
             }
             catch (OperationCanceledException)
@@ -408,6 +398,112 @@ namespace SimpleGrep
                     button1.PerformClick();
                 }
             }
+        }
+
+        private void FilterTextChanged(object sender, EventArgs e)
+        {
+            ApplyFilters();
+        }
+
+        private void ApplyFilters()
+        {
+            var filtered = currentSearchResults?
+                .Where(MatchesFilters)
+                .ToList() ?? new List<SearchResult>();
+
+            RenderResults(filtered);
+        }
+
+        private bool MatchesFilters(SearchResult result)
+        {
+            if (result == null)
+            {
+                return false;
+            }
+
+            string filePathFilter = GetFilterText(txtFilePathFilter);
+            if (!string.IsNullOrEmpty(filePathFilter) && !ContainsText(result.FilePath, filePathFilter))
+            {
+                return false;
+            }
+
+            string fileNameFilter = GetFilterText(txtFileNameFilter);
+            if (!string.IsNullOrEmpty(fileNameFilter) && !ContainsText(result.FileName, fileNameFilter))
+            {
+                return false;
+            }
+
+            string rowFilter = GetFilterText(txtRowNumFilter);
+            if (!string.IsNullOrEmpty(rowFilter) && !ContainsText(result.LineNumber.ToString(), rowFilter))
+            {
+                return false;
+            }
+
+            string grepResultFilter = GetFilterText(txtGrepResultFilter);
+            if (!string.IsNullOrEmpty(grepResultFilter) && !ContainsText(result.LineText, grepResultFilter))
+            {
+                return false;
+            }
+
+            string methodFilter = GetFilterText(txtMethodFilter);
+            if (!string.IsNullOrEmpty(methodFilter) && !ContainsText(result.MethodSignature, methodFilter))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static string GetFilterText(TextBox textBox)
+        {
+            return textBox?.Text?.Trim() ?? string.Empty;
+        }
+
+        private static bool ContainsText(string source, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+            {
+                return true;
+            }
+
+            if (string.IsNullOrEmpty(source))
+            {
+                return false;
+            }
+
+            return source.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void RenderResults(IReadOnlyList<SearchResult> results)
+        {
+            dataGridViewResults.SuspendLayout();
+            dataGridViewResults.Rows.Clear();
+
+            if (results != null && results.Count > 0)
+            {
+                var rows = new DataGridViewRow[results.Count];
+                for (int i = 0; i < results.Count; i++)
+                {
+                    var result = results[i];
+                    object[] cells =
+                    {
+                        result.FilePath,
+                        result.FileName,
+                        result.LineNumber,
+                        result.LineText,
+                        result.MethodSignature,
+                        result.EncodingName
+                    };
+
+                    var row = new DataGridViewRow();
+                    row.CreateCells(dataGridViewResults, cells);
+                    rows[i] = row;
+                }
+
+                dataGridViewResults.Rows.AddRange(rows);
+            }
+
+            dataGridViewResults.ResumeLayout();
         }
 
         private void btnFileCopy_Click(object sender, EventArgs e)

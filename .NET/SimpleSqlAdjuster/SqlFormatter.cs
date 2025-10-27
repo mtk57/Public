@@ -56,6 +56,20 @@ namespace SimpleSqlAdjuster
             ClauseStopper.Keyword("EXCEPT")
         };
 
+        private static readonly ClauseStopper[] UpdateSetStops =
+        {
+            ClauseStopper.Keyword("WHERE"),
+            ClauseStopper.Keyword("RETURNING"),
+            ClauseStopper.Keyword("FROM")
+        };
+
+        private static readonly ClauseStopper[] ValuesStops =
+        {
+            ClauseStopper.Keyword("RETURNING"),
+            ClauseStopper.Keyword("SELECT"),
+            ClauseStopper.Keyword("ON")
+        };
+
         public string Format(string sql, int lineNumber)
         {
             try
@@ -109,6 +123,25 @@ namespace SimpleSqlAdjuster
 
                     if (token.IsSymbol(";"))
                     {
+                        _index++;
+                        continue;
+                    }
+
+                    if (token.IsKeyword("UPDATE"))
+                    {
+                        FormatUpdateStatement();
+                        continue;
+                    }
+
+                    if (token.IsKeyword("INSERT"))
+                    {
+                        FormatInsertStatement();
+                        continue;
+                    }
+
+                    if (token.IsKeyword("DELETE"))
+                    {
+                        _writer.WriteLine(0, "DELETE");
                         _index++;
                         continue;
                     }
@@ -260,6 +293,122 @@ namespace SimpleSqlAdjuster
 
                     WriteClauseItem(1, segment.Tokens);
                 }
+            }
+
+            private void FormatUpdateStatement()
+            {
+                _writer.WriteLine(0, "UPDATE");
+                _index++;
+
+                var targetTokens = new List<SqlToken>();
+                while (_index < _tokens.Count)
+                {
+                    var token = _tokens[_index];
+                    if (token.IsKeyword("SET") ||
+                        token.IsKeyword("RETURNING") ||
+                        token.IsSymbol(";"))
+                    {
+                        break;
+                    }
+
+                    targetTokens.Add(token);
+                    _index++;
+                }
+
+                WriteClauseItem(1, targetTokens);
+
+                if (_index < _tokens.Count && _tokens[_index].IsKeyword("SET"))
+                {
+                    _writer.WriteLine(0, "SET");
+                    _index++;
+                    FormatCommaSeparatedClause(UpdateSetStops);
+                }
+            }
+
+            private void FormatInsertStatement()
+            {
+                var headerTokens = new List<SqlToken>();
+                headerTokens.Add(_tokens[_index]);
+                _index++;
+
+                while (_index < _tokens.Count)
+                {
+                    var token = _tokens[_index];
+                    if (token.IsSymbol("(") ||
+                        token.IsKeyword("VALUES") ||
+                        token.IsKeyword("SELECT") ||
+                        token.IsKeyword("WITH") ||
+                        token.IsSymbol(";"))
+                    {
+                        break;
+                    }
+
+                    headerTokens.Add(token);
+                    _index++;
+                }
+
+                var headerText = RenderTokens(headerTokens);
+                if (!string.IsNullOrEmpty(headerText))
+                {
+                    _writer.WriteLine(0, headerText);
+                }
+
+                while (_index < _tokens.Count && _tokens[_index].IsSymbol("("))
+                {
+                    var extraTokens = ReadParenthesizedTokens();
+                    if (extraTokens.Count == 0)
+                    {
+                        break;
+                    }
+
+                    WriteClauseItem(1, extraTokens);
+                }
+
+                if (_index < _tokens.Count && _tokens[_index].IsKeyword("VALUES"))
+                {
+                    _writer.WriteLine(0, "VALUES");
+                    _index++;
+                    FormatValuesClause();
+                }
+            }
+
+            private void FormatValuesClause()
+            {
+                FormatCommaSeparatedClause(ValuesStops);
+            }
+
+            private List<SqlToken> ReadParenthesizedTokens()
+            {
+                var collected = new List<SqlToken>();
+                if (_index >= _tokens.Count || !_tokens[_index].IsSymbol("("))
+                {
+                    return collected;
+                }
+
+                var depth = 0;
+                while (_index < _tokens.Count)
+                {
+                    var token = _tokens[_index];
+                    collected.Add(token);
+
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                    }
+                    else if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                        if (depth == 0)
+                        {
+                            _index++;
+                            break;
+                        }
+                    }
+
+                    _index++;
+                }
+
+                return collected;
             }
 
             private void FormatCommaSeparatedClause(ClauseStopper[] stops)
@@ -423,6 +572,11 @@ namespace SimpleSqlAdjuster
                     return true;
                 }
 
+                if (TryWriteInSubquery(indentLevel, tokens))
+                {
+                    return true;
+                }
+
                 if (TryWriteParenthesizedSubquery(indentLevel, tokens))
                 {
                     return true;
@@ -478,6 +632,92 @@ namespace SimpleSqlAdjuster
 
                 _writer.WriteLine(indentLevel, closingText);
                 return true;
+            }
+
+            private bool TryWriteInSubquery(int indentLevel, List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                var depth = 0;
+                for (var i = 0; i < tokens.Count; i++)
+                {
+                    var token = tokens[i];
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                        continue;
+                    }
+
+                    if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                        continue;
+                    }
+
+                    if (depth != 0)
+                    {
+                        continue;
+                    }
+
+                    var isNotIn = token.IsKeyword("NOT") && i + 1 < tokens.Count && tokens[i + 1].IsKeyword("IN");
+                    var isIn = token.IsKeyword("IN");
+                    if (!isNotIn && !isIn)
+                    {
+                        continue;
+                    }
+
+                    var inIndex = isIn ? i : i + 1;
+                    var headTokens = tokens.GetRange(0, inIndex + 1);
+
+                    var subStart = inIndex + 1;
+                    while (subStart < tokens.Count && tokens[subStart].Kind == TokenKind.Comment)
+                    {
+                        subStart++;
+                    }
+
+                    if (subStart >= tokens.Count || !tokens[subStart].IsSymbol("("))
+                    {
+                        continue;
+                    }
+
+                    var subTokens = tokens.GetRange(subStart, tokens.Count - subStart);
+                    var closingIndex = FindMatchingParenthesis(subTokens, 0);
+                    if (closingIndex <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (!ContainsTopLevelSelect(subTokens, 1, closingIndex - 1) &&
+                        !LooksLikeSubquery(subTokens.GetRange(1, Math.Max(0, closingIndex - 1))))
+                    {
+                        continue;
+                    }
+
+                    var headText = RenderTokens(headTokens);
+                    if (!string.IsNullOrEmpty(headText))
+                    {
+                        _writer.WriteLine(indentLevel, headText);
+                    }
+
+                    if (TryWriteParenthesizedSubquery(indentLevel, subTokens))
+                    {
+                        return true;
+                    }
+
+                    var fallback = RenderTokens(subTokens);
+                    if (!string.IsNullOrEmpty(fallback))
+                    {
+                        _writer.WriteLine(indentLevel + 1, fallback);
+                        return true;
+                    }
+
+                    return true;
+                }
+
+                return false;
             }
 
             private void WriteNestedSql(int indentLevel, string sql)
@@ -992,6 +1232,7 @@ namespace SimpleSqlAdjuster
             "OR",
             "NOT",
             "EXISTS",
+            "IN",
             "INNER",
             "LEFT",
             "RIGHT",
@@ -1004,6 +1245,7 @@ namespace SimpleSqlAdjuster
             "DELETE",
             "INTO",
             "VALUES",
+            "RETURNING",
             "SET",
             "WITH",
             "AS",

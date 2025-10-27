@@ -385,7 +385,10 @@ namespace SimpleSqlAdjuster
                     continue;
                 }
 
-                if (c == '.' && depth == 0 && (i + 1 >= content.Length || char.IsWhiteSpace(content[i + 1])))
+                var isDotDelimiter = c == '.' && (i + 1 >= content.Length || char.IsWhiteSpace(content[i + 1]));
+                var isCommaDelimiter = c == ','; // カンマは常に区切りとする
+
+                if (depth == 0 && (isDotDelimiter || isCommaDelimiter))
                 {
                     var segment = content.Substring(segmentStart, i - segmentStart).Trim();
                     if (!string.IsNullOrEmpty(segment))

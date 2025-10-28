@@ -61,7 +61,7 @@
             this.splitContainer1.Panel2.Controls.Add(this.txtAfterSQL);
             this.splitContainer1.Size = new System.Drawing.Size(542, 486);
             this.splitContainer1.SplitterDistance = 234;
-            this.splitContainer1.TabIndex = 0;
+            this.splitContainer1.TabIndex = 1;
             // 
             // txtBeforeSQL
             // 
@@ -74,7 +74,7 @@
             this.txtBeforeSQL.Name = "txtBeforeSQL";
             this.txtBeforeSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtBeforeSQL.Size = new System.Drawing.Size(518, 186);
-            this.txtBeforeSQL.TabIndex = 0;
+            this.txtBeforeSQL.TabIndex = 4;
             // 
             // txtAfterSQL
             // 
@@ -88,7 +88,7 @@
             this.txtAfterSQL.ReadOnly = true;
             this.txtAfterSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtAfterSQL.Size = new System.Drawing.Size(518, 200);
-            this.txtAfterSQL.TabIndex = 0;
+            this.txtAfterSQL.TabIndex = 3;
             this.txtAfterSQL.TextChanged += new System.EventHandler(this.txtAfterSQL_TextChanged);
             // 
             // label1
@@ -97,7 +97,7 @@
             this.label1.Location = new System.Drawing.Point(12, 12);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(62, 12);
-            this.label1.TabIndex = 2;
+            this.label1.TabIndex = 0;
             this.label1.Text = "変更前SQL";
             // 
             // label2
@@ -106,7 +106,7 @@
             this.label2.Location = new System.Drawing.Point(12, 12);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(62, 12);
-            this.label2.TabIndex = 3;
+            this.label2.TabIndex = 0;
             this.label2.Text = "変更後SQL";
             // 
             // btnRun
@@ -115,7 +115,7 @@
             this.btnRun.Location = new System.Drawing.Point(455, 10);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 23);
-            this.btnRun.TabIndex = 1;
+            this.btnRun.TabIndex = 2;
             this.btnRun.Text = "実行";
             this.btnRun.UseVisualStyleBackColor = true;
             // 

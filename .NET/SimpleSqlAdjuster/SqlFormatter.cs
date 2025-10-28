@@ -521,6 +521,11 @@ namespace SimpleSqlAdjuster
                     return;
                 }
 
+                if (TryWriteAssignmentWithSubquery(indentLevel, tokens))
+                {
+                    return;
+                }
+
                 if (TryWriteSpecialExpression(indentLevel, tokens))
                 {
                     return;
@@ -531,6 +536,65 @@ namespace SimpleSqlAdjuster
                 {
                     _writer.WriteLine(indentLevel, text);
                 }
+            }
+
+            private bool TryWriteAssignmentWithSubquery(int indentLevel, List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                var equalsIndex = FindTopLevelSymbol(tokens, "=");
+                if (equalsIndex <= 0 || equalsIndex >= tokens.Count - 1)
+                {
+                    return false;
+                }
+
+                var leftTokens = tokens.GetRange(0, equalsIndex);
+                var leftText = RenderTokens(leftTokens);
+                if (string.IsNullOrEmpty(leftText))
+                {
+                    return false;
+                }
+
+                var rightTokens = tokens.GetRange(equalsIndex + 1, tokens.Count - equalsIndex - 1);
+                if (rightTokens.Count == 0)
+                {
+                    return false;
+                }
+
+                var commentTokens = new List<SqlToken>();
+                var contentStart = 0;
+                while (contentStart < rightTokens.Count && rightTokens[contentStart].Kind == TokenKind.Comment)
+                {
+                    commentTokens.Add(rightTokens[contentStart]);
+                    contentStart++;
+                }
+
+                if (contentStart >= rightTokens.Count)
+                {
+                    return false;
+                }
+
+                var subTokens = rightTokens.GetRange(contentStart, rightTokens.Count - contentStart);
+                if (!IsParenthesizedSubquery(subTokens))
+                {
+                    return false;
+                }
+
+                _writer.WriteLine(indentLevel, leftText + " =");
+
+                foreach (var comment in commentTokens)
+                {
+                    if (comment != null && !string.IsNullOrEmpty(comment.Value))
+                    {
+                        _writer.WriteLine(indentLevel, comment.Value.TrimEnd());
+                    }
+                }
+
+                TryWriteParenthesizedSubquery(indentLevel, subTokens);
+                return true;
             }
 
             private bool TryWriteSpecialExpression(int indentLevel, List<SqlToken> tokens)
@@ -756,6 +820,33 @@ namespace SimpleSqlAdjuster
                 }
             }
 
+            private static int FindTopLevelSymbol(List<SqlToken> tokens, string symbol)
+            {
+                var depth = 0;
+                for (var i = 0; i < tokens.Count; i++)
+                {
+                    var token = tokens[i];
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                        continue;
+                    }
+
+                    if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                        continue;
+                    }
+
+                    if (depth == 0 && token.IsSymbol(symbol))
+                    {
+                        return i;
+                    }
+                }
+
+                return -1;
+            }
+
             private static int FindMatchingParenthesis(List<SqlToken> tokens, int startIndex)
             {
                 var depth = 0;
@@ -844,6 +935,31 @@ namespace SimpleSqlAdjuster
                 }
 
                 return false;
+            }
+
+            private static bool IsParenthesizedSubquery(List<SqlToken> tokens)
+            {
+                if (tokens == null || tokens.Count == 0 || !tokens[0].IsSymbol("("))
+                {
+                    return false;
+                }
+
+                var closingIndex = FindMatchingParenthesis(tokens, 0);
+                if (closingIndex <= 0)
+                {
+                    return false;
+                }
+
+                var innerCount = closingIndex - 1;
+                var innerTokens = innerCount > 0 ? tokens.GetRange(1, innerCount) : new List<SqlToken>();
+
+                if (!ContainsTopLevelSelect(tokens, 1, closingIndex - 1) &&
+                    !LooksLikeSubquery(innerTokens))
+                {
+                    return false;
+                }
+
+                return true;
             }
 
             private List<SqlToken> CollectTokensUntil(ClauseStopper[] stops)

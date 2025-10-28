@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace SimpleSqlAdjuster
@@ -20,6 +21,9 @@ namespace SimpleSqlAdjuster
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
+
             _settings = _settingsService.Load();
 
             if (_settings.WindowWidth > 0 && _settings.WindowHeight > 0)

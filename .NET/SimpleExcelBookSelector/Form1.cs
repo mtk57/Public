@@ -303,7 +303,6 @@ namespace SimpleExcelBookSelector
             {
                 var jsonText = File.ReadAllText(_settingsFilePath, Encoding.UTF8);
                 bool hasHistoryOpenSetting = jsonText.IndexOf("\"IsHistoryOpenFolderOnDoubleClickEnabled\"", StringComparison.OrdinalIgnoreCase) >= 0;
-                bool hasFilterHistorySetting = jsonText.IndexOf("\"HistoryFilterKeywords\"", StringComparison.OrdinalIgnoreCase) >= 0;
 
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonText)))
                 {
@@ -316,10 +315,6 @@ namespace SimpleExcelBookSelector
                     loadedSettings.IsHistoryOpenFolderOnDoubleClickEnabled = loadedSettings.IsOpenFolderOnDoubleClickEnabled;
                 }
 
-                if (loadedSettings != null && !hasFilterHistorySetting)
-                {
-                    loadedSettings.HistoryFilterKeywords = new List<string>();
-                }
             }
             catch (SerializationException)
             {
@@ -336,8 +331,7 @@ namespace SimpleExcelBookSelector
                             IsSheetSelectionEnabled = oldSettings.IsSheetSelectionEnabled,
                             IsAutoRefreshEnabled = oldSettings.IsAutoRefreshEnabled,
                             RefreshInterval = oldSettings.RefreshInterval,
-                            FileHistory = oldSettings.FileHistory?.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList() ?? new List<HistoryItem>(),
-                            HistoryFilterKeywords = new List<string>()
+                            FileHistory = oldSettings.FileHistory?.Select(path => new HistoryItem { FilePath = path, IsPinned = false, LastUpdated = DateTime.Now }).ToList() ?? new List<HistoryItem>()
                         };
                         loadedSettings.IsOpenFolderOnDoubleClickEnabled = true;
                         loadedSettings.IsHistoryOpenFolderOnDoubleClickEnabled = loadedSettings.IsOpenFolderOnDoubleClickEnabled;
@@ -359,10 +353,6 @@ namespace SimpleExcelBookSelector
             if (_settings.FileHistory == null)
             {
                 _settings.FileHistory = new List<HistoryItem>();
-            }
-            if (_settings.HistoryFilterKeywords == null)
-            {
-                _settings.HistoryFilterKeywords = new List<string>();
             }
             _settings.IsHistoryOpenFolderOnDoubleClickEnabled = loadedSettings?.IsHistoryOpenFolderOnDoubleClickEnabled ?? _settings.IsHistoryOpenFolderOnDoubleClickEnabled;
 
@@ -614,7 +604,6 @@ namespace SimpleExcelBookSelector
                     }
 
                     _settings.IsHistoryOpenFolderOnDoubleClickEnabled = historyForm.IsOpenFolderOnDoubleClickEnabled;
-                    _settings.HistoryFilterKeywords = historyForm.FilterHistory.ToList();
                     _settings.FileHistory = updatedHistory;
                     SaveSettings();
                     RefreshExcelFileList(forceUpdate: true);

@@ -40,9 +40,6 @@
             this.btnSelectOpen = new System.Windows.Forms.Button();
             this.btnDeleteSelectedFiles = new System.Windows.Forms.Button();
             this.btnAllCheckOnOff = new System.Windows.Forms.Button();
-            this.comboFilter = new System.Windows.Forms.ComboBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.btnClearFilter = new System.Windows.Forms.Button();
             this.btnPinnedSelectedFiles = new System.Windows.Forms.Button();
             this.btnUnPinnedSelectedFiles = new System.Windows.Forms.Button();
             this.btnApply = new System.Windows.Forms.Button();
@@ -67,11 +64,11 @@
             this.colFileName,
             this.colFilePath,
             this.colUpdatedAt});
-            this.dataGridView1.Location = new System.Drawing.Point(21, 118);
+            this.dataGridView1.Location = new System.Drawing.Point(21, 71);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(775, 161);
-            this.dataGridView1.TabIndex = 12;
+            this.dataGridView1.Size = new System.Drawing.Size(775, 208);
+            this.dataGridView1.TabIndex = 10;
             this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             this.dataGridView1.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView1_ColumnHeaderMouseClick);
             // 
@@ -169,37 +166,6 @@
             this.btnAllCheckOnOff.UseVisualStyleBackColor = true;
             this.btnAllCheckOnOff.Click += new System.EventHandler(this.btnAllCheckOnOff_Click);
             // 
-            // comboFilter
-            // 
-            this.comboFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDown;
-            this.comboFilter.FormattingEnabled = true;
-            this.comboFilter.Location = new System.Drawing.Point(66, 83);
-            this.comboFilter.Name = "comboFilter";
-            this.comboFilter.Size = new System.Drawing.Size(368, 20);
-            this.comboFilter.TabIndex = 10;
-            this.comboFilter.SelectedIndexChanged += new System.EventHandler(this.comboFilter_SelectedIndexChanged);
-            this.comboFilter.TextChanged += new System.EventHandler(this.comboFilter_TextChanged);
-            this.comboFilter.KeyDown += new System.Windows.Forms.KeyEventHandler(this.comboFilter_KeyDown);
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(22, 86);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(38, 12);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "フィルタ";
-            // 
-            // btnClearFilter
-            // 
-            this.btnClearFilter.Location = new System.Drawing.Point(440, 81);
-            this.btnClearFilter.Name = "btnClearFilter";
-            this.btnClearFilter.Size = new System.Drawing.Size(48, 23);
-            this.btnClearFilter.TabIndex = 11;
-            this.btnClearFilter.Text = "クリア";
-            this.btnClearFilter.UseVisualStyleBackColor = true;
-            this.btnClearFilter.Click += new System.EventHandler(this.btnClearFilter_Click);
-            // 
             // btnPinnedSelectedFiles
             // 
             this.btnPinnedSelectedFiles.Location = new System.Drawing.Point(493, 37);
@@ -273,9 +239,6 @@
             this.Controls.Add(this.btnApply);
             this.Controls.Add(this.btnUnPinnedSelectedFiles);
             this.Controls.Add(this.btnPinnedSelectedFiles);
-            this.Controls.Add(this.btnClearFilter);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.comboFilter);
             this.Controls.Add(this.btnAllCheckOnOff);
             this.Controls.Add(this.btnDeleteSelectedFiles);
             this.Controls.Add(this.btnSelectOpen);
@@ -299,9 +262,6 @@
         private System.Windows.Forms.Button btnSelectOpen;
         private System.Windows.Forms.Button btnDeleteSelectedFiles;
         private System.Windows.Forms.Button btnAllCheckOnOff;
-        private System.Windows.Forms.ComboBox comboFilter;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button btnClearFilter;
         private System.Windows.Forms.Button btnPinnedSelectedFiles;
         private System.Windows.Forms.Button btnUnPinnedSelectedFiles;
         private System.Windows.Forms.Button btnApply;

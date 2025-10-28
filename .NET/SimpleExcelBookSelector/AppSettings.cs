@@ -52,9 +52,6 @@ namespace SimpleExcelBookSelector
         public bool IsHistoryOpenFolderOnDoubleClickEnabled { get; set; } = true;
 
         [DataMember]
-        public List<string> HistoryFilterKeywords { get; set; } = new List<string>();
-
-        [DataMember]
         public FormLayoutSettings MainFormLayout { get; set; } = new FormLayoutSettings();
 
         [DataMember]

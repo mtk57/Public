@@ -18,39 +18,19 @@ namespace SimpleExcelBookSelector
         private const string FileNameColumnName = "colFileName";
         private const string FilePathColumnName = "colFilePath";
         private const string UpdatedAtColumnName = "colUpdatedAt";
-        private const int MaxFilterHistoryCount = 10;
         private string _currentSortColumnName = PinnedColumnName;
         private bool _isSortAscending = false;
         private static readonly StringComparer SortComparer = StringComparer.OrdinalIgnoreCase;
-        private readonly List<string> _filterHistory;
-        private bool _suppressFilterEvents;
 
         public bool IsOpenFolderOnDoubleClickEnabled => chkIsOpenDir.Checked;
-        public IList<string> FilterHistory
-        {
-            get
-            {
-                RememberFilterKeyword(comboFilter.Text, updateComboItems: false);
-                return new List<string>(_filterHistory);
-            }
-        }
 
         public HistoryForm(AppSettings settings)
         {
             InitializeComponent();
             _settings = settings;
-            _filterHistory = new List<string>(settings.HistoryFilterKeywords ?? Enumerable.Empty<string>());
-            _suppressFilterEvents = true;
             chkIsOpenDir.Checked = settings.IsHistoryOpenFolderOnDoubleClickEnabled;
             FileHistory = new List<HistoryItem>(settings.FileHistory.Select(item => new HistoryItem { FilePath = item.FilePath, IsPinned = item.IsPinned, LastUpdated = item.LastUpdated }));
             dataGridView1.CellClick += DataGridView1_CellClick;
-            comboFilter.Items.AddRange(_filterHistory.ToArray());
-            if (_filterHistory.Count > 0)
-            {
-                comboFilter.Text = _filterHistory[0];
-                comboFilter.SelectionStart = comboFilter.Text.Length;
-            }
-            _suppressFilterEvents = false;
         }
 
         private void HistoryForm_Load(object sender, EventArgs e)
@@ -261,22 +241,7 @@ namespace SimpleExcelBookSelector
 
         private void ApplyFilterAndSort()
         {
-            if (_suppressFilterEvents)
-            {
-                return;
-            }
-
-            var filterText = comboFilter.Text;
-
-            IEnumerable<HistoryItem> filteredHistory = FileHistory;
-
-            if (!string.IsNullOrWhiteSpace(filterText))
-            {
-                filteredHistory = filteredHistory
-                    .Where(item => item.FilePath.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0);
-            }
-
-            var sortedHistory = SortHistory(filteredHistory);
+            var sortedHistory = SortHistory(FileHistory);
 
             PopulateDataGridView(sortedHistory);
             UpdateCheckToggleButtonText();
@@ -445,91 +410,6 @@ namespace SimpleExcelBookSelector
             }
 
             ApplyFilterAndSort();
-        }
-
-        private void comboFilter_TextChanged(object sender, EventArgs e)
-        {
-            if (_suppressFilterEvents)
-            {
-                return;
-            }
-
-            ApplyFilterAndSort();
-        }
-
-        private void comboFilter_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_suppressFilterEvents)
-            {
-                return;
-            }
-
-            ApplyFilterAndSort();
-            RememberFilterKeyword(comboFilter.Text, updateComboItems: true);
-        }
-
-        private void comboFilter_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                RememberFilterKeyword(comboFilter.Text, updateComboItems: true);
-                ApplyFilterAndSort();
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-        }
-
-        private void btnClearFilter_Click(object sender, EventArgs e)
-        {
-            _suppressFilterEvents = true;
-            comboFilter.SelectedIndex = -1;
-            comboFilter.Text = string.Empty;
-            _suppressFilterEvents = false;
-            ApplyFilterAndSort();
-        }
-
-        private void RememberFilterKeyword(string keyword, bool updateComboItems)
-        {
-            keyword = keyword?.Trim();
-            if (string.IsNullOrEmpty(keyword))
-            {
-                return;
-            }
-
-            var existingIndex = _filterHistory.FindIndex(k => string.Equals(k, keyword, StringComparison.OrdinalIgnoreCase));
-            if (existingIndex >= 0)
-            {
-                _filterHistory.RemoveAt(existingIndex);
-            }
-
-            _filterHistory.Insert(0, keyword);
-            if (_filterHistory.Count > MaxFilterHistoryCount)
-            {
-                _filterHistory.RemoveRange(MaxFilterHistoryCount, _filterHistory.Count - MaxFilterHistoryCount);
-            }
-
-            if (!updateComboItems || comboFilter.IsDisposed)
-            {
-                return;
-            }
-
-            _suppressFilterEvents = true;
-            comboFilter.BeginUpdate();
-            comboFilter.Items.Clear();
-            comboFilter.Items.AddRange(_filterHistory.ToArray());
-            comboFilter.EndUpdate();
-            var index = comboFilter.FindStringExact(keyword);
-            if (index >= 0)
-            {
-                comboFilter.SelectedIndex = index;
-            }
-            else
-            {
-                comboFilter.SelectedIndex = -1;
-                comboFilter.Text = keyword;
-                comboFilter.SelectionStart = comboFilter.Text.Length;
-            }
-            _suppressFilterEvents = false;
         }
 
         private void ChangePinnedState(bool shouldBePinned)

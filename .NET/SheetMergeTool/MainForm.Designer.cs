@@ -48,7 +48,7 @@
             this.lblStatus.Location = new System.Drawing.Point(22, 280);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(53, 12);
-            this.lblStatus.TabIndex = 17;
+            this.lblStatus.TabIndex = 0;
             this.lblStatus.Text = "準備完了";
             // 
             // txtResults
@@ -60,7 +60,7 @@
             this.txtResults.ReadOnly = true;
             this.txtResults.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtResults.Size = new System.Drawing.Size(521, 70);
-            this.txtResults.TabIndex = 16;
+            this.txtResults.TabIndex = 6;
             // 
             // label3
             // 
@@ -68,7 +68,7 @@
             this.label3.Location = new System.Drawing.Point(22, 138);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(53, 12);
-            this.label3.TabIndex = 15;
+            this.label3.TabIndex = 0;
             this.label3.Text = "処理結果";
             // 
             // btnProcess
@@ -77,7 +77,7 @@
             this.btnProcess.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnProcess.Name = "btnProcess";
             this.btnProcess.Size = new System.Drawing.Size(64, 24);
-            this.btnProcess.TabIndex = 14;
+            this.btnProcess.TabIndex = 7;
             this.btnProcess.Text = "処理開始";
             this.btnProcess.UseVisualStyleBackColor = true;
             this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
@@ -88,7 +88,7 @@
             this.txtStartCell.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtStartCell.Name = "txtStartCell";
             this.txtStartCell.Size = new System.Drawing.Size(132, 19);
-            this.txtStartCell.TabIndex = 13;
+            this.txtStartCell.TabIndex = 3;
             // 
             // label2
             // 
@@ -96,7 +96,7 @@
             this.label2.Location = new System.Drawing.Point(22, 84);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(119, 12);
-            this.label2.TabIndex = 12;
+            this.label2.TabIndex = 0;
             this.label2.Text = "開始セル位置(A1形式)";
             // 
             // btnBrowse
@@ -105,7 +105,7 @@
             this.btnBrowse.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(64, 18);
-            this.btnBrowse.TabIndex = 11;
+            this.btnBrowse.TabIndex = 2;
             this.btnBrowse.Text = "参照";
             this.btnBrowse.UseVisualStyleBackColor = true;
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
@@ -116,7 +116,7 @@
             this.txtDirPath.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtDirPath.Name = "txtDirPath";
             this.txtDirPath.Size = new System.Drawing.Size(451, 19);
-            this.txtDirPath.TabIndex = 10;
+            this.txtDirPath.TabIndex = 1;
             // 
             // label1
             // 
@@ -124,7 +124,7 @@
             this.label1.Location = new System.Drawing.Point(22, 22);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(87, 12);
-            this.label1.TabIndex = 9;
+            this.label1.TabIndex = 0;
             this.label1.Text = "Excelフォルダパス";
             // 
             // txtEndCell
@@ -133,7 +133,7 @@
             this.txtEndCell.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtEndCell.Name = "txtEndCell";
             this.txtEndCell.Size = new System.Drawing.Size(132, 19);
-            this.txtEndCell.TabIndex = 19;
+            this.txtEndCell.TabIndex = 4;
             // 
             // label4
             // 
@@ -141,7 +141,7 @@
             this.label4.Location = new System.Drawing.Point(183, 84);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(119, 12);
-            this.label4.TabIndex = 18;
+            this.label4.TabIndex = 0;
             this.label4.Text = "終了セル位置(A1形式)";
             // 
             // chkEnableSubDir
@@ -150,7 +150,7 @@
             this.chkEnableSubDir.Location = new System.Drawing.Point(348, 101);
             this.chkEnableSubDir.Name = "chkEnableSubDir";
             this.chkEnableSubDir.Size = new System.Drawing.Size(118, 16);
-            this.chkEnableSubDir.TabIndex = 20;
+            this.chkEnableSubDir.TabIndex = 5;
             this.chkEnableSubDir.Text = "サブフォルダも含める";
             this.chkEnableSubDir.UseVisualStyleBackColor = true;
             // 

@@ -241,11 +241,75 @@ namespace SimpleExcelBookSelector
 
         private void ApplyFilterAndSort()
         {
-            var sortedHistory = SortHistory(FileHistory);
+            var filteredHistory = FilterHistory(FileHistory);
+            var sortedHistory = SortHistory(filteredHistory);
 
             PopulateDataGridView(sortedHistory);
             UpdateCheckToggleButtonText();
             UpdateSortGlyphs();
+        }
+
+        private IEnumerable<HistoryItem> FilterHistory(IEnumerable<HistoryItem> history)
+        {
+            if (history == null)
+            {
+                return Enumerable.Empty<HistoryItem>();
+            }
+
+            var directoryFilter = NormalizeFilterText(txtDirFilter?.Text);
+            var fileFilter = NormalizeFilterText(txtFileFilter?.Text);
+            var filePathFilter = NormalizeFilterText(txtFilePathFilter?.Text);
+            var updatedAtFilter = NormalizeFilterText(txtUpdateTimeFilter?.Text);
+
+            return history.Where(item =>
+            {
+                var filePath = item.FilePath ?? string.Empty;
+                var directory = GetDirectoryName(filePath);
+                var fileName = GetFileName(filePath);
+                var updatedAt = FormatTimestamp(item.LastUpdated);
+
+                if (!MatchesFilter(directory, directoryFilter))
+                {
+                    return false;
+                }
+
+                if (!MatchesFilter(fileName, fileFilter))
+                {
+                    return false;
+                }
+
+                if (!MatchesFilter(filePath, filePathFilter))
+                {
+                    return false;
+                }
+
+                if (!MatchesFilter(updatedAt, updatedAtFilter))
+                {
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
+        private static string NormalizeFilterText(string text)
+        {
+            return string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim();
+        }
+
+        private static bool MatchesFilter(string value, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+            {
+                return true;
+            }
+
+            return (value ?? string.Empty).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void FilterTextBox_TextChanged(object sender, EventArgs e)
+        {
+            ApplyFilterAndSort();
         }
 
         private void btnAllOpen_Click(object sender, EventArgs e)

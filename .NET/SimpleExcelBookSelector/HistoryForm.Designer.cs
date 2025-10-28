@@ -242,6 +242,7 @@
             this.txtDirFilter.Name = "txtDirFilter";
             this.txtDirFilter.Size = new System.Drawing.Size(75, 19);
             this.txtDirFilter.TabIndex = 15;
+            this.txtDirFilter.TextChanged += new System.EventHandler(this.FilterTextBox_TextChanged);
             // 
             // txtFileFilter
             // 
@@ -249,6 +250,7 @@
             this.txtFileFilter.Name = "txtFileFilter";
             this.txtFileFilter.Size = new System.Drawing.Size(75, 19);
             this.txtFileFilter.TabIndex = 16;
+            this.txtFileFilter.TextChanged += new System.EventHandler(this.FilterTextBox_TextChanged);
             // 
             // txtFilePathFilter
             // 
@@ -256,6 +258,7 @@
             this.txtFilePathFilter.Name = "txtFilePathFilter";
             this.txtFilePathFilter.Size = new System.Drawing.Size(75, 19);
             this.txtFilePathFilter.TabIndex = 17;
+            this.txtFilePathFilter.TextChanged += new System.EventHandler(this.FilterTextBox_TextChanged);
             // 
             // txtUpdateTimeFilter
             // 
@@ -263,6 +266,7 @@
             this.txtUpdateTimeFilter.Name = "txtUpdateTimeFilter";
             this.txtUpdateTimeFilter.Size = new System.Drawing.Size(75, 19);
             this.txtUpdateTimeFilter.TabIndex = 18;
+            this.txtUpdateTimeFilter.TextChanged += new System.EventHandler(this.FilterTextBox_TextChanged);
             // 
             // label1
             // 

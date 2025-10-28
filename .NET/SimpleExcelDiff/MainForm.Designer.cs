@@ -57,7 +57,7 @@
             this.lblStatus.Location = new System.Drawing.Point(20, 521);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(53, 12);
-            this.lblStatus.TabIndex = 17;
+            this.lblStatus.TabIndex = 0;
             this.lblStatus.Text = "準備完了";
             // 
             // label3
@@ -66,7 +66,7 @@
             this.label3.Location = new System.Drawing.Point(22, 181);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(53, 12);
-            this.label3.TabIndex = 15;
+            this.label3.TabIndex = 0;
             this.label3.Text = "処理結果";
             // 
             // btnProcess
@@ -75,7 +75,7 @@
             this.btnProcess.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnProcess.Name = "btnProcess";
             this.btnProcess.Size = new System.Drawing.Size(64, 24);
-            this.btnProcess.TabIndex = 4;
+            this.btnProcess.TabIndex = 8;
             this.btnProcess.Text = "処理開始";
             this.btnProcess.UseVisualStyleBackColor = true;
             this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
@@ -87,7 +87,7 @@
             this.btnBrowseSrc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowseSrc.Name = "btnBrowseSrc";
             this.btnBrowseSrc.Size = new System.Drawing.Size(64, 19);
-            this.btnBrowseSrc.TabIndex = 1;
+            this.btnBrowseSrc.TabIndex = 4;
             this.btnBrowseSrc.Text = "参照";
             this.btnBrowseSrc.UseVisualStyleBackColor = true;
             this.btnBrowseSrc.Click += new System.EventHandler(this.btnBrowseSrc_Click);
@@ -100,7 +100,7 @@
             this.txtPathSrc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPathSrc.Name = "txtPathSrc";
             this.txtPathSrc.Size = new System.Drawing.Size(873, 19);
-            this.txtPathSrc.TabIndex = 0;
+            this.txtPathSrc.TabIndex = 2;
             // 
             // label1
             // 
@@ -108,7 +108,7 @@
             this.label1.Location = new System.Drawing.Point(22, 22);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(191, 12);
-            this.label1.TabIndex = 9;
+            this.label1.TabIndex = 0;
             this.label1.Text = "Excelフォルダ or ファイル パス (比較元)";
             // 
             // chkEnableSubDir
@@ -117,7 +117,7 @@
             this.chkEnableSubDir.Location = new System.Drawing.Point(24, 135);
             this.chkEnableSubDir.Name = "chkEnableSubDir";
             this.chkEnableSubDir.Size = new System.Drawing.Size(118, 16);
-            this.chkEnableSubDir.TabIndex = 3;
+            this.chkEnableSubDir.TabIndex = 7;
             this.chkEnableSubDir.Text = "サブフォルダも含める";
             this.chkEnableSubDir.UseVisualStyleBackColor = true;
             // 
@@ -128,7 +128,7 @@
             this.btnBrowseDst.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowseDst.Name = "btnBrowseDst";
             this.btnBrowseDst.Size = new System.Drawing.Size(64, 19);
-            this.btnBrowseDst.TabIndex = 2;
+            this.btnBrowseDst.TabIndex = 6;
             this.btnBrowseDst.Text = "参照";
             this.btnBrowseDst.UseVisualStyleBackColor = true;
             this.btnBrowseDst.Click += new System.EventHandler(this.btnBrowseDst_Click);
@@ -141,7 +141,7 @@
             this.txtPathDst.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPathDst.Name = "txtPathDst";
             this.txtPathDst.Size = new System.Drawing.Size(873, 19);
-            this.txtPathDst.TabIndex = 1;
+            this.txtPathDst.TabIndex = 5;
             // 
             // label2
             // 
@@ -149,7 +149,7 @@
             this.label2.Location = new System.Drawing.Point(22, 73);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(191, 12);
-            this.label2.TabIndex = 22;
+            this.label2.TabIndex = 0;
             this.label2.Text = "Excelフォルダ or ファイル パス (比較先)";
             // 
             // dataGridView1
@@ -162,7 +162,7 @@
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
             this.dataGridView1.Size = new System.Drawing.Size(943, 312);
-            this.dataGridView1.TabIndex = 21;
+            this.dataGridView1.TabIndex = 9;
             // 
             // chkDrawCell
             // 
@@ -170,7 +170,7 @@
             this.chkDrawCell.Location = new System.Drawing.Point(17, 27);
             this.chkDrawCell.Name = "chkDrawCell";
             this.chkDrawCell.Size = new System.Drawing.Size(48, 16);
-            this.chkDrawCell.TabIndex = 23;
+            this.chkDrawCell.TabIndex = 1;
             this.chkDrawCell.Text = "有効";
             this.chkDrawCell.UseVisualStyleBackColor = true;
             this.chkDrawCell.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
@@ -182,7 +182,7 @@
             this.btnColorSelector.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnColorSelector.Name = "btnColorSelector";
             this.btnColorSelector.Size = new System.Drawing.Size(52, 19);
-            this.btnColorSelector.TabIndex = 24;
+            this.btnColorSelector.TabIndex = 3;
             this.btnColorSelector.Text = "色選択";
             this.btnColorSelector.UseVisualStyleBackColor = true;
             this.btnColorSelector.Click += new System.EventHandler(this.btnColorSelector_Click);
@@ -193,7 +193,7 @@
             this.picCellColor.Location = new System.Drawing.Point(71, 23);
             this.picCellColor.Name = "picCellColor";
             this.picCellColor.Size = new System.Drawing.Size(23, 20);
-            this.picCellColor.TabIndex = 25;
+            this.picCellColor.TabIndex = 0;
             this.picCellColor.TabStop = false;
             // 
             // contextMenuStrip1
@@ -209,7 +209,7 @@
             this.groupBox1.Location = new System.Drawing.Point(373, 113);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(161, 58);
-            this.groupBox1.TabIndex = 26;
+            this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "セル色変更";
             // 

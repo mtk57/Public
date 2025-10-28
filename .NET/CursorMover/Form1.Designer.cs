@@ -41,7 +41,7 @@
             this.textCursorMoveTimeSec.Location = new System.Drawing.Point(29, 50);
             this.textCursorMoveTimeSec.Name = "textCursorMoveTimeSec";
             this.textCursorMoveTimeSec.Size = new System.Drawing.Size(182, 19);
-            this.textCursorMoveTimeSec.TabIndex = 0;
+            this.textCursorMoveTimeSec.TabIndex = 1;
             // 
             // label1
             // 
@@ -49,7 +49,7 @@
             this.label1.Location = new System.Drawing.Point(29, 32);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(139, 12);
-            this.label1.TabIndex = 1;
+            this.label1.TabIndex = 0;
             this.label1.Text = "カーソル自動移動間隔（秒）";
             // 
             // btnStart

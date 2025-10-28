@@ -4,6 +4,7 @@ namespace SimpleMethodCallListCreator
     {
         StartsWith = 0,
         EndsWith = 1,
-        Contains = 2
+        Contains = 2,
+        Exact = 3
     }
 }

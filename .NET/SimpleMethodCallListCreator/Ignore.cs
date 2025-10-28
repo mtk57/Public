@@ -180,6 +180,8 @@ namespace SimpleMethodCallListCreator
                     return "終わる";
                 case IgnoreRule.Contains:
                     return "含む";
+                case IgnoreRule.Exact:
+                    return "一致";
                 case IgnoreRule.StartsWith:
                 default:
                     return "始まる";
@@ -195,6 +197,8 @@ namespace SimpleMethodCallListCreator
                     return IgnoreRule.EndsWith;
                 case "含む":
                     return IgnoreRule.Contains;
+                case "一致":
+                    return IgnoreRule.Exact;
                 default:
                     return IgnoreRule.StartsWith;
             }

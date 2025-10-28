@@ -663,6 +663,8 @@ namespace SimpleMethodCallListCreator
                     return target.EndsWith(keyword, comparison);
                 case IgnoreRule.Contains:
                     return target.IndexOf(keyword, comparison) >= 0;
+                case IgnoreRule.Exact:
+                    return string.Equals(target, keyword, comparison);
                 default:
                     return false;
             }

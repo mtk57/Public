@@ -29,12 +29,12 @@
         private void InitializeComponent ()
         {
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.btnInsertRow = new System.Windows.Forms.Button();
-            this.btnRemoveRow = new System.Windows.Forms.Button();
             this.clmKeyword = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmMode = new System.Windows.Forms.DataGridViewComboBoxColumn();
             this.clmRegEx = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.clmCase = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.btnInsertRow = new System.Windows.Forms.Button();
+            this.btnRemoveRow = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -54,24 +54,6 @@
             this.dataGridView1.RowTemplate.Height = 21;
             this.dataGridView1.Size = new System.Drawing.Size(595, 192);
             this.dataGridView1.TabIndex = 0;
-            // 
-            // btnInsertRow
-            // 
-            this.btnInsertRow.Location = new System.Drawing.Point(29, 20);
-            this.btnInsertRow.Name = "btnInsertRow";
-            this.btnInsertRow.Size = new System.Drawing.Size(75, 23);
-            this.btnInsertRow.TabIndex = 1;
-            this.btnInsertRow.Text = "行追加";
-            this.btnInsertRow.UseVisualStyleBackColor = true;
-            // 
-            // btnRemoveRow
-            // 
-            this.btnRemoveRow.Location = new System.Drawing.Point(110, 20);
-            this.btnRemoveRow.Name = "btnRemoveRow";
-            this.btnRemoveRow.Size = new System.Drawing.Size(75, 23);
-            this.btnRemoveRow.TabIndex = 2;
-            this.btnRemoveRow.Text = "行削除";
-            this.btnRemoveRow.UseVisualStyleBackColor = true;
             // 
             // clmKeyword
             // 
@@ -102,6 +84,24 @@
             this.clmCase.HeaderText = "大小区別";
             this.clmCase.Name = "clmCase";
             // 
+            // btnInsertRow
+            // 
+            this.btnInsertRow.Location = new System.Drawing.Point(29, 20);
+            this.btnInsertRow.Name = "btnInsertRow";
+            this.btnInsertRow.Size = new System.Drawing.Size(75, 23);
+            this.btnInsertRow.TabIndex = 1;
+            this.btnInsertRow.Text = "行追加";
+            this.btnInsertRow.UseVisualStyleBackColor = true;
+            // 
+            // btnRemoveRow
+            // 
+            this.btnRemoveRow.Location = new System.Drawing.Point(110, 20);
+            this.btnRemoveRow.Name = "btnRemoveRow";
+            this.btnRemoveRow.Size = new System.Drawing.Size(75, 23);
+            this.btnRemoveRow.TabIndex = 2;
+            this.btnRemoveRow.Text = "行削除";
+            this.btnRemoveRow.UseVisualStyleBackColor = true;
+            // 
             // IgnoreForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -111,7 +111,7 @@
             this.Controls.Add(this.btnInsertRow);
             this.Controls.Add(this.dataGridView1);
             this.Name = "IgnoreForm";
-            this.Text = "除外指定";
+            this.Text = "呼出先メソッド名の除外指定";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
 

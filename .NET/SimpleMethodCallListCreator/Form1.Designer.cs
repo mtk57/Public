@@ -358,6 +358,7 @@
             this.button1.Size = new System.Drawing.Size(80, 24);
             this.button1.TabIndex = 101;
             this.button1.Text = "除外指定";
+            this.toolTip1.SetToolTip(this.button1, "呼出先メソッド名の除外指定");
             this.button1.UseVisualStyleBackColor = true;
             // 
             // MainForm

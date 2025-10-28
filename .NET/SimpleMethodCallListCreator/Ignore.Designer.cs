@@ -86,7 +86,8 @@
             this.clmMode.Items.AddRange(new object[] {
             "始まる",
             "終わる",
-            "含む"});
+            "含む",
+            "一致"});
             this.clmMode.Name = "clmMode";
             // 
             // clmRegEx

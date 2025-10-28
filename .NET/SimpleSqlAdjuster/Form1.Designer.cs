@@ -46,7 +46,6 @@
             this.txtBeforeSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtBeforeSQL.Size = new System.Drawing.Size(491, 187);
             this.txtBeforeSQL.TabIndex = 0;
-            this.txtBeforeSQL.WordWrap = false;
             // 
             // txtAfterSQL
             // 
@@ -58,7 +57,6 @@
             this.txtAfterSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtAfterSQL.Size = new System.Drawing.Size(496, 182);
             this.txtAfterSQL.TabIndex = 1;
-            this.txtAfterSQL.WordWrap = false;
             this.txtAfterSQL.TextChanged += new System.EventHandler(this.txtAfterSQL_TextChanged);
             // 
             // label1

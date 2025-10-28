@@ -1,7 +1,7 @@
 ## 出力言語
 このリポジトリに関するすべての説明・要約は日本語で記述してください。
 
-## SimpleSqlAdjuster 仕様  Version 1.0.6
+## SimpleSqlAdjuster 仕様  Version 1.0.7
 
 ## アプリ概要
 - Windows Forms (.NET Framework 4.8) 製のデスクトップアプリ。エントリポイントは `Program.cs` の `MainForm` 起動。

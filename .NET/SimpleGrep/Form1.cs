@@ -254,6 +254,7 @@ namespace SimpleGrep
 
             dataGridViewResults.Rows.Clear();
             currentSearchResults.Clear();
+            ClearAllFilters();
             button1.Enabled = false;
             btnCancel.Enabled = true;
             this.Cursor = Cursors.WaitCursor;
@@ -437,6 +438,15 @@ namespace SimpleGrep
                 .ToList() ?? new List<SearchResult>();
 
             RenderResults(filtered);
+        }
+
+        private void ClearAllFilters()
+        {
+            txtFilePathFilter.Text = string.Empty;
+            txtFileNameFilter.Text = string.Empty;
+            txtRowNumFilter.Text = string.Empty;
+            txtGrepResultFilter.Text = string.Empty;
+            txtMethodFilter.Text = string.Empty;
         }
 
         private bool MatchesFilters(SearchResult result)
@@ -632,7 +642,6 @@ namespace SimpleGrep
                     try
                     {
                         Process.Start(sakuraPath, $"\"{fileName}\"");
-                        MessageBox.Show($"{fileName} に結果を保存し、サクラエディタで開きました。", "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {

@@ -1,12 +1,12 @@
 ## 出力言語
 このリポジトリに関するすべての説明・要約は日本語で記述してください。
 
-## SimpleSqlAdjuster 仕様  Version 1.0.7
+## SimpleSqlAdjuster 仕様  Version 1.0.8
 
 ## アプリ概要
 - Windows Forms (.NET Framework 4.8) 製のデスクトップアプリ。エントリポイントは `Program.cs` の `MainForm` 起動。
 - 1行につき1 SQL を前提に、テキストボックスに貼り付けた SQL を整形し、変数名とフォーマット済み SQL を出力する。
-- 設定 (`SimpleSqlAdjuster.settings.json`) とログ (`SimpleSqlAdjuster.log`) は実行ファイルと同じディレクトリに保存する。
+- ログ (`SimpleSqlAdjuster.log`) は実行ファイルと同じディレクトリに保存する。
 
 ## UI 構成（`MainForm`）
 - `txtBeforeSQL`（入力）と `txtAfterSQL`（出力）の 2 つのマルチラインテキストボックス、`btnRun` ボタンのみで構成。
@@ -31,11 +31,6 @@
 ## エラー処理・ロギング
 - 整形中に発生した問題は `SqlProcessingException` として捕捉し、行・列番号を保持。`ToDisplayMessage()` で「行 X, 列 Y: メッセージ」の形式に整形する。
 - 例外やアプリ内メッセージは `LogService` により `SimpleSqlAdjuster.log` に追記。ログ書き込み失敗時はアプリ動作を妨げない。
-
-## 設定ファイル
-- `UserSettingsService` が `JavaScriptSerializer` を用いて JSON をシリアライズ／デシリアライズ。
-- 保存項目はウィンドウ幅・高さ・位置 (`WindowWidth`, `WindowHeight`, `WindowX`, `WindowY`) と直前に入力した SQL (`LastBeforeSql`)。
-- 設定ファイルが存在しない、または読み書き例外が発生した場合はログへ出力し、アプリはデフォルト値で継続する。
 
 ## ビルド／実行補足
 - ソリューションファイル `SimpleSqlAdjuster.sln` とプロジェクトファイル `SimpleSqlAdjuster.csproj` を Visual Studio などで開けばビルド可能。

@@ -71,7 +71,7 @@
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
             this.dataGridView1.Size = new System.Drawing.Size(775, 161);
-            this.dataGridView1.TabIndex = 0;
+            this.dataGridView1.TabIndex = 12;
             this.dataGridView1.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellDoubleClick);
             this.dataGridView1.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView1_ColumnHeaderMouseClick);
             // 
@@ -134,7 +134,7 @@
             this.btnAllClear.Location = new System.Drawing.Point(493, 12);
             this.btnAllClear.Name = "btnAllClear";
             this.btnAllClear.Size = new System.Drawing.Size(119, 23);
-            this.btnAllClear.TabIndex = 2;
+            this.btnAllClear.TabIndex = 4;
             this.btnAllClear.Text = "全て履歴から削除";
             this.btnAllClear.UseVisualStyleBackColor = true;
             this.btnAllClear.Click += new System.EventHandler(this.btnAllClear_Click);
@@ -144,7 +144,7 @@
             this.btnSelectOpen.Location = new System.Drawing.Point(133, 37);
             this.btnSelectOpen.Name = "btnSelectOpen";
             this.btnSelectOpen.Size = new System.Drawing.Size(121, 23);
-            this.btnSelectOpen.TabIndex = 3;
+            this.btnSelectOpen.TabIndex = 7;
             this.btnSelectOpen.Text = "選択ファイルのみ開く";
             this.btnSelectOpen.UseVisualStyleBackColor = true;
             this.btnSelectOpen.Click += new System.EventHandler(this.btnSelectOpen_Click);
@@ -154,7 +154,7 @@
             this.btnDeleteSelectedFiles.Location = new System.Drawing.Point(618, 12);
             this.btnDeleteSelectedFiles.Name = "btnDeleteSelectedFiles";
             this.btnDeleteSelectedFiles.Size = new System.Drawing.Size(121, 23);
-            this.btnDeleteSelectedFiles.TabIndex = 4;
+            this.btnDeleteSelectedFiles.TabIndex = 5;
             this.btnDeleteSelectedFiles.Text = "選択ファイルのみ削除";
             this.btnDeleteSelectedFiles.UseVisualStyleBackColor = true;
             this.btnDeleteSelectedFiles.Click += new System.EventHandler(this.btnDeleteSelectedFiles_Click);
@@ -164,7 +164,7 @@
             this.btnAllCheckOnOff.Location = new System.Drawing.Point(102, 12);
             this.btnAllCheckOnOff.Name = "btnAllCheckOnOff";
             this.btnAllCheckOnOff.Size = new System.Drawing.Size(74, 23);
-            this.btnAllCheckOnOff.TabIndex = 5;
+            this.btnAllCheckOnOff.TabIndex = 2;
             this.btnAllCheckOnOff.Text = "全てチェック";
             this.btnAllCheckOnOff.UseVisualStyleBackColor = true;
             this.btnAllCheckOnOff.Click += new System.EventHandler(this.btnAllCheckOnOff_Click);
@@ -176,7 +176,7 @@
             this.comboFilter.Location = new System.Drawing.Point(66, 83);
             this.comboFilter.Name = "comboFilter";
             this.comboFilter.Size = new System.Drawing.Size(368, 20);
-            this.comboFilter.TabIndex = 6;
+            this.comboFilter.TabIndex = 10;
             this.comboFilter.SelectedIndexChanged += new System.EventHandler(this.comboFilter_SelectedIndexChanged);
             this.comboFilter.TextChanged += new System.EventHandler(this.comboFilter_TextChanged);
             this.comboFilter.KeyDown += new System.Windows.Forms.KeyEventHandler(this.comboFilter_KeyDown);
@@ -187,7 +187,7 @@
             this.label1.Location = new System.Drawing.Point(22, 86);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(38, 12);
-            this.label1.TabIndex = 7;
+            this.label1.TabIndex = 0;
             this.label1.Text = "フィルタ";
             // 
             // btnClearFilter
@@ -195,7 +195,7 @@
             this.btnClearFilter.Location = new System.Drawing.Point(440, 81);
             this.btnClearFilter.Name = "btnClearFilter";
             this.btnClearFilter.Size = new System.Drawing.Size(48, 23);
-            this.btnClearFilter.TabIndex = 8;
+            this.btnClearFilter.TabIndex = 11;
             this.btnClearFilter.Text = "クリア";
             this.btnClearFilter.UseVisualStyleBackColor = true;
             this.btnClearFilter.Click += new System.EventHandler(this.btnClearFilter_Click);
@@ -205,7 +205,7 @@
             this.btnPinnedSelectedFiles.Location = new System.Drawing.Point(493, 37);
             this.btnPinnedSelectedFiles.Name = "btnPinnedSelectedFiles";
             this.btnPinnedSelectedFiles.Size = new System.Drawing.Size(137, 23);
-            this.btnPinnedSelectedFiles.TabIndex = 9;
+            this.btnPinnedSelectedFiles.TabIndex = 8;
             this.btnPinnedSelectedFiles.Text = "選択ファイルのみピン止め";
             this.btnPinnedSelectedFiles.UseVisualStyleBackColor = true;
             this.btnPinnedSelectedFiles.Click += new System.EventHandler(this.btnPinnedSelectedFiles_Click);
@@ -215,7 +215,7 @@
             this.btnUnPinnedSelectedFiles.Location = new System.Drawing.Point(636, 37);
             this.btnUnPinnedSelectedFiles.Name = "btnUnPinnedSelectedFiles";
             this.btnUnPinnedSelectedFiles.Size = new System.Drawing.Size(158, 23);
-            this.btnUnPinnedSelectedFiles.TabIndex = 10;
+            this.btnUnPinnedSelectedFiles.TabIndex = 9;
             this.btnUnPinnedSelectedFiles.Text = "選択ファイルのみピン止め解除";
             this.btnUnPinnedSelectedFiles.UseVisualStyleBackColor = true;
             this.btnUnPinnedSelectedFiles.Click += new System.EventHandler(this.btnUnPinnedSelectedFiles_Click);
@@ -227,7 +227,7 @@
             this.btnApply.Location = new System.Drawing.Point(692, 285);
             this.btnApply.Name = "btnApply";
             this.btnApply.Size = new System.Drawing.Size(49, 23);
-            this.btnApply.TabIndex = 11;
+            this.btnApply.TabIndex = 13;
             this.btnApply.Text = "Apply";
             this.btnApply.UseVisualStyleBackColor = true;
             // 
@@ -238,7 +238,7 @@
             this.btnCancel.Location = new System.Drawing.Point(747, 285);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(49, 23);
-            this.btnCancel.TabIndex = 12;
+            this.btnCancel.TabIndex = 14;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -247,7 +247,7 @@
             this.btnOpenAllPin.Location = new System.Drawing.Point(24, 37);
             this.btnOpenAllPin.Name = "btnOpenAllPin";
             this.btnOpenAllPin.Size = new System.Drawing.Size(103, 23);
-            this.btnOpenAllPin.TabIndex = 13;
+            this.btnOpenAllPin.TabIndex = 6;
             this.btnOpenAllPin.Text = "ピン止めを全て開く";
             this.btnOpenAllPin.UseVisualStyleBackColor = true;
             this.btnOpenAllPin.Click += new System.EventHandler(this.btnOpenAllPin_Click);
@@ -258,7 +258,7 @@
             this.chkIsOpenDir.Location = new System.Drawing.Point(194, 12);
             this.chkIsOpenDir.Name = "chkIsOpenDir";
             this.chkIsOpenDir.Size = new System.Drawing.Size(154, 16);
-            this.chkIsOpenDir.TabIndex = 14;
+            this.chkIsOpenDir.TabIndex = 3;
             this.chkIsOpenDir.Text = "ダブルクリックでフォルダを開く";
             this.chkIsOpenDir.UseVisualStyleBackColor = true;
             // 

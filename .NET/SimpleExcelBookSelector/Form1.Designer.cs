@@ -63,7 +63,7 @@
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             this.dataGridViewResults.Size = new System.Drawing.Size(693, 191);
-            this.dataGridViewResults.TabIndex = 6;
+            this.dataGridViewResults.TabIndex = 7;
             // 
             // chkEnableSheetSelectMode
             // 
@@ -71,7 +71,7 @@
             this.chkEnableSheetSelectMode.Location = new System.Drawing.Point(12, 12);
             this.chkEnableSheetSelectMode.Name = "chkEnableSheetSelectMode";
             this.chkEnableSheetSelectMode.Size = new System.Drawing.Size(104, 16);
-            this.chkEnableSheetSelectMode.TabIndex = 7;
+            this.chkEnableSheetSelectMode.TabIndex = 1;
             this.chkEnableSheetSelectMode.Text = "シート選択モード";
             this.chkEnableSheetSelectMode.UseVisualStyleBackColor = true;
             // 
@@ -81,7 +81,7 @@
             this.chkEnableAutoUpdateMode.Location = new System.Drawing.Point(215, 11);
             this.chkEnableAutoUpdateMode.Name = "chkEnableAutoUpdateMode";
             this.chkEnableAutoUpdateMode.Size = new System.Drawing.Size(196, 16);
-            this.chkEnableAutoUpdateMode.TabIndex = 8;
+            this.chkEnableAutoUpdateMode.TabIndex = 3;
             this.chkEnableAutoUpdateMode.Text = "自動更新間隔(秒単位。最小値=1)";
             this.chkEnableAutoUpdateMode.UseVisualStyleBackColor = true;
             // 
@@ -90,7 +90,7 @@
             this.textAutoUpdateSec.Location = new System.Drawing.Point(159, 9);
             this.textAutoUpdateSec.Name = "textAutoUpdateSec";
             this.textAutoUpdateSec.Size = new System.Drawing.Size(50, 19);
-            this.textAutoUpdateSec.TabIndex = 9;
+            this.textAutoUpdateSec.TabIndex = 2;
             this.textAutoUpdateSec.Text = "1";
             // 
             // btnForceUpdate
@@ -98,7 +98,7 @@
             this.btnForceUpdate.Location = new System.Drawing.Point(428, 7);
             this.btnForceUpdate.Name = "btnForceUpdate";
             this.btnForceUpdate.Size = new System.Drawing.Size(75, 23);
-            this.btnForceUpdate.TabIndex = 11;
+            this.btnForceUpdate.TabIndex = 4;
             this.btnForceUpdate.Text = "強制更新";
             this.btnForceUpdate.UseVisualStyleBackColor = true;
             // 
@@ -107,7 +107,7 @@
             this.btnHistory.Location = new System.Drawing.Point(634, 4);
             this.btnHistory.Name = "btnHistory";
             this.btnHistory.Size = new System.Drawing.Size(71, 23);
-            this.btnHistory.TabIndex = 12;
+            this.btnHistory.TabIndex = 5;
             this.btnHistory.Text = "履歴管理";
             this.btnHistory.UseVisualStyleBackColor = true;
             this.btnHistory.Click += new System.EventHandler(this.btnHistory_Click);
@@ -118,7 +118,7 @@
             this.chkIsOpenDir.Location = new System.Drawing.Point(12, 34);
             this.chkIsOpenDir.Name = "chkIsOpenDir";
             this.chkIsOpenDir.Size = new System.Drawing.Size(154, 16);
-            this.chkIsOpenDir.TabIndex = 13;
+            this.chkIsOpenDir.TabIndex = 6;
             this.chkIsOpenDir.Text = "ダブルクリックでフォルダを開く";
             this.chkIsOpenDir.UseVisualStyleBackColor = true;
             // 

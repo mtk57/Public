@@ -48,7 +48,7 @@ namespace ER2SpreadTool
             this.label1.Location = new System.Drawing.Point(20, 20);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(86, 12);
-            this.label1.TabIndex = 0;
+            this.label1.TabIndex = 1;
             this.label1.Text = "Excelファイルパス";
             // 
             // txtFilePath
@@ -57,7 +57,7 @@ namespace ER2SpreadTool
             this.txtFilePath.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtFilePath.Name = "txtFilePath";
             this.txtFilePath.Size = new System.Drawing.Size(451, 19);
-            this.txtFilePath.TabIndex = 1;
+            this.txtFilePath.TabIndex = 2;
             // 
             // btnBrowse
             // 
@@ -65,7 +65,7 @@ namespace ER2SpreadTool
             this.btnBrowse.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(64, 18);
-            this.btnBrowse.TabIndex = 2;
+            this.btnBrowse.TabIndex = 3;
             this.btnBrowse.Text = "参照";
             this.btnBrowse.UseVisualStyleBackColor = true;
             // 
@@ -75,7 +75,7 @@ namespace ER2SpreadTool
             this.label2.Location = new System.Drawing.Point(20, 82);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(45, 12);
-            this.label2.TabIndex = 3;
+            this.label2.TabIndex = 4;
             this.label2.Text = "シート名";
             // 
             // txtSheetName
@@ -84,7 +84,7 @@ namespace ER2SpreadTool
             this.txtSheetName.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtSheetName.Name = "txtSheetName";
             this.txtSheetName.Size = new System.Drawing.Size(451, 19);
-            this.txtSheetName.TabIndex = 4;
+            this.txtSheetName.TabIndex = 5;
             // 
             // btnProcess
             // 
@@ -92,7 +92,7 @@ namespace ER2SpreadTool
             this.btnProcess.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnProcess.Name = "btnProcess";
             this.btnProcess.Size = new System.Drawing.Size(64, 27);
-            this.btnProcess.TabIndex = 5;
+            this.btnProcess.TabIndex = 8;
             this.btnProcess.Text = "処理開始";
             this.btnProcess.UseVisualStyleBackColor = true;
             this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
@@ -123,7 +123,7 @@ namespace ER2SpreadTool
             this.lblStatus.Location = new System.Drawing.Point(20, 278);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(53, 12);
-            this.lblStatus.TabIndex = 8;
+            this.lblStatus.TabIndex = 9;
             this.lblStatus.Text = "準備完了";
             // 
             // MainForm

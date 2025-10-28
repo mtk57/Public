@@ -52,7 +52,7 @@
             this.btnBrowse.Location = new System.Drawing.Point(617, 25);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
-            this.btnBrowse.TabIndex = 0;
+            this.btnBrowse.TabIndex = 2;
             this.btnBrowse.Text = "参照";
             this.btnBrowse.UseVisualStyleBackColor = true;
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
@@ -63,7 +63,7 @@
             this.label1.Location = new System.Drawing.Point(12, 13);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(83, 12);
-            this.label1.TabIndex = 2;
+            this.label1.TabIndex = 0;
             this.label1.Text = "検索フォルダパス";
             // 
             // label2
@@ -72,7 +72,7 @@
             this.label2.Location = new System.Drawing.Point(15, 109);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(75, 12);
-            this.label2.TabIndex = 3;
+            this.label2.TabIndex = 0;
             this.label2.Text = "検索ファイル名";
             // 
             // cmbKeyword
@@ -83,7 +83,7 @@
             this.cmbKeyword.Location = new System.Drawing.Point(12, 125);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(650, 20);
-            this.cmbKeyword.TabIndex = 0;
+            this.cmbKeyword.TabIndex = 8;
             this.cmbKeyword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.cmbKeyword_KeyDown);
             // 
             // cmbFolderPath
@@ -102,7 +102,7 @@
             this.btnSearch.Location = new System.Drawing.Point(276, 156);
             this.btnSearch.Name = "btnSearch";
             this.btnSearch.Size = new System.Drawing.Size(83, 33);
-            this.btnSearch.TabIndex = 5;
+            this.btnSearch.TabIndex = 9;
             this.btnSearch.Text = "検索";
             this.btnSearch.UseVisualStyleBackColor = true;
             this.btnSearch.Click += new System.EventHandler(this.btnSearch_Click);
@@ -113,7 +113,7 @@
             this.chkUseRegex.Location = new System.Drawing.Point(17, 75);
             this.chkUseRegex.Name = "chkUseRegex";
             this.chkUseRegex.Size = new System.Drawing.Size(72, 16);
-            this.chkUseRegex.TabIndex = 6;
+            this.chkUseRegex.TabIndex = 4;
             this.chkUseRegex.Text = "正規表現";
             this.chkUseRegex.UseVisualStyleBackColor = true;
             // 
@@ -131,7 +131,7 @@
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.Size = new System.Drawing.Size(655, 164);
-            this.dataGridViewResults.TabIndex = 6;
+            this.dataGridViewResults.TabIndex = 11;
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             // 
             // columnFilePath
@@ -147,7 +147,7 @@
             this.chkIncludeFolderNames.Location = new System.Drawing.Point(106, 75);
             this.chkIncludeFolderNames.Name = "chkIncludeFolderNames";
             this.chkIncludeFolderNames.Size = new System.Drawing.Size(71, 16);
-            this.chkIncludeFolderNames.TabIndex = 7;
+            this.chkIncludeFolderNames.TabIndex = 5;
             this.chkIncludeFolderNames.Text = "フォルダ名";
             this.chkIncludeFolderNames.UseVisualStyleBackColor = true;
             // 
@@ -157,7 +157,7 @@
             this.labelResult.Location = new System.Drawing.Point(398, 166);
             this.labelResult.Name = "labelResult";
             this.labelResult.Size = new System.Drawing.Size(38, 12);
-            this.labelResult.TabIndex = 8;
+            this.labelResult.TabIndex = 0;
             this.labelResult.Text = "Result";
             // 
             // chkPartialMatch
@@ -166,7 +166,7 @@
             this.chkPartialMatch.Location = new System.Drawing.Point(193, 75);
             this.chkPartialMatch.Name = "chkPartialMatch";
             this.chkPartialMatch.Size = new System.Drawing.Size(72, 16);
-            this.chkPartialMatch.TabIndex = 9;
+            this.chkPartialMatch.TabIndex = 6;
             this.chkPartialMatch.Text = "部分一致";
             this.chkPartialMatch.UseVisualStyleBackColor = true;
             // 
@@ -176,7 +176,7 @@
             this.chkSearchSubDir.Location = new System.Drawing.Point(17, 53);
             this.chkSearchSubDir.Name = "chkSearchSubDir";
             this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
-            this.chkSearchSubDir.TabIndex = 68;
+            this.chkSearchSubDir.TabIndex = 3;
             this.chkSearchSubDir.Text = "サブフォルダも対象";
             this.chkSearchSubDir.UseVisualStyleBackColor = true;
             // 
@@ -186,7 +186,7 @@
             this.chkDblClickToOpen.Location = new System.Drawing.Point(292, 75);
             this.chkDblClickToOpen.Name = "chkDblClickToOpen";
             this.chkDblClickToOpen.Size = new System.Drawing.Size(153, 16);
-            this.chkDblClickToOpen.TabIndex = 69;
+            this.chkDblClickToOpen.TabIndex = 7;
             this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
             this.chkDblClickToOpen.UseVisualStyleBackColor = true;
             // 
@@ -195,7 +195,7 @@
             this.btnFileCopy.Location = new System.Drawing.Point(579, 156);
             this.btnFileCopy.Name = "btnFileCopy";
             this.btnFileCopy.Size = new System.Drawing.Size(83, 33);
-            this.btnFileCopy.TabIndex = 70;
+            this.btnFileCopy.TabIndex = 10;
             this.btnFileCopy.Text = "ファイルをコピー";
             this.btnFileCopy.UseVisualStyleBackColor = true;
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);

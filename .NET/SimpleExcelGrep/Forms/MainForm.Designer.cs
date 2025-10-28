@@ -74,7 +74,7 @@
             this.btnStartSearch.Location = new System.Drawing.Point(11, 207);
             this.btnStartSearch.Name = "btnStartSearch";
             this.btnStartSearch.Size = new System.Drawing.Size(94, 30);
-            this.btnStartSearch.TabIndex = 10;
+            this.btnStartSearch.TabIndex = 16;
             this.btnStartSearch.Text = "検索開始";
             this.btnStartSearch.UseVisualStyleBackColor = true;
             // 
@@ -84,7 +84,7 @@
             this.btnCancelSearch.Location = new System.Drawing.Point(117, 208);
             this.btnCancelSearch.Name = "btnCancelSearch";
             this.btnCancelSearch.Size = new System.Drawing.Size(100, 28);
-            this.btnCancelSearch.TabIndex = 11;
+            this.btnCancelSearch.TabIndex = 17;
             this.btnCancelSearch.Text = "検索中止";
             this.btnCancelSearch.UseVisualStyleBackColor = true;
             // 
@@ -97,7 +97,7 @@
             this.chkRealTimeDisplay.Name = "chkRealTimeDisplay";
             this.chkRealTimeDisplay.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
             this.chkRealTimeDisplay.Size = new System.Drawing.Size(106, 16);
-            this.chkRealTimeDisplay.TabIndex = 12;
+            this.chkRealTimeDisplay.TabIndex = 18;
             this.chkRealTimeDisplay.Text = "リアルタイム表示";
             this.chkRealTimeDisplay.UseVisualStyleBackColor = true;
             // 
@@ -108,7 +108,7 @@
             this.lblParallelism.Name = "lblParallelism";
             this.lblParallelism.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
             this.lblParallelism.Size = new System.Drawing.Size(48, 12);
-            this.lblParallelism.TabIndex = 13;
+            this.lblParallelism.TabIndex = 0;
             this.lblParallelism.Text = "並列数:";
             // 
             // nudParallelism
@@ -126,7 +126,7 @@
             0});
             this.nudParallelism.Name = "nudParallelism";
             this.nudParallelism.Size = new System.Drawing.Size(50, 19);
-            this.nudParallelism.TabIndex = 14;
+            this.nudParallelism.TabIndex = 19;
             this.nudParallelism.Value = new decimal(new int[] {
             4,
             0,
@@ -139,7 +139,7 @@
             this.chkSearchShapes.Location = new System.Drawing.Point(256, 178);
             this.chkSearchShapes.Name = "chkSearchShapes";
             this.chkSearchShapes.Size = new System.Drawing.Size(81, 16);
-            this.chkSearchShapes.TabIndex = 9;
+            this.chkSearchShapes.TabIndex = 13;
             this.chkSearchShapes.Text = "図形も検索";
             this.chkSearchShapes.UseVisualStyleBackColor = true;
             // 
@@ -149,7 +149,7 @@
             this.chkFirstHitOnly.Location = new System.Drawing.Point(133, 178);
             this.chkFirstHitOnly.Name = "chkFirstHitOnly";
             this.chkFirstHitOnly.Size = new System.Drawing.Size(102, 16);
-            this.chkFirstHitOnly.TabIndex = 8;
+            this.chkFirstHitOnly.TabIndex = 12;
             this.chkFirstHitOnly.Text = "最初のヒットのみ";
             this.chkFirstHitOnly.UseVisualStyleBackColor = true;
             // 
@@ -159,7 +159,7 @@
             this.chkRegex.Location = new System.Drawing.Point(13, 178);
             this.chkRegex.Name = "chkRegex";
             this.chkRegex.Size = new System.Drawing.Size(105, 16);
-            this.chkRegex.TabIndex = 7;
+            this.chkRegex.TabIndex = 11;
             this.chkRegex.Text = "正規表現を使用";
             this.chkRegex.UseVisualStyleBackColor = true;
             // 
@@ -170,7 +170,7 @@
             this.lblIgnoreHint.Location = new System.Drawing.Point(741, 95);
             this.lblIgnoreHint.Name = "lblIgnoreHint";
             this.lblIgnoreHint.Size = new System.Drawing.Size(78, 28);
-            this.lblIgnoreHint.TabIndex = 5;
+            this.lblIgnoreHint.TabIndex = 0;
             this.lblIgnoreHint.Text = "カンマ区切り";
             this.lblIgnoreHint.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -182,14 +182,14 @@
             this.cmbIgnoreKeywords.Location = new System.Drawing.Point(107, 100);
             this.cmbIgnoreKeywords.Name = "cmbIgnoreKeywords";
             this.cmbIgnoreKeywords.Size = new System.Drawing.Size(610, 20);
-            this.cmbIgnoreKeywords.TabIndex = 4;
+            this.cmbIgnoreKeywords.TabIndex = 6;
             // 
             // lblIgnore
             // 
             this.lblIgnore.Location = new System.Drawing.Point(11, 95);
             this.lblIgnore.Name = "lblIgnore";
             this.lblIgnore.Size = new System.Drawing.Size(88, 28);
-            this.lblIgnore.TabIndex = 61;
+            this.lblIgnore.TabIndex = 0;
             this.lblIgnore.Text = "無視キーワード:";
             this.lblIgnore.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -225,7 +225,7 @@
             this.cmbKeyword.Location = new System.Drawing.Point(107, 57);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(606, 20);
-            this.cmbKeyword.TabIndex = 2;
+            this.cmbKeyword.TabIndex = 5;
             // 
             // btnSelectFolder
             // 
@@ -233,7 +233,7 @@
             this.btnSelectFolder.Location = new System.Drawing.Point(728, 11);
             this.btnSelectFolder.Name = "btnSelectFolder";
             this.btnSelectFolder.Size = new System.Drawing.Size(57, 22);
-            this.btnSelectFolder.TabIndex = 1;
+            this.btnSelectFolder.TabIndex = 2;
             this.btnSelectFolder.Text = "選択...";
             this.btnSelectFolder.UseVisualStyleBackColor = true;
             // 
@@ -242,7 +242,7 @@
             this.lblFolder.Location = new System.Drawing.Point(10, 9);
             this.lblFolder.Name = "lblFolder";
             this.lblFolder.Size = new System.Drawing.Size(81, 28);
-            this.lblFolder.TabIndex = 60;
+            this.lblFolder.TabIndex = 0;
             this.lblFolder.Text = "フォルダパス:";
             this.lblFolder.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -251,7 +251,7 @@
             this.lblStatus.Location = new System.Drawing.Point(10, 242);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(442, 28);
-            this.lblStatus.TabIndex = 16;
+            this.lblStatus.TabIndex = 0;
             this.lblStatus.Text = "準備完了";
             this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -260,7 +260,7 @@
             this.lblKeyword.Location = new System.Drawing.Point(9, 52);
             this.lblKeyword.Name = "lblKeyword";
             this.lblKeyword.Size = new System.Drawing.Size(90, 28);
-            this.lblKeyword.TabIndex = 59;
+            this.lblKeyword.TabIndex = 0;
             this.lblKeyword.Text = "検索キーワード:";
             this.lblKeyword.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -272,7 +272,7 @@
             this.cmbFolderPath.Location = new System.Drawing.Point(107, 13);
             this.cmbFolderPath.Name = "cmbFolderPath";
             this.cmbFolderPath.Size = new System.Drawing.Size(610, 20);
-            this.cmbFolderPath.TabIndex = 0;
+            this.cmbFolderPath.TabIndex = 1;
             // 
             // colCellValue
             // 
@@ -301,14 +301,14 @@
             this.grdResults.RowTemplate.Height = 21;
             this.grdResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.grdResults.Size = new System.Drawing.Size(824, 202);
-            this.grdResults.TabIndex = 17;
+            this.grdResults.TabIndex = 21;
             // 
             // lblIgnoreFileSize
             // 
             this.lblIgnoreFileSize.Location = new System.Drawing.Point(11, 137);
             this.lblIgnoreFileSize.Name = "lblIgnoreFileSize";
             this.lblIgnoreFileSize.Size = new System.Drawing.Size(116, 28);
-            this.lblIgnoreFileSize.TabIndex = 62;
+            this.lblIgnoreFileSize.TabIndex = 0;
             this.lblIgnoreFileSize.Text = "無視ファイルサイズ:";
             this.lblIgnoreFileSize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -317,7 +317,7 @@
             this.txtIgnoreFileSizeMB.Location = new System.Drawing.Point(133, 142);
             this.txtIgnoreFileSizeMB.Name = "txtIgnoreFileSizeMB";
             this.txtIgnoreFileSizeMB.Size = new System.Drawing.Size(60, 19);
-            this.txtIgnoreFileSizeMB.TabIndex = 5;
+            this.txtIgnoreFileSizeMB.TabIndex = 7;
             this.txtIgnoreFileSizeMB.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // lblIgnoreFileSizeUnit
@@ -326,7 +326,7 @@
             this.lblIgnoreFileSizeUnit.Location = new System.Drawing.Point(199, 145);
             this.lblIgnoreFileSizeUnit.Name = "lblIgnoreFileSizeUnit";
             this.lblIgnoreFileSizeUnit.Size = new System.Drawing.Size(30, 12);
-            this.lblIgnoreFileSizeUnit.TabIndex = 6;
+            this.lblIgnoreFileSizeUnit.TabIndex = 0;
             this.lblIgnoreFileSizeUnit.Text = "(MB)";
             // 
             // btnLoadTsv
@@ -335,7 +335,7 @@
             this.btnLoadTsv.Location = new System.Drawing.Point(728, 208);
             this.btnLoadTsv.Name = "btnLoadTsv";
             this.btnLoadTsv.Size = new System.Drawing.Size(107, 28);
-            this.btnLoadTsv.TabIndex = 15;
+            this.btnLoadTsv.TabIndex = 20;
             this.btnLoadTsv.Text = "TSV読み込み";
             this.btnLoadTsv.UseVisualStyleBackColor = true;
             // 
@@ -345,7 +345,7 @@
             this.txtCellAddress.Location = new System.Drawing.Point(338, 142);
             this.txtCellAddress.Name = "txtCellAddress";
             this.txtCellAddress.Size = new System.Drawing.Size(180, 19);
-            this.txtCellAddress.TabIndex = 63;
+            this.txtCellAddress.TabIndex = 8;
             this.toolTip1.SetToolTip(this.txtCellAddress, "A1形式で指定。半角カンマで複数指定可。");
             // 
             // label2
@@ -353,7 +353,7 @@
             this.label2.Location = new System.Drawing.Point(254, 137);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(85, 28);
-            this.label2.TabIndex = 65;
+            this.label2.TabIndex = 0;
             this.label2.Text = "指定セルモード:";
             this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -363,7 +363,7 @@
             this.chkCellMode.Location = new System.Drawing.Point(524, 145);
             this.chkCellMode.Name = "chkCellMode";
             this.chkCellMode.Size = new System.Drawing.Size(68, 16);
-            this.chkCellMode.TabIndex = 66;
+            this.chkCellMode.TabIndex = 9;
             this.chkCellMode.Text = "ON/OFF";
             this.chkCellMode.UseVisualStyleBackColor = true;
             this.chkCellMode.CheckedChanged += new System.EventHandler(this.ChkCellMode_CheckedChanged);
@@ -374,7 +374,7 @@
             this.chkSearchSubDir.Location = new System.Drawing.Point(107, 35);
             this.chkSearchSubDir.Name = "chkSearchSubDir";
             this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
-            this.chkSearchSubDir.TabIndex = 67;
+            this.chkSearchSubDir.TabIndex = 3;
             this.chkSearchSubDir.Text = "サブフォルダも対象";
             this.chkSearchSubDir.UseVisualStyleBackColor = true;
             // 
@@ -384,7 +384,7 @@
             this.chkEnableLog.Location = new System.Drawing.Point(352, 178);
             this.chkEnableLog.Name = "chkEnableLog";
             this.chkEnableLog.Size = new System.Drawing.Size(75, 16);
-            this.chkEnableLog.TabIndex = 68;
+            this.chkEnableLog.TabIndex = 14;
             this.chkEnableLog.Text = "ログを出力";
             this.chkEnableLog.UseVisualStyleBackColor = true;
             // 
@@ -394,7 +394,7 @@
             this.chkEnableInvisibleSheet.Location = new System.Drawing.Point(443, 178);
             this.chkEnableInvisibleSheet.Name = "chkEnableInvisibleSheet";
             this.chkEnableInvisibleSheet.Size = new System.Drawing.Size(121, 16);
-            this.chkEnableInvisibleSheet.TabIndex = 69;
+            this.chkEnableInvisibleSheet.TabIndex = 15;
             this.chkEnableInvisibleSheet.Text = "非表示シートも対象";
             this.chkEnableInvisibleSheet.UseVisualStyleBackColor = true;
             // 
@@ -404,7 +404,7 @@
             this.chkDblClickToOpen.Location = new System.Drawing.Point(256, 35);
             this.chkDblClickToOpen.Name = "chkDblClickToOpen";
             this.chkDblClickToOpen.Size = new System.Drawing.Size(153, 16);
-            this.chkDblClickToOpen.TabIndex = 70;
+            this.chkDblClickToOpen.TabIndex = 4;
             this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
             this.chkDblClickToOpen.UseVisualStyleBackColor = true;
             // 
@@ -414,7 +414,7 @@
             this.chkCollectStrInShape.Location = new System.Drawing.Point(633, 144);
             this.chkCollectStrInShape.Name = "chkCollectStrInShape";
             this.chkCollectStrInShape.Size = new System.Drawing.Size(148, 16);
-            this.chkCollectStrInShape.TabIndex = 71;
+            this.chkCollectStrInShape.TabIndex = 10;
             this.chkCollectStrInShape.Text = "図形内文字列収集モード";
             this.chkCollectStrInShape.UseVisualStyleBackColor = true;
             // 

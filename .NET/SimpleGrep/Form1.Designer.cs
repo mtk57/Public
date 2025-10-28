@@ -75,7 +75,7 @@
             this.btnBrowse.Location = new System.Drawing.Point(686, 28);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
-            this.btnBrowse.TabIndex = 0;
+            this.btnBrowse.TabIndex = 2;
             this.btnBrowse.Text = "参照";
             this.btnBrowse.UseVisualStyleBackColor = true;
             // 
@@ -85,7 +85,7 @@
             this.label1.Location = new System.Drawing.Point(46, 13);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(83, 12);
-            this.label1.TabIndex = 2;
+            this.label1.TabIndex = 0;
             this.label1.Text = "検索フォルダパス";
             // 
             // label2
@@ -94,7 +94,7 @@
             this.label2.Location = new System.Drawing.Point(46, 141);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(77, 12);
-            this.label2.TabIndex = 3;
+            this.label2.TabIndex = 0;
             this.label2.Text = "検索キーワード";
             // 
             // cmbKeyword
@@ -105,7 +105,7 @@
             this.cmbKeyword.Location = new System.Drawing.Point(48, 156);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(632, 20);
-            this.cmbKeyword.TabIndex = 0;
+            this.cmbKeyword.TabIndex = 5;
             // 
             // cmbFolderPath
             // 
@@ -123,7 +123,7 @@
             this.btnCancel.Location = new System.Drawing.Point(352, 212);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 33);
-            this.btnCancel.TabIndex = 5;
+            this.btnCancel.TabIndex = 13;
             this.btnCancel.Text = "中止";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -155,7 +155,7 @@
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
             this.dataGridViewResults.Size = new System.Drawing.Size(660, 272);
-            this.dataGridViewResults.TabIndex = 6;
+            this.dataGridViewResults.TabIndex = 21;
             // 
             // labelTime
             // 
@@ -163,7 +163,7 @@
             this.labelTime.Location = new System.Drawing.Point(433, 222);
             this.labelTime.Name = "labelTime";
             this.labelTime.Size = new System.Drawing.Size(30, 12);
-            this.labelTime.TabIndex = 8;
+            this.labelTime.TabIndex = 0;
             this.labelTime.Text = "Time";
             // 
             // chkSearchSubDir
@@ -172,7 +172,7 @@
             this.chkSearchSubDir.Location = new System.Drawing.Point(48, 54);
             this.chkSearchSubDir.Name = "chkSearchSubDir";
             this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
-            this.chkSearchSubDir.TabIndex = 68;
+            this.chkSearchSubDir.TabIndex = 3;
             this.chkSearchSubDir.Text = "サブフォルダも対象";
             this.chkSearchSubDir.UseVisualStyleBackColor = true;
             // 
@@ -182,7 +182,7 @@
             this.chkCase.Location = new System.Drawing.Point(141, 182);
             this.chkCase.Name = "chkCase";
             this.chkCase.Size = new System.Drawing.Size(72, 16);
-            this.chkCase.TabIndex = 69;
+            this.chkCase.TabIndex = 7;
             this.chkCase.Text = "大小区別";
             this.chkCase.UseVisualStyleBackColor = true;
             // 
@@ -191,7 +191,7 @@
             this.button1.Location = new System.Drawing.Point(271, 212);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 33);
-            this.button1.TabIndex = 70;
+            this.button1.TabIndex = 12;
             this.button1.Text = "検索";
             this.button1.UseVisualStyleBackColor = true;
             // 
@@ -200,7 +200,7 @@
             this.btnExportSakura.Location = new System.Drawing.Point(48, 222);
             this.btnExportSakura.Name = "btnExportSakura";
             this.btnExportSakura.Size = new System.Drawing.Size(96, 23);
-            this.btnExportSakura.TabIndex = 71;
+            this.btnExportSakura.TabIndex = 11;
             this.btnExportSakura.Text = "Export sakura";
             this.btnExportSakura.UseVisualStyleBackColor = true;
             // 
@@ -210,7 +210,7 @@
             this.label3.Location = new System.Drawing.Point(49, 83);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(113, 12);
-            this.label3.TabIndex = 72;
+            this.label3.TabIndex = 0;
             this.label3.Text = "対象ファイル（例：*.cs）";
             // 
             // comboBox1
@@ -221,7 +221,7 @@
             this.comboBox1.Location = new System.Drawing.Point(48, 98);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(632, 20);
-            this.comboBox1.TabIndex = 73;
+            this.comboBox1.TabIndex = 4;
             // 
             // chkTagJump
             // 
@@ -229,7 +229,7 @@
             this.chkTagJump.Location = new System.Drawing.Point(233, 182);
             this.chkTagJump.Name = "chkTagJump";
             this.chkTagJump.Size = new System.Drawing.Size(77, 16);
-            this.chkTagJump.TabIndex = 74;
+            this.chkTagJump.TabIndex = 8;
             this.chkTagJump.Text = "タグジャンプ";
             this.chkTagJump.UseVisualStyleBackColor = true;
             // 
@@ -238,7 +238,7 @@
             this.progressBar.Location = new System.Drawing.Point(271, 251);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new System.Drawing.Size(156, 10);
-            this.progressBar.TabIndex = 75;
+            this.progressBar.TabIndex = 15;
             // 
             // lblPer
             // 
@@ -246,7 +246,7 @@
             this.lblPer.Location = new System.Drawing.Point(433, 249);
             this.lblPer.Name = "lblPer";
             this.lblPer.Size = new System.Drawing.Size(21, 12);
-            this.lblPer.TabIndex = 76;
+            this.lblPer.TabIndex = 0;
             this.lblPer.Text = "0 %";
             // 
             // chkMethod
@@ -255,7 +255,7 @@
             this.chkMethod.Location = new System.Drawing.Point(331, 182);
             this.chkMethod.Name = "chkMethod";
             this.chkMethod.Size = new System.Drawing.Size(102, 16);
-            this.chkMethod.TabIndex = 77;
+            this.chkMethod.TabIndex = 9;
             this.chkMethod.Text = "メソッド名を導出";
             this.toolTip1.SetToolTip(this.chkMethod, "現バージョンではJavaのみをサポート");
             this.chkMethod.UseVisualStyleBackColor = true;
@@ -266,7 +266,7 @@
             this.chkIgnoreComment.Location = new System.Drawing.Point(451, 182);
             this.chkIgnoreComment.Name = "chkIgnoreComment";
             this.chkIgnoreComment.Size = new System.Drawing.Size(81, 16);
-            this.chkIgnoreComment.TabIndex = 79;
+            this.chkIgnoreComment.TabIndex = 10;
             this.chkIgnoreComment.Text = "コメント無視";
             this.toolTip1.SetToolTip(this.chkIgnoreComment, "現バージョンではJavaのみをサポート");
             this.chkIgnoreComment.UseVisualStyleBackColor = true;
@@ -276,7 +276,7 @@
             this.btnFileCopy.Location = new System.Drawing.Point(605, 212);
             this.btnFileCopy.Name = "btnFileCopy";
             this.btnFileCopy.Size = new System.Drawing.Size(75, 33);
-            this.btnFileCopy.TabIndex = 78;
+            this.btnFileCopy.TabIndex = 14;
             this.btnFileCopy.Text = "ファイルコピー";
             this.btnFileCopy.UseVisualStyleBackColor = true;
             // 
@@ -320,35 +320,35 @@
             this.txtFilePathFilter.Location = new System.Drawing.Point(48, 298);
             this.txtFilePathFilter.Name = "txtFilePathFilter";
             this.txtFilePathFilter.Size = new System.Drawing.Size(81, 19);
-            this.txtFilePathFilter.TabIndex = 80;
+            this.txtFilePathFilter.TabIndex = 16;
             // 
             // txtFileNameFilter
             // 
             this.txtFileNameFilter.Location = new System.Drawing.Point(135, 298);
             this.txtFileNameFilter.Name = "txtFileNameFilter";
             this.txtFileNameFilter.Size = new System.Drawing.Size(81, 19);
-            this.txtFileNameFilter.TabIndex = 81;
+            this.txtFileNameFilter.TabIndex = 17;
             // 
             // txtRowNumFilter
             // 
             this.txtRowNumFilter.Location = new System.Drawing.Point(222, 298);
             this.txtRowNumFilter.Name = "txtRowNumFilter";
             this.txtRowNumFilter.Size = new System.Drawing.Size(81, 19);
-            this.txtRowNumFilter.TabIndex = 82;
+            this.txtRowNumFilter.TabIndex = 18;
             // 
             // txtGrepResultFilter
             // 
             this.txtGrepResultFilter.Location = new System.Drawing.Point(309, 298);
             this.txtGrepResultFilter.Name = "txtGrepResultFilter";
             this.txtGrepResultFilter.Size = new System.Drawing.Size(81, 19);
-            this.txtGrepResultFilter.TabIndex = 83;
+            this.txtGrepResultFilter.TabIndex = 19;
             // 
             // txtMethodFilter
             // 
             this.txtMethodFilter.Location = new System.Drawing.Point(396, 298);
             this.txtMethodFilter.Name = "txtMethodFilter";
             this.txtMethodFilter.Size = new System.Drawing.Size(81, 19);
-            this.txtMethodFilter.TabIndex = 84;
+            this.txtMethodFilter.TabIndex = 20;
             // 
             // label4
             // 
@@ -356,7 +356,7 @@
             this.label4.Location = new System.Drawing.Point(49, 283);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(58, 12);
-            this.label4.TabIndex = 86;
+            this.label4.TabIndex = 0;
             this.label4.Text = "ファイルパス";
             // 
             // label5
@@ -365,7 +365,7 @@
             this.label5.Location = new System.Drawing.Point(139, 283);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(51, 12);
-            this.label5.TabIndex = 87;
+            this.label5.TabIndex = 0;
             this.label5.Text = "ファイル名";
             // 
             // label6
@@ -374,7 +374,7 @@
             this.label6.Location = new System.Drawing.Point(231, 283);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(17, 12);
-            this.label6.TabIndex = 88;
+            this.label6.TabIndex = 0;
             this.label6.Text = "行";
             // 
             // label7
@@ -383,7 +383,7 @@
             this.label7.Location = new System.Drawing.Point(307, 283);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(53, 12);
-            this.label7.TabIndex = 89;
+            this.label7.TabIndex = 0;
             this.label7.Text = "Grep結果";
             // 
             // label8
@@ -392,7 +392,7 @@
             this.label8.Location = new System.Drawing.Point(394, 283);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(38, 12);
-            this.label8.TabIndex = 90;
+            this.label8.TabIndex = 0;
             this.label8.Text = "メソッド";
             // 
             // MainForm

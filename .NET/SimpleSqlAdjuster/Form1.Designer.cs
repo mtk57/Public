@@ -35,34 +35,66 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.btnRun = new System.Windows.Forms.Button();
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
+            this.splitContainer1.Panel1.SuspendLayout();
+            this.splitContainer1.Panel2.SuspendLayout();
+            this.splitContainer1.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // splitContainer1
+            // 
+            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer1.Location = new System.Drawing.Point(0, 0);
+            this.splitContainer1.Name = "splitContainer1";
+            this.splitContainer1.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            // 
+            // splitContainer1.Panel1
+            // 
+            this.splitContainer1.Panel1.Controls.Add(this.label1);
+            this.splitContainer1.Panel1.Controls.Add(this.btnRun);
+            this.splitContainer1.Panel1.Controls.Add(this.txtBeforeSQL);
+            // 
+            // splitContainer1.Panel2
+            // 
+            this.splitContainer1.Panel2.Controls.Add(this.label2);
+            this.splitContainer1.Panel2.Controls.Add(this.txtAfterSQL);
+            this.splitContainer1.Size = new System.Drawing.Size(542, 486);
+            this.splitContainer1.SplitterDistance = 234;
+            this.splitContainer1.TabIndex = 0;
             // 
             // txtBeforeSQL
             // 
-            this.txtBeforeSQL.Location = new System.Drawing.Point(31, 46);
+            this.txtBeforeSQL.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtBeforeSQL.Location = new System.Drawing.Point(12, 36);
             this.txtBeforeSQL.MaxLength = 0;
             this.txtBeforeSQL.Multiline = true;
             this.txtBeforeSQL.Name = "txtBeforeSQL";
             this.txtBeforeSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtBeforeSQL.Size = new System.Drawing.Size(491, 187);
+            this.txtBeforeSQL.Size = new System.Drawing.Size(518, 186);
             this.txtBeforeSQL.TabIndex = 0;
             // 
             // txtAfterSQL
             // 
-            this.txtAfterSQL.Location = new System.Drawing.Point(27, 283);
+            this.txtAfterSQL.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtAfterSQL.Location = new System.Drawing.Point(12, 36);
             this.txtAfterSQL.MaxLength = 0;
             this.txtAfterSQL.Multiline = true;
             this.txtAfterSQL.Name = "txtAfterSQL";
             this.txtAfterSQL.ReadOnly = true;
             this.txtAfterSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtAfterSQL.Size = new System.Drawing.Size(496, 182);
-            this.txtAfterSQL.TabIndex = 1;
+            this.txtAfterSQL.Size = new System.Drawing.Size(518, 200);
+            this.txtAfterSQL.TabIndex = 0;
             this.txtAfterSQL.TextChanged += new System.EventHandler(this.txtAfterSQL_TextChanged);
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(31, 32);
+            this.label1.Location = new System.Drawing.Point(12, 12);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(62, 12);
             this.label1.TabIndex = 2;
@@ -71,7 +103,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(31, 249);
+            this.label2.Location = new System.Drawing.Point(12, 12);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(62, 12);
             this.label2.TabIndex = 3;
@@ -79,10 +111,11 @@
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(220, 12);
+            this.btnRun.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnRun.Location = new System.Drawing.Point(455, 10);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 23);
-            this.btnRun.TabIndex = 4;
+            this.btnRun.TabIndex = 1;
             this.btnRun.Text = "実行";
             this.btnRun.UseVisualStyleBackColor = true;
             // 
@@ -91,15 +124,16 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(542, 486);
-            this.Controls.Add(this.btnRun);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.txtAfterSQL);
-            this.Controls.Add(this.txtBeforeSQL);
+            this.Controls.Add(this.splitContainer1);
             this.Name = "MainForm";
             this.Text = "Simple SQL Adjuster";
+            this.splitContainer1.Panel1.ResumeLayout(false);
+            this.splitContainer1.Panel1.PerformLayout();
+            this.splitContainer1.Panel2.ResumeLayout(false);
+            this.splitContainer1.Panel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
+            this.splitContainer1.ResumeLayout(false);
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -110,6 +144,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnRun;
+        private System.Windows.Forms.SplitContainer splitContainer1;
     }
 }
-

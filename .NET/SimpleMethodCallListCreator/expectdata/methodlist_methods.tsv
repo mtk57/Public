@@ -10,5 +10,8 @@ C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\serv
 C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\service\TaskService.java	TaskService.java	samples.service	TaskService	private void processStep(int)
 C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\service\TaskService.java	TaskService.java	samples.service	TaskService	public static void prepareEnvironment()
 C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\service\TaskService.java	TaskService.java	samples.service	TaskService	public List<String> summarize(List<String>)
+C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\service\TaskService.java	TaskService.java	samples.service	Helper	void handle(int)
 C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\util\Converters.java	Converters.java	samples.util	Converters	public static String toDisplayName(String)
 C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\util\Converters.java	Converters.java	samples.util	Converters	public static String join(String, String[])
+C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\util\MultiLineFormatter.java	MultiLineFormatter.java	samples.util	MultiLineFormatter	public String compose(int, String, boolean)
+C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\methodlist\samples\util\MultiLineFormatter.java	MultiLineFormatter.java	samples.util	MultiLineFormatter	public static void invokeRepeated(Runnable, int)

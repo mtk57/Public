@@ -229,43 +229,50 @@ namespace SimpleMethodCallListCreator
         private static List<JavaClassInfo> ExtractClasses(string text, LineIndexer lineIndexer)
         {
             var classes = new List<JavaClassInfo>();
-            var keyword = "class";
-            var index = 0;
-            while (index < text.Length)
+            ExtractClassesRecursive(text, 0, text.Length, lineIndexer, classes);
+            return classes;
+        }
+
+        private static void ExtractClassesRecursive(string text, int startIndex, int endIndex,
+            LineIndexer lineIndexer, List<JavaClassInfo> classes)
+        {
+            const string keyword = "class";
+            var index = startIndex;
+            while (index < endIndex)
             {
-                index = text.IndexOf(keyword, index, StringComparison.Ordinal);
-                if (index == -1)
+                var found = text.IndexOf(keyword, index, endIndex - index, StringComparison.Ordinal);
+                if (found == -1)
                 {
                     break;
                 }
 
-                if (!IsStandaloneKeyword(text, index, keyword))
+                if (!IsStandaloneKeyword(text, found, keyword))
                 {
-                    index += keyword.Length;
+                    index = found + keyword.Length;
                     continue;
                 }
 
-                var nameStart = SkipWhitespaceForward(text, index + keyword.Length);
-                if (nameStart >= text.Length)
+                var nameStart = SkipWhitespaceForward(text, found + keyword.Length);
+                if (nameStart >= endIndex)
                 {
                     break;
                 }
 
                 var nameEnd = nameStart;
-                while (nameEnd < text.Length && IsIdentifierChar(text[nameEnd]))
+                while (nameEnd < endIndex && IsIdentifierChar(text[nameEnd]))
                 {
                     nameEnd++;
                 }
 
                 if (nameEnd == nameStart)
                 {
-                    index += keyword.Length;
+                    index = found + keyword.Length;
                     continue;
                 }
 
                 var className = text.Substring(nameStart, nameEnd - nameStart);
                 var bodyStartSearch = nameEnd;
-                var bodyStart = FindNextChar(text, bodyStartSearch, '{');
+                var bodyStart = FindNextCharWithinRange(text, bodyStartSearch, '{', endIndex);
                 if (bodyStart == -1)
                 {
                     var line = lineIndexer.GetLineNumber(nameStart);
@@ -273,7 +280,7 @@ namespace SimpleMethodCallListCreator
                 }
 
                 var bodyEnd = FindMatchingBrace(text, bodyStart);
-                if (bodyEnd == -1)
+                if (bodyEnd == -1 || bodyEnd > endIndex)
                 {
                     var line = lineIndexer.GetLineNumber(bodyStart);
                     throw new JavaParseException("クラス定義の終端が見つかりません。", line, className);
@@ -282,15 +289,18 @@ namespace SimpleMethodCallListCreator
                 classes.Add(new JavaClassInfo
                 {
                     Name = className,
-                    DeclarationIndex = index,
+                    DeclarationIndex = found,
                     BodyStartIndex = bodyStart,
                     BodyEndIndex = bodyEnd
                 });
 
+                if (bodyStart + 1 < bodyEnd)
+                {
+                    ExtractClassesRecursive(text, bodyStart + 1, bodyEnd, lineIndexer, classes);
+                }
+
                 index = bodyEnd + 1;
             }
-
-            return classes;
         }
 
         private static List<JavaMethodInfo> ExtractMethods(string text, JavaClassInfo javaClass, LineIndexer lineIndexer)
@@ -852,6 +862,26 @@ namespace SimpleMethodCallListCreator
         {
             var state = new StringState();
             for (var i = startIndex; i < text.Length; i++)
+            {
+                UpdateStringState(text, i, state);
+                if (state.InString)
+                {
+                    continue;
+                }
+
+                if (text[i] == target)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int FindNextCharWithinRange(string text, int startIndex, char target, int endIndex)
+        {
+            var state = new StringState();
+            for (var i = startIndex; i < endIndex && i < text.Length; i++)
             {
                 UpdateStringState(text, i, state);
                 if (state.InString)

@@ -1,7 +1,7 @@
 ## 出力言語
 このリポジトリに関するすべての説明・要約は日本語で記述してください。
 
-## SimpleMethodCallListCreator 仕様  Version 1.2.0
+## SimpleMethodCallListCreator 仕様  Version 1.2.2
 ===============
 
 #概要

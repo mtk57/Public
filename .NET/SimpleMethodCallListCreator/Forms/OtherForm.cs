@@ -34,5 +34,10 @@ namespace SimpleMethodCallListCreator
                 dialog.ShowDialog(this);
             }
         }
+
+        private void btnInsertTagJump_Click ( object sender, EventArgs e )
+        {
+            // TBD
+        }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -973,7 +972,7 @@ namespace SimpleMethodCallListCreator
 
             try
             {
-                LaunchSakura(detail.FilePath, Math.Max(detail.LineNumber, 1));
+                SakuraTagJumpLauncher.Launch(detail.FilePath, Math.Max(detail.LineNumber, 1));
             }
             catch (Exception ex)
             {
@@ -1149,79 +1148,6 @@ namespace SimpleMethodCallListCreator
             {
                 ErrorLogger.LogException(ex);
             }
-        }
-
-        private void LaunchSakura(string filePath, int lineNumber)
-        {
-            var sakuraPath = FindSakuraPath();
-            if (!string.IsNullOrEmpty(sakuraPath))
-            {
-                var arguments = $"-Y={lineNumber} \"{filePath}\"";
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = sakuraPath,
-                    Arguments = arguments,
-                    UseShellExecute = false
-                });
-            }
-            else
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = filePath,
-                    UseShellExecute = true
-                });
-            }
-        }
-
-        private string FindSakuraPath()
-        {
-            try
-            {
-                var configPath = ConfigurationManager.AppSettings["SakuraEditorPath"];
-                if (!string.IsNullOrEmpty(configPath) && File.Exists(configPath))
-                {
-                    return configPath;
-                }
-            }
-            catch (ConfigurationErrorsException ex)
-            {
-                ErrorLogger.LogException(ex);
-            }
-
-            var programFilesPaths = new[]
-            {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "sakura", "sakura.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "sakura", "sakura.exe")
-            };
-
-            foreach (var candidate in programFilesPaths)
-            {
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            var pathEnv = Environment.GetEnvironmentVariable("PATH");
-            if (!string.IsNullOrEmpty(pathEnv))
-            {
-                foreach (var part in pathEnv.Split(Path.PathSeparator))
-                {
-                    if (string.IsNullOrEmpty(part))
-                    {
-                        continue;
-                    }
-
-                    var candidate = Path.Combine(part, "sakura.exe");
-                    if (File.Exists(candidate))
-                    {
-                        return candidate;
-                    }
-                }
-            }
-
-            return null;
         }
 
         private List<string> CaptureHistoryFromCombo(ComboBox comboBox, bool caseInsensitive, bool allowEmpty = false)

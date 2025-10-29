@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Infrastructure\AppSettings.cs" />
     <Compile Include="Infrastructure\ErrorLogger.cs" />
+    <Compile Include="Infrastructure\SakuraTagJumpLauncher.cs" />
     <Compile Include="Core\IgnoreConditionSetting.cs" />
     <Compile Include="Forms\Form1.cs">
       <SubType>Form</SubType>

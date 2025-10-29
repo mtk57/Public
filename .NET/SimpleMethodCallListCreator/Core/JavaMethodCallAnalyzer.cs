@@ -76,7 +76,8 @@ namespace SimpleMethodCallListCreator
                 foreach (var method in methods)
                 {
                     var signature = BuildMethodSignature(cleanedText, method);
-                    results.Add(new MethodDefinitionDetail(filePath, packageName, javaClass.Name, signature));
+                    var lineNumber = lineIndexer.GetLineNumber(method.SignatureIndex);
+                    results.Add(new MethodDefinitionDetail(filePath, packageName, javaClass.Name, signature, lineNumber));
                 }
             }
 

@@ -29,20 +29,7 @@ namespace SimpleMethodCallListCreator
 
         public static List<MethodCallDetail> Analyze(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
-            {
-                throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
-            }
-
-            if (!File.Exists(filePath))
-            {
-                throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
-            }
-
-            if (!string.Equals(Path.GetExtension(filePath), ".java", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("サポートされていないファイル形式です。Javaファイル（*.java）のみ指定してください。");
-            }
+            ValidateJavaFile(filePath);
 
             var originalText = File.ReadAllText(filePath, Encoding.UTF8);
             var cleanedText = RemoveComments(originalText);
@@ -65,6 +52,53 @@ namespace SimpleMethodCallListCreator
             }
 
             return results;
+        }
+
+        public static List<MethodDefinitionDetail> ExtractMethodDefinitions(string filePath)
+        {
+            ValidateJavaFile(filePath);
+
+            var originalText = File.ReadAllText(filePath, Encoding.UTF8);
+            var cleanedText = RemoveComments(originalText);
+            var lineIndexer = new LineIndexer(originalText);
+            var packageName = ExtractPackageName(cleanedText);
+
+            var classes = ExtractClasses(cleanedText, lineIndexer);
+            if (classes.Count == 0)
+            {
+                throw new JavaParseException("クラス定義が見つかりません。", 1);
+            }
+
+            var results = new List<MethodDefinitionDetail>();
+            foreach (var javaClass in classes)
+            {
+                var methods = ExtractMethods(cleanedText, javaClass, lineIndexer);
+                foreach (var method in methods)
+                {
+                    var signature = BuildMethodSignature(cleanedText, method);
+                    results.Add(new MethodDefinitionDetail(filePath, packageName, javaClass.Name, signature));
+                }
+            }
+
+            return results;
+        }
+
+        private static void ValidateJavaFile(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
+            }
+
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
+            }
+
+            if (!string.Equals(Path.GetExtension(filePath), ".java", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("サポートされていないファイル形式です。Javaファイル（*.java）のみ指定してください。");
+            }
         }
 
         private static string RemoveComments(string text)
@@ -148,6 +182,48 @@ namespace SimpleMethodCallListCreator
             }
 
             return new string(chars);
+        }
+
+        private static string ExtractPackageName(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            const string keyword = "package";
+            var index = 0;
+            while (index < text.Length)
+            {
+                index = text.IndexOf(keyword, index, StringComparison.Ordinal);
+                if (index == -1)
+                {
+                    break;
+                }
+
+                if (!IsStandaloneKeyword(text, index, keyword))
+                {
+                    index += keyword.Length;
+                    continue;
+                }
+
+                var start = SkipWhitespaceForward(text, index + keyword.Length);
+                if (start >= text.Length)
+                {
+                    return string.Empty;
+                }
+
+                var semicolon = text.IndexOf(';', start);
+                if (semicolon == -1)
+                {
+                    return string.Empty;
+                }
+
+                var candidate = text.Substring(start, semicolon - start).Trim();
+                return candidate;
+            }
+
+            return string.Empty;
         }
 
         private static List<JavaClassInfo> ExtractClasses(string text, LineIndexer lineIndexer)
@@ -297,10 +373,15 @@ namespace SimpleMethodCallListCreator
                         continue;
                     }
 
+                    var signatureStart = FindMethodSignatureStart(text, methodNameStart);
+
                     methods.Add(new JavaMethodInfo
                     {
                         Name = methodName,
                         SignatureIndex = methodNameStart,
+                        SignatureStartIndex = signatureStart,
+                        ParameterListStartIndex = index,
+                        ParameterListEndIndex = closeParen,
                         BodyStartIndex = next,
                         BodyEndIndex = bodyEnd,
                         ClassInfo = javaClass
@@ -392,6 +473,221 @@ namespace SimpleMethodCallListCreator
             }
 
             return results;
+        }
+
+        private static string BuildMethodSignature(string text, JavaMethodInfo method)
+        {
+            if (method == null)
+            {
+                return string.Empty;
+            }
+
+            var signatureStart = method.SignatureStartIndex;
+            if (signatureStart < 0 || signatureStart >= text.Length)
+            {
+                signatureStart = method.SignatureIndex;
+            }
+
+            var prefixLength = method.SignatureIndex - signatureStart;
+            if (prefixLength < 0)
+            {
+                prefixLength = 0;
+            }
+
+            var prefix = prefixLength > 0
+                ? text.Substring(signatureStart, prefixLength)
+                : string.Empty;
+
+            prefix = NormalizeWhitespace(RemoveLeadingAnnotations(prefix));
+
+            var parametersSection = string.Empty;
+            if (method.ParameterListStartIndex >= 0 &&
+                method.ParameterListEndIndex > method.ParameterListStartIndex &&
+                method.ParameterListEndIndex < text.Length)
+            {
+                parametersSection = text.Substring(
+                    method.ParameterListStartIndex + 1,
+                    method.ParameterListEndIndex - method.ParameterListStartIndex - 1);
+            }
+
+            var parameterTypes = ExtractParameterTypes(parametersSection);
+            var builder = new StringBuilder();
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                builder.Append(prefix);
+                builder.Append(' ');
+            }
+
+            builder.Append(method.Name);
+            builder.Append('(');
+            builder.Append(string.Join(", ", parameterTypes));
+            builder.Append(')');
+            return builder.ToString();
+        }
+
+        private static List<string> ExtractParameterTypes(string parametersSection)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrWhiteSpace(parametersSection))
+            {
+                return result;
+            }
+
+            var segments = SplitParameters(parametersSection);
+            foreach (var segment in segments)
+            {
+                var cleaned = RemoveLeadingAnnotations(segment);
+                cleaned = RemoveParameterModifiers(cleaned);
+                cleaned = cleaned.Trim();
+                if (cleaned.Length == 0)
+                {
+                    continue;
+                }
+
+                var type = GetParameterType(cleaned);
+                type = NormalizeWhitespace(type);
+                if (type.Length > 0)
+                {
+                    result.Add(type);
+                }
+            }
+
+            return result;
+        }
+
+        private static List<string> SplitParameters(string parametersSection)
+        {
+            var list = new List<string>();
+            var builder = new StringBuilder();
+            var angleDepth = 0;
+            var parenDepth = 0;
+
+            for (var i = 0; i < parametersSection.Length; i++)
+            {
+                var c = parametersSection[i];
+                if (c == ',' && angleDepth == 0 && parenDepth == 0)
+                {
+                    list.Add(builder.ToString());
+                    builder.Clear();
+                    continue;
+                }
+
+                builder.Append(c);
+                if (c == '<')
+                {
+                    angleDepth++;
+                }
+                else if (c == '>')
+                {
+                    if (angleDepth > 0)
+                    {
+                        angleDepth--;
+                    }
+                }
+                else if (c == '(')
+                {
+                    parenDepth++;
+                }
+                else if (c == ')')
+                {
+                    if (parenDepth > 0)
+                    {
+                        parenDepth--;
+                    }
+                }
+            }
+
+            if (builder.Length > 0)
+            {
+                list.Add(builder.ToString());
+            }
+
+            return list;
+        }
+
+        private static string RemoveParameterModifiers(string parameter)
+        {
+            var result = parameter ?? string.Empty;
+            result = result.TrimStart();
+
+            var modifiers = new[] { "final" };
+            var updated = true;
+            while (updated && result.Length > 0)
+            {
+                updated = false;
+                foreach (var modifier in modifiers)
+                {
+                    if (result.StartsWith(modifier, StringComparison.Ordinal))
+                    {
+                        var after = result.Substring(modifier.Length);
+                        if (after.Length == 0 || char.IsWhiteSpace(after[0]))
+                        {
+                            result = after.TrimStart();
+                            updated = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static string GetParameterType(string parameter)
+        {
+            var trimmed = parameter.Trim();
+            if (trimmed.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var end = trimmed.Length - 1;
+            while (end >= 0 && char.IsWhiteSpace(trimmed[end]))
+            {
+                end--;
+            }
+
+            var arraySuffixCount = 0;
+            while (end >= 1 && trimmed[end] == ']' && trimmed[end - 1] == '[')
+            {
+                arraySuffixCount++;
+                end -= 2;
+                while (end >= 0 && char.IsWhiteSpace(trimmed[end]))
+                {
+                    end--;
+                }
+            }
+
+            var nameEnd = end;
+            while (nameEnd >= 0 &&
+                   (char.IsLetterOrDigit(trimmed[nameEnd]) || trimmed[nameEnd] == '_' || trimmed[nameEnd] == '$'))
+            {
+                nameEnd--;
+            }
+
+            var typePart = trimmed;
+            if (nameEnd >= 0)
+            {
+                typePart = trimmed.Substring(0, nameEnd + 1).TrimEnd();
+                if (typePart.Length == 0)
+                {
+                    typePart = trimmed;
+                }
+            }
+
+            if (arraySuffixCount > 0)
+            {
+                var builder = new StringBuilder(typePart.Length + arraySuffixCount * 2);
+                builder.Append(typePart);
+                for (var i = 0; i < arraySuffixCount; i++)
+                {
+                    builder.Append("[]");
+                }
+
+                typePart = builder.ToString();
+            }
+
+            return typePart;
         }
 
         private static MethodNameInfo GetMethodNameInfo(string text, int lowerBound, int searchIndex)
@@ -757,6 +1053,119 @@ namespace SimpleMethodCallListCreator
             return builder.ToString();
         }
 
+        private static string NormalizeWhitespace(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(text.Length);
+            var previousIsSpace = false;
+            foreach (var c in text)
+            {
+                if (char.IsWhiteSpace(c))
+                {
+                    if (!previousIsSpace)
+                    {
+                        builder.Append(' ');
+                        previousIsSpace = true;
+                    }
+                }
+                else
+                {
+                    builder.Append(c);
+                    previousIsSpace = false;
+                }
+            }
+
+            return builder.ToString().Trim();
+        }
+
+        private static string RemoveLeadingAnnotations(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            var index = 0;
+            while (index < text.Length)
+            {
+                index = SkipWhitespaceForward(text, index);
+                if (index >= text.Length || text[index] != '@')
+                {
+                    break;
+                }
+
+                index++;
+                while (index < text.Length &&
+                       (char.IsLetterOrDigit(text[index]) || text[index] == '_' || text[index] == '.'))
+                {
+                    index++;
+                }
+
+                if (index < text.Length && text[index] == '(')
+                {
+                    var depth = 1;
+                    index++;
+                    while (index < text.Length && depth > 0)
+                    {
+                        if (text[index] == '(')
+                        {
+                            depth++;
+                        }
+                        else if (text[index] == ')')
+                        {
+                            depth--;
+                        }
+
+                        index++;
+                    }
+                }
+
+                while (index < text.Length && char.IsWhiteSpace(text[index]))
+                {
+                    index++;
+                }
+            }
+
+            if (index >= text.Length)
+            {
+                return string.Empty;
+            }
+
+            return text.Substring(index);
+        }
+
+        private static int FindMethodSignatureStart(string text, int methodNameStart)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return 0;
+            }
+
+            var index = methodNameStart - 1;
+            while (index >= 0)
+            {
+                var c = text[index];
+                if (c == ';' || c == '{' || c == '}')
+                {
+                    index++;
+                    break;
+                }
+
+                index--;
+            }
+
+            if (index < 0)
+            {
+                index = 0;
+            }
+
+            return SkipWhitespaceForward(text, index);
+        }
+
         private sealed class JavaClassInfo
         {
             public string Name { get; set; }
@@ -769,6 +1178,9 @@ namespace SimpleMethodCallListCreator
         {
             public string Name { get; set; }
             public int SignatureIndex { get; set; }
+            public int SignatureStartIndex { get; set; }
+            public int ParameterListStartIndex { get; set; }
+            public int ParameterListEndIndex { get; set; }
             public int BodyStartIndex { get; set; }
             public int BodyEndIndex { get; set; }
             public JavaClassInfo ClassInfo { get; set; }

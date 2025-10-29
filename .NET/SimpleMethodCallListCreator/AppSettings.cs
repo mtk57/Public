@@ -38,5 +38,17 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public List<IgnoreConditionSetting> IgnoreConditions { get; set; } = new List<IgnoreConditionSetting>();
+
+        [DataMember]
+        public List<string> RecentMethodListDirectories { get; set; } = new List<string>();
+
+        [DataMember]
+        public string LastMethodListDirectory { get; set; } = string.Empty;
+
+        [DataMember]
+        public int SelectedMethodListDirectoryIndex { get; set; } = -1;
+
+        [DataMember]
+        public int SelectedMethodListExtensionIndex { get; set; }
     }
 }

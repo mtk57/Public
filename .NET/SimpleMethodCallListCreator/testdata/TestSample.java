@@ -67,7 +67,7 @@ class Utility {
 		String format,
 		String value) throws Exception {
 
-        Utility.log("step:" + index);
+        log(String.format(format, value));
     }
 
 }

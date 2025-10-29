@@ -33,7 +33,7 @@
             this.btnBrowse = new System.Windows.Forms.Button();
             this.cmbExt = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btnCreate = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -89,22 +89,22 @@
             this.label2.TabIndex = 7;
             this.label2.Text = "対象拡張子";
             // 
-            // button1
+            // btnCreate
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(300, 128);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(103, 29);
-            this.button1.TabIndex = 8;
-            this.button1.Text = "メソッドリスト作成";
-            this.button1.UseVisualStyleBackColor = true;
+            this.btnCreate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCreate.Location = new System.Drawing.Point(300, 128);
+            this.btnCreate.Name = "btnCreate";
+            this.btnCreate.Size = new System.Drawing.Size(103, 29);
+            this.btnCreate.TabIndex = 8;
+            this.btnCreate.Text = "メソッドリスト作成";
+            this.btnCreate.UseVisualStyleBackColor = true;
             // 
             // MethodListForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(736, 183);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.btnCreate);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.cmbExt);
             this.Controls.Add(this.label1);
@@ -126,6 +126,6 @@
         private System.Windows.Forms.Button btnBrowse;
         private System.Windows.Forms.ComboBox cmbExt;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button btnCreate;
     }
 }

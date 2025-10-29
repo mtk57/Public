@@ -12,9 +12,27 @@ namespace SimpleMethodCallListCreator
 {
     public partial class OtherForm : Form
     {
-        public OtherForm ()
+        private readonly AppSettings _settings;
+
+        public OtherForm(AppSettings settings)
         {
+            _settings = settings ?? new AppSettings();
             InitializeComponent();
+            HookEvents();
+        }
+
+        private void HookEvents()
+        {
+            btnMethodList.Click += BtnMethodList_Click;
+        }
+
+        private void BtnMethodList_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new MethodListForm(_settings))
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.ShowDialog(this);
+            }
         }
     }
 }

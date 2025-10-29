@@ -70,6 +70,7 @@
     <Compile Include="JavaMethodCallAnalyzer.cs" />
     <Compile Include="JavaParseException.cs" />
     <Compile Include="MethodCallDetail.cs" />
+    <Compile Include="MethodDefinitionDetail.cs" />
     <Compile Include="MethodListForm.cs">
       <SubType>Form</SubType>
     </Compile>

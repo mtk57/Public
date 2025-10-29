@@ -65,6 +65,7 @@ namespace SimpleMethodCallListCreator
             btnRun.Click += BtnRun_Click;
             btnExport.Click += BtnExport_Click;
             btnImport.Click += BtnImport_Click;
+            btnOther.Click += BtnOther_Click;
             cmbFilePath.DragEnter += CmbFilePath_DragEnter;
             cmbFilePath.DragDrop += CmbFilePath_DragDrop;
             cmbCallerMethod.KeyDown += CmbCallerMethod_KeyDown;
@@ -239,6 +240,22 @@ namespace SimpleMethodCallListCreator
                     ErrorLogger.LogException(ex);
                 }
             }
+        }
+
+        private void BtnOther_Click(object sender, EventArgs e)
+        {
+            if (_settings == null)
+            {
+                _settings = new AppSettings();
+            }
+
+            using (var dialog = new OtherForm(_settings))
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.ShowDialog(this);
+            }
+
+            SaveSettings();
         }
 
         private void BtnEditIgnoreConditions_Click(object sender, EventArgs e)

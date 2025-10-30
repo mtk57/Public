@@ -71,9 +71,13 @@ namespace SimpleMethodCallListCreator
 
         private static string GetLogFilePath()
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var directory = Path.Combine(appData, "SimpleMethodCallListCreator");
-            return Path.Combine(directory, LogFileName);
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            if (string.IsNullOrEmpty(baseDirectory))
+            {
+                baseDirectory = Environment.CurrentDirectory;
+            }
+
+            return Path.Combine(baseDirectory, LogFileName);
         }
     }
 }

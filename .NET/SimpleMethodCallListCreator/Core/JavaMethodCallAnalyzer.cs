@@ -8,6 +8,7 @@ namespace SimpleMethodCallListCreator
     public static class JavaMethodCallAnalyzer
     {
         private const bool ExcludeConstructors = true;
+        private static readonly Encoding[] CandidateEncodings = CreateCandidateEncodings();
         private static readonly HashSet<string> ReservedKeywords = new HashSet<string>(StringComparer.Ordinal)
         {
             "if",
@@ -31,7 +32,7 @@ namespace SimpleMethodCallListCreator
         {
             ValidateJavaFile(filePath);
 
-            var originalText = File.ReadAllText(filePath, Encoding.UTF8);
+            var originalText = ReadAllTextWithEncoding(filePath);
             var cleanedText = RemoveComments(originalText);
             var lineIndexer = new LineIndexer(originalText);
 
@@ -58,7 +59,7 @@ namespace SimpleMethodCallListCreator
         {
             ValidateJavaFile(filePath);
 
-            var originalText = File.ReadAllText(filePath, Encoding.UTF8);
+            var originalText = ReadAllTextWithEncoding(filePath);
             var cleanedText = RemoveComments(originalText);
             var lineIndexer = new LineIndexer(originalText);
             var packageName = ExtractPackageName(cleanedText);
@@ -88,7 +89,7 @@ namespace SimpleMethodCallListCreator
         {
             ValidateJavaFile(filePath);
 
-            var originalText = File.ReadAllText(filePath, Encoding.UTF8);
+            var originalText = ReadAllTextWithEncoding(filePath);
             var cleanedText = RemoveComments(originalText);
             var lineIndexer = new LineIndexer(originalText);
 
@@ -132,6 +133,65 @@ namespace SimpleMethodCallListCreator
             }
 
             return new JavaFileStructure(filePath, originalText, methodStructures);
+        }
+
+        private static Encoding[] CreateCandidateEncodings()
+        {
+            var encodings = new List<Encoding>
+            {
+                new UTF8Encoding(false, true)
+            };
+
+            try
+            {
+                encodings.Add(Encoding.GetEncoding("Shift_JIS"));
+            }
+            catch (ArgumentException)
+            {
+                // Shift_JIS が利用できない環境では追加しない
+            }
+
+            var defaultEncoding = Encoding.Default;
+            if (defaultEncoding != null)
+            {
+                var exists = encodings.Exists(
+                    e => string.Equals(e.WebName, defaultEncoding.WebName, StringComparison.OrdinalIgnoreCase));
+                if (!exists)
+                {
+                    encodings.Add(defaultEncoding);
+                }
+            }
+
+            return encodings.ToArray();
+        }
+
+        private static string ReadAllTextWithEncoding(string filePath)
+        {
+            foreach (var encoding in CandidateEncodings)
+            {
+                try
+                {
+                    return ReadAllTextInternal(filePath, encoding);
+                }
+                catch (DecoderFallbackException)
+                {
+                    // 次の候補を試す
+                }
+                catch (ArgumentException)
+                {
+                    // 次の候補を試す
+                }
+            }
+
+            return File.ReadAllText(filePath);
+        }
+
+        private static string ReadAllTextInternal(string filePath, Encoding encoding)
+        {
+            using (var reader = new StreamReader(filePath, encoding, detectEncodingFromByteOrderMarks: true))
+            {
+                return reader.ReadToEnd();
+            }
         }
 
         private static void ValidateJavaFile(string filePath)

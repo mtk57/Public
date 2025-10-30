@@ -50,5 +50,17 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public int SelectedMethodListExtensionIndex { get; set; }
+
+        [DataMember]
+        public string LastTagJumpMethodListPath { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastTagJumpSourceFilePath { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastTagJumpMethod { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastTagJumpPrefix { get; set; } = "//@ ";
     }
 }

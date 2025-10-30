@@ -37,7 +37,13 @@ namespace SimpleMethodCallListCreator
 
         private void btnInsertTagJump_Click ( object sender, EventArgs e )
         {
-            // TBD
+            using ( var dialog = new Forms.InsertTagJumpForm( _settings ) )
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.ShowDialog( this );
+            }
+
+            SettingsManager.Save( _settings );
         }
     }
 }

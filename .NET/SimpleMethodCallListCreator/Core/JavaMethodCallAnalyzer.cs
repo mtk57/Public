@@ -84,6 +84,56 @@ namespace SimpleMethodCallListCreator
             return results;
         }
 
+        public static JavaFileStructure ExtractMethodStructures(string filePath)
+        {
+            ValidateJavaFile(filePath);
+
+            var originalText = File.ReadAllText(filePath, Encoding.UTF8);
+            var cleanedText = RemoveComments(originalText);
+            var lineIndexer = new LineIndexer(originalText);
+
+            var classes = ExtractClasses(cleanedText, lineIndexer);
+            if (classes.Count == 0)
+            {
+                throw new JavaParseException("クラス定義が見つかりません。", 1);
+            }
+
+            var methodStructures = new List<JavaMethodStructure>();
+            foreach (var javaClass in classes)
+            {
+                var methods = ExtractMethods(cleanedText, javaClass, lineIndexer);
+                foreach (var method in methods)
+                {
+                    var signature = BuildMethodSignature(cleanedText, method);
+                    var lineNumber = lineIndexer.GetLineNumber(method.SignatureIndex);
+                    var calls = new List<JavaMethodCallStructure>();
+                    foreach (var call in EnumerateMethodCalls(cleanedText, method, lineIndexer))
+                    {
+                        calls.Add(new JavaMethodCallStructure(
+                            call.CalleeIdentifier,
+                            call.MethodName,
+                            call.Arguments,
+                            call.ArgumentCount,
+                            call.MethodNameStart,
+                            call.CallEndIndex,
+                            call.LineNumber));
+                    }
+
+                    methodStructures.Add(new JavaMethodStructure(
+                        javaClass.Name,
+                        method.Name,
+                        signature,
+                        method.SignatureStartIndex,
+                        method.BodyStartIndex,
+                        method.BodyEndIndex,
+                        lineNumber,
+                        calls));
+                }
+            }
+
+            return new JavaFileStructure(filePath, originalText, methodStructures);
+        }
+
         private static void ValidateJavaFile(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
@@ -413,6 +463,24 @@ namespace SimpleMethodCallListCreator
             JavaMethodInfo method, LineIndexer lineIndexer, string filePath)
         {
             var results = new List<MethodCallDetail>();
+            foreach (var call in EnumerateMethodCalls(text, method, lineIndexer))
+            {
+                results.Add(new MethodCallDetail(
+                    filePath,
+                    javaClass.Name,
+                    method.Name,
+                    call.CalleeIdentifier,
+                    call.MethodName,
+                    call.Arguments,
+                    call.LineNumber));
+            }
+
+            return results;
+        }
+
+        private static IEnumerable<MethodCallParseResult> EnumerateMethodCalls(string text,
+            JavaMethodInfo method, LineIndexer lineIndexer)
+        {
             var state = new StringState();
             var index = method.BodyStartIndex + 1;
             var end = method.BodyEndIndex;
@@ -426,64 +494,55 @@ namespace SimpleMethodCallListCreator
                     continue;
                 }
 
-                if (text[index] == '(')
+                if (text[index] != '(')
                 {
-                    var closeParen = FindMatchingParenthesis(text, index);
-                    if (closeParen == -1)
-                    {
-                        var line = lineIndexer.GetLineNumber(index);
-                        throw new JavaParseException("メソッド呼び出しの括弧が閉じられていません。", line, method.Name);
-                    }
+                    index++;
+                    continue;
+                }
 
-                    var methodNameInfo = GetMethodNameInfo(text, method.BodyStartIndex + 1, index - 1);
-                    if (methodNameInfo == null)
-                    {
-                        index = closeParen + 1;
-                        continue;
-                    }
+                var closeParen = FindMatchingParenthesis(text, index);
+                if (closeParen == -1)
+                {
+                    var line = lineIndexer.GetLineNumber(index);
+                    throw new JavaParseException("メソッド呼び出しの括弧が閉じられていません。", line, method.Name);
+                }
 
-                    if (ReservedKeywords.Contains(methodNameInfo.MethodName))
-                    {
-                        index = closeParen + 1;
-                        continue;
-                    }
-
-                    if (methodNameInfo.IsConstructorCall)
-                    {
-                        index = closeParen + 1;
-                        continue;
-                    }
-
-                    var callText = text.Substring(methodNameInfo.MethodNameStart,
-                        closeParen - methodNameInfo.MethodNameStart + 1).Trim();
-                    callText = NormalizeCallText(callText);
-                    var methodNameOnly = methodNameInfo.MethodName;
-                    var methodArguments = ExtractArguments(callText);
-
-                    var calleeClass = methodNameInfo.Callee;
-                    if (string.Equals(calleeClass, "this", StringComparison.Ordinal))
-                    {
-                        calleeClass = string.Empty;
-                    }
-
-                    var lineNumber = lineIndexer.GetLineNumber(methodNameInfo.MethodNameStart);
-                    results.Add(new MethodCallDetail(
-                        filePath,
-                        javaClass.Name,
-                        method.Name,
-                        calleeClass,
-                        methodNameOnly,
-                        methodArguments,
-                        lineNumber));
-
+                var methodNameInfo = GetMethodNameInfo(text, method.BodyStartIndex + 1, index - 1);
+                if (methodNameInfo == null)
+                {
                     index = closeParen + 1;
                     continue;
                 }
 
-                index++;
-            }
+                if (ReservedKeywords.Contains(methodNameInfo.MethodName) || methodNameInfo.IsConstructorCall)
+                {
+                    index = closeParen + 1;
+                    continue;
+                }
 
-            return results;
+                var callText = text.Substring(methodNameInfo.MethodNameStart,
+                    closeParen - methodNameInfo.MethodNameStart + 1).Trim();
+                var normalizedCallText = NormalizeCallText(callText);
+                var arguments = ExtractArguments(normalizedCallText);
+                var argumentCount = CountArguments(arguments);
+                var calleeIdentifier = methodNameInfo.Callee;
+                if (string.Equals(calleeIdentifier, "this", StringComparison.Ordinal))
+                {
+                    calleeIdentifier = string.Empty;
+                }
+
+                var lineNumber = lineIndexer.GetLineNumber(methodNameInfo.MethodNameStart);
+                yield return new MethodCallParseResult(
+                    calleeIdentifier,
+                    methodNameInfo.MethodName,
+                    arguments,
+                    argumentCount,
+                    methodNameInfo.MethodNameStart,
+                    closeParen,
+                    lineNumber);
+
+                index = closeParen + 1;
+            }
         }
 
         private static string BuildMethodSignature(string text, JavaMethodInfo method)
@@ -1046,6 +1105,119 @@ namespace SimpleMethodCallListCreator
             return callText.Substring(index);
         }
 
+        private static int CountArguments(string argumentsText)
+        {
+            if (string.IsNullOrEmpty(argumentsText))
+            {
+                return 0;
+            }
+
+            var trimmed = argumentsText.Trim();
+            if (trimmed.Length < 2 || trimmed[0] != '(' || trimmed[trimmed.Length - 1] != ')')
+            {
+                return 0;
+            }
+
+            if (trimmed.Length == 2)
+            {
+                return 0;
+            }
+
+            var count = 1;
+            var parenthesesDepth = 0;
+            var bracketDepth = 0;
+            var braceDepth = 0;
+            var angleDepth = 0;
+            var inSingleQuote = false;
+            var inDoubleQuote = false;
+
+            for (var i = 1; i < trimmed.Length - 1; i++)
+            {
+                var c = trimmed[i];
+                if (inSingleQuote)
+                {
+                    if (c == '\'' && !IsEscaped(trimmed, i))
+                    {
+                        inSingleQuote = false;
+                    }
+
+                    continue;
+                }
+
+                if (inDoubleQuote)
+                {
+                    if (c == '"' && !IsEscaped(trimmed, i))
+                    {
+                        inDoubleQuote = false;
+                    }
+
+                    continue;
+                }
+
+                switch (c)
+                {
+                    case '\'':
+                        inSingleQuote = true;
+                        continue;
+                    case '"':
+                        inDoubleQuote = true;
+                        continue;
+                    case '(':
+                        parenthesesDepth++;
+                        continue;
+                    case ')':
+                        if (parenthesesDepth > 0)
+                        {
+                            parenthesesDepth--;
+                        }
+
+                        continue;
+                    case '[':
+                        bracketDepth++;
+                        continue;
+                    case ']':
+                        if (bracketDepth > 0)
+                        {
+                            bracketDepth--;
+                        }
+
+                        continue;
+                    case '{':
+                        braceDepth++;
+                        continue;
+                    case '}':
+                        if (braceDepth > 0)
+                        {
+                            braceDepth--;
+                        }
+
+                        continue;
+                    case '<':
+                        angleDepth++;
+                        continue;
+                    case '>':
+                        if (angleDepth > 0)
+                        {
+                            angleDepth--;
+                        }
+
+                        continue;
+                    case ',':
+                        if (parenthesesDepth == 0 &&
+                            bracketDepth == 0 &&
+                            braceDepth == 0 &&
+                            angleDepth == 0)
+                        {
+                            count++;
+                        }
+
+                        continue;
+                }
+            }
+
+            return count;
+        }
+
         private static string NormalizeCallText(string callText)
         {
             if (string.IsNullOrEmpty(callText))
@@ -1203,6 +1375,29 @@ namespace SimpleMethodCallListCreator
             public int DeclarationIndex { get; set; }
             public int BodyStartIndex { get; set; }
             public int BodyEndIndex { get; set; }
+        }
+
+        private sealed class MethodCallParseResult
+        {
+            public MethodCallParseResult(string calleeIdentifier, string methodName, string arguments,
+                int argumentCount, int methodNameStart, int callEndIndex, int lineNumber)
+            {
+                CalleeIdentifier = calleeIdentifier ?? string.Empty;
+                MethodName = methodName;
+                Arguments = arguments ?? string.Empty;
+                ArgumentCount = argumentCount;
+                MethodNameStart = methodNameStart;
+                CallEndIndex = callEndIndex;
+                LineNumber = lineNumber;
+            }
+
+            public string CalleeIdentifier { get; }
+            public string MethodName { get; }
+            public string Arguments { get; }
+            public int ArgumentCount { get; }
+            public int MethodNameStart { get; }
+            public int CallEndIndex { get; }
+            public int LineNumber { get; }
         }
 
         private sealed class JavaMethodInfo

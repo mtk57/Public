@@ -108,7 +108,7 @@
             this.chkEnableLogging.AutoSize = true;
             this.chkEnableLogging.Location = new System.Drawing.Point(25, 135);
             this.chkEnableLogging.Name = "chkEnableLogging";
-            this.chkEnableLogging.Size = new System.Drawing.Size(202, 16);
+            this.chkEnableLogging.Size = new System.Drawing.Size(200, 16);
             this.chkEnableLogging.TabIndex = 8;
             this.chkEnableLogging.Text = "詳細ログを出力する (methodlist.log)";
             this.chkEnableLogging.UseVisualStyleBackColor = true;
@@ -138,7 +138,7 @@
             // 
             this.lblProgressStatus.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblProgressStatus.AutoSize = true;
-            this.lblProgressStatus.Location = new System.Drawing.Point(530, 135);
+            this.lblProgressStatus.Location = new System.Drawing.Point(269, 205);
             this.lblProgressStatus.Name = "lblProgressStatus";
             this.lblProgressStatus.Size = new System.Drawing.Size(0, 12);
             this.lblProgressStatus.TabIndex = 12;

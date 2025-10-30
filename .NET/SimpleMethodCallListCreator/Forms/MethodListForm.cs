@@ -37,6 +37,7 @@ namespace SimpleMethodCallListCreator
             btnCreate.Click += BtnCreate_Click;
             cmbDirPath.DragEnter += CmbDirPath_DragEnter;
             cmbDirPath.DragDrop += CmbDirPath_DragDrop;
+            FormClosing += MethodListForm_FormClosing;
         }
 
         private void LoadSettings()
@@ -81,6 +82,8 @@ namespace SimpleMethodCallListCreator
                     cmbExt.SelectedIndex = selectedIndex;
                 }
             }
+
+            chkEnableLogging.Checked = _settings.EnableMethodListLogging;
         }
 
         private void BtnBrowse_Click(object sender, EventArgs e)
@@ -139,20 +142,55 @@ namespace SimpleMethodCallListCreator
                 return;
             }
 
+            var loggingEnabled = IsLoggingEnabled;
+            if (loggingEnabled)
+            {
+                MethodListLogger.LogInfo("==== メソッドリスト作成開始 ====");
+                MethodListLogger.LogInfo($"対象フォルダ: {directoryPath}");
+                MethodListLogger.LogInfo($"対象拡張子: {extension}");
+            }
+
             Cursor = Cursors.WaitCursor;
             try
             {
                 var files = EnumerateSourceFiles(directoryPath, extension).ToList();
+                if (loggingEnabled)
+                {
+                    MethodListLogger.LogInfo($"検出ファイル数: {files.Count}");
+                }
+
                 var results = new List<MethodDefinitionDetail>();
                 foreach (var file in files)
                 {
                     try
                     {
+                        if (loggingEnabled)
+                        {
+                            MethodListLogger.LogInfo($"解析開始: {file}");
+                        }
+
                         var definitions = JavaMethodCallAnalyzer.ExtractMethodDefinitions(file);
                         results.AddRange(definitions);
+
+                        if (loggingEnabled)
+                        {
+                            MethodListLogger.LogInfo($"解析成功: {file} (メソッド定義数: {definitions.Count})");
+                        }
                     }
                     catch (JavaParseException ex)
                     {
+                        if (loggingEnabled)
+                        {
+                            MethodListLogger.LogError($"解析失敗: {file} (行: {ex.LineNumber})");
+                            if (!string.IsNullOrEmpty(ex.InvalidContent))
+                            {
+                                MethodListLogger.LogError($"問題箇所: {ex.InvalidContent}");
+                            }
+
+                            MethodListLogger.LogException(ex);
+                            MethodListLogger.LogInfo("エラーのため処理を中断します。");
+                        }
+
                         HandleJavaParseException(file, ex);
                         return;
                     }
@@ -163,6 +201,13 @@ namespace SimpleMethodCallListCreator
                 UpdateDirectoryHistory(directoryPath);
                 SaveSettings();
 
+                if (loggingEnabled)
+                {
+                    MethodListLogger.LogInfo($"出力ファイル: {exportPath}");
+                    MethodListLogger.LogInfo($"出力件数: {results.Count}");
+                    MethodListLogger.LogInfo("==== メソッドリスト作成完了 ====");
+                }
+
                 MessageBox.Show(this, $"メソッドリストを出力しました。\n{exportPath}", "結果",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 OpenExportFolder(exportPath);
@@ -172,6 +217,11 @@ namespace SimpleMethodCallListCreator
                 MessageBox.Show(this, $"メソッドリストの作成に失敗しました。\n{ex.Message}", "エラー",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ErrorLogger.LogException(ex);
+                if (loggingEnabled)
+                {
+                    MethodListLogger.LogError($"メソッドリスト作成中にエラーが発生しました: {ex.Message}");
+                    MethodListLogger.LogException(ex);
+                }
             }
             finally
             {
@@ -293,6 +343,11 @@ namespace SimpleMethodCallListCreator
         {
             try
             {
+                if (_settings != null)
+                {
+                    _settings.EnableMethodListLogging = chkEnableLogging.Checked;
+                }
+
                 SettingsManager.Save(_settings);
             }
             catch (Exception ex)
@@ -315,6 +370,11 @@ namespace SimpleMethodCallListCreator
             var message = builder.ToString();
             MessageBox.Show(this, message, "解析エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ErrorLogger.LogError(message.TrimEnd());
+            if (IsLoggingEnabled)
+            {
+                MethodListLogger.LogError(message.TrimEnd());
+                MethodListLogger.LogException(ex);
+            }
         }
 
         private void CmbDirPath_DragEnter(object sender, DragEventArgs e)
@@ -376,6 +436,16 @@ namespace SimpleMethodCallListCreator
             {
                 ErrorLogger.LogException(ex);
             }
+        }
+
+        private void MethodListForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveSettings();
+        }
+
+        private bool IsLoggingEnabled
+        {
+            get { return chkEnableLogging != null && chkEnableLogging.Checked; }
         }
     }
 }

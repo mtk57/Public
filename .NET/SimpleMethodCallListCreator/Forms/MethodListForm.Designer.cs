@@ -34,6 +34,7 @@
             this.cmbExt = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
             this.btnCreate = new System.Windows.Forms.Button();
+            this.chkEnableLogging = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // label1
@@ -95,15 +96,26 @@
             this.btnCreate.Location = new System.Drawing.Point(300, 128);
             this.btnCreate.Name = "btnCreate";
             this.btnCreate.Size = new System.Drawing.Size(103, 29);
-            this.btnCreate.TabIndex = 8;
+            this.btnCreate.TabIndex = 9;
             this.btnCreate.Text = "メソッドリスト作成";
             this.btnCreate.UseVisualStyleBackColor = true;
+            // 
+            // chkEnableLogging
+            // 
+            this.chkEnableLogging.AutoSize = true;
+            this.chkEnableLogging.Location = new System.Drawing.Point(25, 135);
+            this.chkEnableLogging.Name = "chkEnableLogging";
+            this.chkEnableLogging.Size = new System.Drawing.Size(202, 16);
+            this.chkEnableLogging.TabIndex = 8;
+            this.chkEnableLogging.Text = "詳細ログを出力する (methodlist.log)";
+            this.chkEnableLogging.UseVisualStyleBackColor = true;
             // 
             // MethodListForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(736, 183);
+            this.Controls.Add(this.chkEnableLogging);
             this.Controls.Add(this.btnCreate);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.cmbExt);
@@ -127,5 +139,6 @@
         private System.Windows.Forms.ComboBox cmbExt;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnCreate;
+        private System.Windows.Forms.CheckBox chkEnableLogging;
     }
 }

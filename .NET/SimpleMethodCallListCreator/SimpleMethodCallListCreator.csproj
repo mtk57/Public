@@ -59,6 +59,7 @@
     </Compile>
     <Compile Include="Infrastructure\AppSettings.cs" />
     <Compile Include="Infrastructure\ErrorLogger.cs" />
+    <Compile Include="Infrastructure\MethodListLogger.cs" />
     <Compile Include="Infrastructure\SakuraTagJumpLauncher.cs" />
     <Compile Include="Core\IgnoreConditionSetting.cs" />
     <Compile Include="Forms\Form1.cs">

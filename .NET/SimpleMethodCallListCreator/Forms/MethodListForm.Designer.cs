@@ -35,6 +35,9 @@
             this.label2 = new System.Windows.Forms.Label();
             this.btnCreate = new System.Windows.Forms.Button();
             this.chkEnableLogging = new System.Windows.Forms.CheckBox();
+            this.btnCancel = new System.Windows.Forms.Button();
+            this.pbProgress = new System.Windows.Forms.ProgressBar();
+            this.lblProgressStatus = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -110,11 +113,44 @@
             this.chkEnableLogging.Text = "詳細ログを出力する (methodlist.log)";
             this.chkEnableLogging.UseVisualStyleBackColor = true;
             // 
+            // btnCancel
+            // 
+            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCancel.Enabled = false;
+            this.btnCancel.Location = new System.Drawing.Point(423, 128);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(103, 29);
+            this.btnCancel.TabIndex = 10;
+            this.btnCancel.Text = "中止";
+            this.btnCancel.UseVisualStyleBackColor = true;
+            // 
+            // pbProgress
+            // 
+            this.pbProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.pbProgress.Location = new System.Drawing.Point(25, 178);
+            this.pbProgress.Name = "pbProgress";
+            this.pbProgress.Size = new System.Drawing.Size(689, 18);
+            this.pbProgress.TabIndex = 11;
+            this.pbProgress.Visible = false;
+            // 
+            // lblProgressStatus
+            // 
+            this.lblProgressStatus.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblProgressStatus.AutoSize = true;
+            this.lblProgressStatus.Location = new System.Drawing.Point(530, 135);
+            this.lblProgressStatus.Name = "lblProgressStatus";
+            this.lblProgressStatus.Size = new System.Drawing.Size(0, 12);
+            this.lblProgressStatus.TabIndex = 12;
+            // 
             // MethodListForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(736, 183);
+            this.ClientSize = new System.Drawing.Size(736, 228);
+            this.Controls.Add(this.lblProgressStatus);
+            this.Controls.Add(this.pbProgress);
+            this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.chkEnableLogging);
             this.Controls.Add(this.btnCreate);
             this.Controls.Add(this.label2);
@@ -122,8 +158,8 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.cmbDirPath);
             this.Controls.Add(this.btnBrowse);
-            this.MaximumSize = new System.Drawing.Size(752, 222);
-            this.MinimumSize = new System.Drawing.Size(752, 222);
+            this.MaximumSize = new System.Drawing.Size(752, 267);
+            this.MinimumSize = new System.Drawing.Size(752, 267);
             this.Name = "MethodListForm";
             this.Text = "Method List";
             this.ResumeLayout(false);
@@ -140,5 +176,8 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnCreate;
         private System.Windows.Forms.CheckBox chkEnableLogging;
+        private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.ProgressBar pbProgress;
+        private System.Windows.Forms.Label lblProgressStatus;
     }
 }

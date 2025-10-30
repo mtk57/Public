@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SimpleMethodCallListCreator
@@ -13,6 +15,8 @@ namespace SimpleMethodCallListCreator
     {
         private const int MaxHistoryCount = 10;
         private readonly AppSettings _settings;
+        private CancellationTokenSource _cancellationTokenSource;
+        private bool _isProcessing;
 
         public MethodListForm(AppSettings settings)
         {
@@ -29,12 +33,20 @@ namespace SimpleMethodCallListCreator
             {
                 cmbExt.SelectedIndex = 0;
             }
+
+            pbProgress.Minimum = 0;
+            pbProgress.Maximum = 1;
+            pbProgress.Value = 0;
+            pbProgress.Visible = false;
+            btnCancel.Enabled = false;
+            lblProgressStatus.Text = string.Empty;
         }
 
         private void HookEvents()
         {
             btnBrowse.Click += BtnBrowse_Click;
             btnCreate.Click += BtnCreate_Click;
+            btnCancel.Click += BtnCancel_Click;
             cmbDirPath.DragEnter += CmbDirPath_DragEnter;
             cmbDirPath.DragDrop += CmbDirPath_DragDrop;
             FormClosing += MethodListForm_FormClosing;
@@ -105,12 +117,17 @@ namespace SimpleMethodCallListCreator
             }
         }
 
-        private void BtnCreate_Click(object sender, EventArgs e)
+        private async void BtnCreate_Click(object sender, EventArgs e)
         {
-            CreateMethodList();
+            if (_isProcessing)
+            {
+                return;
+            }
+
+            await StartMethodListCreationAsync();
         }
 
-        private void CreateMethodList()
+        private async Task StartMethodListCreationAsync()
         {
             var directoryPath = (cmbDirPath.Text ?? string.Empty).Trim();
             if (directoryPath.Length == 0)
@@ -142,90 +159,120 @@ namespace SimpleMethodCallListCreator
                 return;
             }
 
+            var files = EnumerateSourceFiles(directoryPath, extension).ToList();
             var loggingEnabled = IsLoggingEnabled;
+
+            if (files.Count == 0)
+            {
+                MessageBox.Show(this, "対象フォルダに解析対象のファイルがありません。", "情報",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (loggingEnabled)
+                {
+                    MethodListLogger.LogInfo("解析対象ファイルが見つかりませんでした。処理を終了します。");
+                }
+
+                return;
+            }
+
             if (loggingEnabled)
             {
                 MethodListLogger.LogInfo("==== メソッドリスト作成開始 ====");
                 MethodListLogger.LogInfo($"対象フォルダ: {directoryPath}");
                 MethodListLogger.LogInfo($"対象拡張子: {extension}");
+                MethodListLogger.LogInfo($"検出ファイル数: {files.Count}");
             }
 
+            PrepareProcessingState(files.Count);
+
+            _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
+            var progress = new Progress<MethodListProgressStatus>(status =>
+            {
+                UpdateProgressStatus(status);
+            });
+
+            MethodListProcessResult result = null;
             Cursor = Cursors.WaitCursor;
             try
             {
-                var files = EnumerateSourceFiles(directoryPath, extension).ToList();
-                if (loggingEnabled)
-                {
-                    MethodListLogger.LogInfo($"検出ファイル数: {files.Count}");
-                }
+                result = await Task.Run(
+                    () => ProcessMethodList(files, loggingEnabled, token, progress),
+                    token);
 
-                var results = new List<MethodDefinitionDetail>();
-                foreach (var file in files)
-                {
-                    try
-                    {
-                        if (loggingEnabled)
-                        {
-                            MethodListLogger.LogInfo($"解析開始: {file}");
-                        }
-
-                        var definitions = JavaMethodCallAnalyzer.ExtractMethodDefinitions(file);
-                        results.AddRange(definitions);
-
-                        if (loggingEnabled)
-                        {
-                            MethodListLogger.LogInfo($"解析成功: {file} (メソッド定義数: {definitions.Count})");
-                        }
-                    }
-                    catch (JavaParseException ex)
-                    {
-                        if (loggingEnabled)
-                        {
-                            MethodListLogger.LogError($"解析失敗: {file} (行: {ex.LineNumber})");
-                            if (!string.IsNullOrEmpty(ex.InvalidContent))
-                            {
-                                MethodListLogger.LogError($"問題箇所: {ex.InvalidContent}");
-                            }
-
-                            MethodListLogger.LogException(ex);
-                            MethodListLogger.LogInfo("エラーのため処理を中断します。");
-                        }
-
-                        HandleJavaParseException(file, ex);
-                        return;
-                    }
-                }
-
-                var exportPath = BuildExportPath();
-                WriteResults(exportPath, results);
                 UpdateDirectoryHistory(directoryPath);
                 SaveSettings();
 
+                var completionMessage = new StringBuilder();
+                completionMessage.AppendLine("メソッドリストを出力しました。");
+                completionMessage.AppendLine(result.ExportPath);
+                completionMessage.AppendLine($"成功: {result.SuccessCount}  失敗: {result.FailureCount}");
+
+                MessageBox.Show(this, completionMessage.ToString(), "結果",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                OpenExportFolder(result.ExportPath);
+
+                if (result.FailureCount > 0)
+                {
+                    var failureMessage = new StringBuilder();
+                    failureMessage.AppendLine("一部のファイルで解析に失敗しました。");
+                    failureMessage.AppendLine($"失敗件数: {result.FailureCount}");
+                    failureMessage.AppendLine("失敗ファイル:");
+
+                    var displayCount = Math.Min(10, result.FailedFiles.Count);
+                    for (var i = 0; i < displayCount; i++)
+                    {
+                        failureMessage.AppendLine($"  - {result.FailedFiles[i]}");
+                    }
+
+                    if (result.FailedFiles.Count > displayCount)
+                    {
+                        failureMessage.AppendLine("  ...（残りは methodlist.log を参照してください）");
+                    }
+
+                    MessageBox.Show(this, failureMessage.ToString(), "解析失敗", MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+            catch (OperationCanceledException)
+            {
                 if (loggingEnabled)
                 {
-                    MethodListLogger.LogInfo($"出力ファイル: {exportPath}");
-                    MethodListLogger.LogInfo($"出力件数: {results.Count}");
-                    MethodListLogger.LogInfo("==== メソッドリスト作成完了 ====");
+                    MethodListLogger.LogInfo("処理はユーザーにより中断されました。");
+                    MethodListLogger.LogInfo("==== メソッドリスト作成中断 ====");
                 }
 
-                MessageBox.Show(this, $"メソッドリストを出力しました。\n{exportPath}", "結果",
+                MessageBox.Show(this, "メソッドリストの作成を中断しました。", "情報",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
-                OpenExportFolder(exportPath);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, $"メソッドリストの作成に失敗しました。\n{ex.Message}", "エラー",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ErrorLogger.LogException(ex);
+                MethodListLogger.LogError($"メソッドリスト作成中にエラーが発生しました: {ex.Message}");
+                MethodListLogger.LogException(ex);
                 if (loggingEnabled)
                 {
-                    MethodListLogger.LogError($"メソッドリスト作成中にエラーが発生しました: {ex.Message}");
-                    MethodListLogger.LogException(ex);
+                    MethodListLogger.LogInfo("==== メソッドリスト作成失敗 ====");
                 }
             }
             finally
             {
                 Cursor = Cursors.Default;
+                ResetProcessingState();
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+
+                if (result != null && loggingEnabled)
+                {
+                    MethodListLogger.LogInfo($"出力ファイル: {result.ExportPath}");
+                    MethodListLogger.LogInfo($"成功件数: {result.SuccessCount}, 失敗件数: {result.FailureCount}");
+                    if (result.FailureCount > 0)
+                    {
+                        MethodListLogger.LogInfo("一部のファイルで解析に失敗しました。詳細は上記ログを参照してください。");
+                    }
+                    MethodListLogger.LogInfo("==== メソッドリスト作成完了 ====");
+                }
             }
         }
 
@@ -391,6 +438,159 @@ namespace SimpleMethodCallListCreator
             }
         }
 
+        private void BtnCancel_Click(object sender, EventArgs e)
+        {
+            if (!_isProcessing || _cancellationTokenSource == null)
+            {
+                return;
+            }
+
+            btnCancel.Enabled = false;
+            _cancellationTokenSource.Cancel();
+        }
+
+        private void PrepareProcessingState(int fileCount)
+        {
+            _isProcessing = true;
+            btnCreate.Enabled = false;
+            btnCancel.Enabled = true;
+
+            pbProgress.Minimum = 0;
+            pbProgress.Maximum = Math.Max(1, fileCount);
+            pbProgress.Value = 0;
+            pbProgress.Style = ProgressBarStyle.Continuous;
+            pbProgress.Visible = true;
+            pbProgress.Refresh();
+
+            UpdateProgressStatus(new MethodListProgressStatus(fileCount, 0, 0, 0));
+        }
+
+        private void ResetProcessingState()
+        {
+            _isProcessing = false;
+            btnCreate.Enabled = true;
+            btnCancel.Enabled = false;
+            pbProgress.Visible = false;
+            pbProgress.Value = 0;
+            pbProgress.Maximum = 1;
+            lblProgressStatus.Text = string.Empty;
+        }
+
+        private MethodListProcessResult ProcessMethodList(
+            List<string> files,
+            bool loggingEnabled,
+            CancellationToken token,
+            IProgress<MethodListProgressStatus> progress)
+        {
+            var total = files.Count;
+            var processed = 0;
+            var successCount = 0;
+            var failureCount = 0;
+            var results = new List<MethodDefinitionDetail>();
+            var failedFiles = new List<string>();
+
+            foreach (var file in files)
+            {
+                token.ThrowIfCancellationRequested();
+
+                try
+                {
+                    if (loggingEnabled)
+                    {
+                        MethodListLogger.LogInfo($"解析開始: {file}");
+                    }
+
+                    var definitions = JavaMethodCallAnalyzer.ExtractMethodDefinitions(file);
+                    results.AddRange(definitions);
+
+                    if (loggingEnabled)
+                    {
+                        MethodListLogger.LogInfo($"解析成功: {file} (メソッド定義数: {definitions.Count})");
+                    }
+
+                    successCount++;
+                }
+                catch (JavaParseException ex)
+                {
+                    MethodListLogger.LogError($"解析失敗: {file} (行: {ex.LineNumber})");
+                    if (!string.IsNullOrEmpty(ex.InvalidContent))
+                    {
+                        MethodListLogger.LogError($"問題箇所: {ex.InvalidContent}");
+                    }
+
+                    MethodListLogger.LogException(ex);
+                    failedFiles.Add($"{file} (行: {ex.LineNumber})");
+                    failureCount++;
+                }
+                catch (Exception ex)
+                {
+                    MethodListLogger.LogError($"解析失敗(例外): {file} メッセージ: {ex.Message}");
+                    MethodListLogger.LogException(ex);
+                    failedFiles.Add($"{file} ({ex.Message})");
+                    failureCount++;
+                }
+
+                processed++;
+                progress?.Report(new MethodListProgressStatus(total, processed, successCount, failureCount));
+            }
+
+            token.ThrowIfCancellationRequested();
+
+            var exportPath = BuildExportPath();
+            WriteResults(exportPath, results);
+
+            return new MethodListProcessResult(exportPath, successCount, failureCount, failedFiles);
+        }
+
+        private sealed class MethodListProcessResult
+        {
+            public MethodListProcessResult(string exportPath, int successCount, int failureCount, List<string> failedFiles)
+            {
+                ExportPath = exportPath;
+                SuccessCount = successCount;
+                FailureCount = failureCount;
+                FailedFiles = failedFiles ?? new List<string>();
+            }
+
+            public string ExportPath { get; }
+            public int SuccessCount { get; }
+            public int FailureCount { get; }
+            public List<string> FailedFiles { get; }
+        }
+
+        private sealed class MethodListProgressStatus
+        {
+            public MethodListProgressStatus(int total, int processed, int success, int failure)
+            {
+                Total = Math.Max(0, total);
+                Processed = Math.Max(0, processed);
+                Success = Math.Max(0, success);
+                Failure = Math.Max(0, failure);
+            }
+
+            public int Total { get; }
+            public int Processed { get; }
+            public int Success { get; }
+            public int Failure { get; }
+        }
+
+        private void UpdateProgressStatus(MethodListProgressStatus status)
+        {
+            if (status == null)
+            {
+                return;
+            }
+
+            var total = Math.Max(1, status.Total);
+            pbProgress.Maximum = total;
+            var value = Math.Max(pbProgress.Minimum, Math.Min(total, status.Processed));
+            pbProgress.Value = value;
+
+            lblProgressStatus.Text =
+                $"総数: {status.Total} / 処理済: {status.Processed} (成功: {status.Success}, 失敗: {status.Failure})";
+            lblProgressStatus.Refresh();
+        }
+
         private void HandleJavaParseException(string filePath, JavaParseException ex)
         {
             var builder = new StringBuilder();
@@ -405,11 +605,8 @@ namespace SimpleMethodCallListCreator
             var message = builder.ToString();
             MessageBox.Show(this, message, "解析エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ErrorLogger.LogError(message.TrimEnd());
-            if (IsLoggingEnabled)
-            {
-                MethodListLogger.LogError(message.TrimEnd());
-                MethodListLogger.LogException(ex);
-            }
+            MethodListLogger.LogError(message.TrimEnd());
+            MethodListLogger.LogException(ex);
         }
 
         private void CmbDirPath_DragEnter(object sender, DragEventArgs e)
@@ -475,6 +672,14 @@ namespace SimpleMethodCallListCreator
 
         private void MethodListForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (_isProcessing)
+            {
+                MessageBox.Show(this, "メソッドリスト作成中はウィンドウを閉じることができません。", "情報",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+                return;
+            }
+
             SaveSettings();
         }
 

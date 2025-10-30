@@ -346,6 +346,41 @@ namespace SimpleMethodCallListCreator
                 if (_settings != null)
                 {
                     _settings.EnableMethodListLogging = chkEnableLogging.Checked;
+
+                    var directoryHistory = new List<string>();
+                    foreach (var item in cmbDirPath.Items)
+                    {
+                        var text = (item as string ?? string.Empty).Trim();
+                        if (text.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        if (!directoryHistory.Exists(
+                                d => string.Equals(d, text, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            directoryHistory.Add(text);
+                        }
+                    }
+
+                    var currentDirectory = (cmbDirPath.Text ?? string.Empty).Trim();
+                    if (currentDirectory.Length > 0 &&
+                        !directoryHistory.Exists(
+                            d => string.Equals(d, currentDirectory, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        directoryHistory.Insert(0, currentDirectory);
+                    }
+
+                    if (directoryHistory.Count > MaxHistoryCount)
+                    {
+                        directoryHistory.RemoveRange(MaxHistoryCount, directoryHistory.Count - MaxHistoryCount);
+                    }
+
+                    _settings.RecentMethodListDirectories = directoryHistory;
+                    _settings.LastMethodListDirectory = currentDirectory;
+                    _settings.SelectedMethodListDirectoryIndex = directoryHistory.FindIndex(
+                        d => string.Equals(d, currentDirectory, StringComparison.OrdinalIgnoreCase));
+                    _settings.SelectedMethodListExtensionIndex = cmbExt.SelectedIndex;
                 }
 
                 SettingsManager.Save(_settings);

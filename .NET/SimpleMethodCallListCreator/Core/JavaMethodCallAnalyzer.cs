@@ -36,12 +36,12 @@ namespace SimpleMethodCallListCreator
             var lineIndexer = new LineIndexer(originalText);
 
             var classes = ExtractClasses(cleanedText, lineIndexer);
+            var results = new List<MethodCallDetail>();
             if (classes.Count == 0)
             {
-                throw new JavaParseException("クラス定義が見つかりません。", 1);
+                return results;
             }
 
-            var results = new List<MethodCallDetail>();
             foreach (var javaClass in classes)
             {
                 var methods = ExtractMethods(cleanedText, javaClass, lineIndexer);
@@ -64,12 +64,12 @@ namespace SimpleMethodCallListCreator
             var packageName = ExtractPackageName(cleanedText);
 
             var classes = ExtractClasses(cleanedText, lineIndexer);
+            var results = new List<MethodDefinitionDetail>();
             if (classes.Count == 0)
             {
-                throw new JavaParseException("クラス定義が見つかりません。", 1);
+                return results;
             }
 
-            var results = new List<MethodDefinitionDetail>();
             foreach (var javaClass in classes)
             {
                 var methods = ExtractMethods(cleanedText, javaClass, lineIndexer);
@@ -93,12 +93,12 @@ namespace SimpleMethodCallListCreator
             var lineIndexer = new LineIndexer(originalText);
 
             var classes = ExtractClasses(cleanedText, lineIndexer);
+            var methodStructures = new List<JavaMethodStructure>();
             if (classes.Count == 0)
             {
-                throw new JavaParseException("クラス定義が見つかりません。", 1);
+                return new JavaFileStructure(filePath, originalText, methodStructures);
             }
 
-            var methodStructures = new List<JavaMethodStructure>();
             foreach (var javaClass in classes)
             {
                 var methods = ExtractMethods(cleanedText, javaClass, lineIndexer);
@@ -287,16 +287,28 @@ namespace SimpleMethodCallListCreator
         private static void ExtractClassesRecursive(string text, int startIndex, int endIndex,
             LineIndexer lineIndexer, List<JavaClassInfo> classes)
         {
-            const string keyword = "class";
+            const string keywordClass = "class";
+            const string keywordInterface = "interface";
             var index = startIndex;
             while (index < endIndex)
             {
-                var found = text.IndexOf(keyword, index, endIndex - index, StringComparison.Ordinal);
+                var foundClass = text.IndexOf(keywordClass, index, endIndex - index, StringComparison.Ordinal);
+                var foundInterface = text.IndexOf(keywordInterface, index, endIndex - index, StringComparison.Ordinal);
+
+                var found = foundClass;
+                var isInterface = false;
+                if (foundClass == -1 || (foundInterface != -1 && foundInterface < foundClass))
+                {
+                    found = foundInterface;
+                    isInterface = true;
+                }
+
                 if (found == -1)
                 {
                     break;
                 }
 
+                var keyword = isInterface ? keywordInterface : keywordClass;
                 if (!IsStandaloneKeyword(text, found, keyword))
                 {
                     index = found + keyword.Length;
@@ -337,13 +349,16 @@ namespace SimpleMethodCallListCreator
                     throw new JavaParseException("クラス定義の終端が見つかりません。", line, className);
                 }
 
-                classes.Add(new JavaClassInfo
+                if (!isInterface)
                 {
-                    Name = className,
-                    DeclarationIndex = found,
-                    BodyStartIndex = bodyStart,
-                    BodyEndIndex = bodyEnd
-                });
+                    classes.Add(new JavaClassInfo
+                    {
+                        Name = className,
+                        DeclarationIndex = found,
+                        BodyStartIndex = bodyStart,
+                        BodyEndIndex = bodyEnd
+                    });
+                }
 
                 if (bodyStart + 1 < bodyEnd)
                 {

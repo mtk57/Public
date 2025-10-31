@@ -1,16 +1,14 @@
-// ç¾åœ¨è¡Œã®å†…å®¹ã‚’.NET EXEã«æ¸¡ã—ã¦è¡¨ç¤ºã™ã‚‹ãƒã‚¯ãƒ­
+var EXE_PATH = "C:\\_git\\Public\\.NET\\SimpleMethodCallListCreator\\bin\\Debug\\SimpleMethodCallListCreator.exe";
+var METHOD_LIST_PATH = "C:\\_git\\Public\\.NET\\SimpleMethodCallListCreator\\expectdata\\methodlist_tagjump.tsv";
 
-// ç¾åœ¨è¡Œã®æ–‡å­—åˆ—ã‚’å–å¾—
+// Œ»İs‚Ì•¶š—ñ‚ğæ“¾
 var lineText = GetLineStr(0);
 
-// æœ«å°¾ã®æ”¹è¡Œæ–‡å­—ã‚’å‰Šé™¤
+// ––”ö‚Ì‰üs•¶š‚ğíœ
 lineText = lineText.replace(/\r?\n$/, '');
 
-// EXEã®ãƒ‘ã‚¹ã‚’æŒ‡å®š
-var exePath = "C:\\_git\\Public\\.NET\\SimpleMethodCallListCreator\\bin\\Debug\\SimpleMethodCallListCreator.exe";
+// ƒRƒ}ƒ“ƒhƒ‰ƒCƒ“ˆø”‚Æ‚µ‚Ä“n‚·iƒ_ƒuƒ‹ƒNƒH[ƒg‚ÅˆÍ‚Şj
+var args = '"' + lineText + '"' + ' ' + '"' + METHOD_LIST_PATH + '"';
 
-// ã‚³ãƒãƒ³ãƒ‰ãƒ©ã‚¤ãƒ³å¼•æ•°ã¨ã—ã¦æ¸¡ã™ï¼ˆãƒ€ãƒ–ãƒ«ã‚¯ã‚©ãƒ¼ãƒˆã§å›²ã‚€ï¼‰
-var args = '"' + lineText + '"';
-
-// EXEã‚’å®Ÿè¡Œ
+// EXE‚ğÀs
 ExecCommand(exePath + " " + args);

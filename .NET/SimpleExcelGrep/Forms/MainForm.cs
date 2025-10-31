@@ -25,6 +25,7 @@ namespace SimpleExcelGrep.Forms
         private bool _isSearching = false;
         private bool _isLoading = false;
         private List<SearchResult> _searchResults = new List<SearchResult>();
+        private bool _isUpdatingGridFilter = false;
 
         private System.Windows.Forms.Timer _uiTimer;
 

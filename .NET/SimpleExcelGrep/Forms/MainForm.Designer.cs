@@ -65,6 +65,16 @@
             this.chkEnableInvisibleSheet = new System.Windows.Forms.CheckBox();
             this.chkDblClickToOpen = new System.Windows.Forms.CheckBox();
             this.chkCollectStrInShape = new System.Windows.Forms.CheckBox();
+            this.txtFilePathFilter = new System.Windows.Forms.TextBox();
+            this.txtFileNameFilter = new System.Windows.Forms.TextBox();
+            this.txtSheetNameFilter = new System.Windows.Forms.TextBox();
+            this.txtCellAdrFilter = new System.Windows.Forms.TextBox();
+            this.txtCellValueFilter = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -74,7 +84,7 @@
             this.btnStartSearch.Location = new System.Drawing.Point(11, 207);
             this.btnStartSearch.Name = "btnStartSearch";
             this.btnStartSearch.Size = new System.Drawing.Size(94, 30);
-            this.btnStartSearch.TabIndex = 16;
+            this.btnStartSearch.TabIndex = 15;
             this.btnStartSearch.Text = "検索開始";
             this.btnStartSearch.UseVisualStyleBackColor = true;
             // 
@@ -84,7 +94,7 @@
             this.btnCancelSearch.Location = new System.Drawing.Point(117, 208);
             this.btnCancelSearch.Name = "btnCancelSearch";
             this.btnCancelSearch.Size = new System.Drawing.Size(100, 28);
-            this.btnCancelSearch.TabIndex = 17;
+            this.btnCancelSearch.TabIndex = 16;
             this.btnCancelSearch.Text = "検索中止";
             this.btnCancelSearch.UseVisualStyleBackColor = true;
             // 
@@ -97,7 +107,7 @@
             this.chkRealTimeDisplay.Name = "chkRealTimeDisplay";
             this.chkRealTimeDisplay.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
             this.chkRealTimeDisplay.Size = new System.Drawing.Size(106, 16);
-            this.chkRealTimeDisplay.TabIndex = 18;
+            this.chkRealTimeDisplay.TabIndex = 17;
             this.chkRealTimeDisplay.Text = "リアルタイム表示";
             this.chkRealTimeDisplay.UseVisualStyleBackColor = true;
             // 
@@ -126,7 +136,7 @@
             0});
             this.nudParallelism.Name = "nudParallelism";
             this.nudParallelism.Size = new System.Drawing.Size(50, 19);
-            this.nudParallelism.TabIndex = 19;
+            this.nudParallelism.TabIndex = 18;
             this.nudParallelism.Value = new decimal(new int[] {
             4,
             0,
@@ -139,7 +149,7 @@
             this.chkSearchShapes.Location = new System.Drawing.Point(256, 178);
             this.chkSearchShapes.Name = "chkSearchShapes";
             this.chkSearchShapes.Size = new System.Drawing.Size(81, 16);
-            this.chkSearchShapes.TabIndex = 13;
+            this.chkSearchShapes.TabIndex = 12;
             this.chkSearchShapes.Text = "図形も検索";
             this.chkSearchShapes.UseVisualStyleBackColor = true;
             // 
@@ -149,7 +159,7 @@
             this.chkFirstHitOnly.Location = new System.Drawing.Point(133, 178);
             this.chkFirstHitOnly.Name = "chkFirstHitOnly";
             this.chkFirstHitOnly.Size = new System.Drawing.Size(102, 16);
-            this.chkFirstHitOnly.TabIndex = 12;
+            this.chkFirstHitOnly.TabIndex = 11;
             this.chkFirstHitOnly.Text = "最初のヒットのみ";
             this.chkFirstHitOnly.UseVisualStyleBackColor = true;
             // 
@@ -159,7 +169,7 @@
             this.chkRegex.Location = new System.Drawing.Point(13, 178);
             this.chkRegex.Name = "chkRegex";
             this.chkRegex.Size = new System.Drawing.Size(105, 16);
-            this.chkRegex.TabIndex = 11;
+            this.chkRegex.TabIndex = 10;
             this.chkRegex.Text = "正規表現を使用";
             this.chkRegex.UseVisualStyleBackColor = true;
             // 
@@ -182,7 +192,7 @@
             this.cmbIgnoreKeywords.Location = new System.Drawing.Point(107, 100);
             this.cmbIgnoreKeywords.Name = "cmbIgnoreKeywords";
             this.cmbIgnoreKeywords.Size = new System.Drawing.Size(610, 20);
-            this.cmbIgnoreKeywords.TabIndex = 6;
+            this.cmbIgnoreKeywords.TabIndex = 5;
             // 
             // lblIgnore
             // 
@@ -225,7 +235,7 @@
             this.cmbKeyword.Location = new System.Drawing.Point(107, 57);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(606, 20);
-            this.cmbKeyword.TabIndex = 5;
+            this.cmbKeyword.TabIndex = 4;
             // 
             // btnSelectFolder
             // 
@@ -233,7 +243,7 @@
             this.btnSelectFolder.Location = new System.Drawing.Point(728, 11);
             this.btnSelectFolder.Name = "btnSelectFolder";
             this.btnSelectFolder.Size = new System.Drawing.Size(57, 22);
-            this.btnSelectFolder.TabIndex = 2;
+            this.btnSelectFolder.TabIndex = 1;
             this.btnSelectFolder.Text = "選択...";
             this.btnSelectFolder.UseVisualStyleBackColor = true;
             // 
@@ -272,7 +282,7 @@
             this.cmbFolderPath.Location = new System.Drawing.Point(107, 13);
             this.cmbFolderPath.Name = "cmbFolderPath";
             this.cmbFolderPath.Size = new System.Drawing.Size(610, 20);
-            this.cmbFolderPath.TabIndex = 1;
+            this.cmbFolderPath.TabIndex = 0;
             // 
             // colCellValue
             // 
@@ -295,13 +305,13 @@
             this.colSheetName,
             this.colCellPosition,
             this.colCellValue});
-            this.grdResults.Location = new System.Drawing.Point(11, 278);
+            this.grdResults.Location = new System.Drawing.Point(11, 330);
             this.grdResults.Name = "grdResults";
             this.grdResults.ReadOnly = true;
             this.grdResults.RowTemplate.Height = 21;
             this.grdResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.grdResults.Size = new System.Drawing.Size(824, 202);
-            this.grdResults.TabIndex = 21;
+            this.grdResults.Size = new System.Drawing.Size(824, 150);
+            this.grdResults.TabIndex = 25;
             // 
             // lblIgnoreFileSize
             // 
@@ -317,7 +327,7 @@
             this.txtIgnoreFileSizeMB.Location = new System.Drawing.Point(133, 142);
             this.txtIgnoreFileSizeMB.Name = "txtIgnoreFileSizeMB";
             this.txtIgnoreFileSizeMB.Size = new System.Drawing.Size(60, 19);
-            this.txtIgnoreFileSizeMB.TabIndex = 7;
+            this.txtIgnoreFileSizeMB.TabIndex = 6;
             this.txtIgnoreFileSizeMB.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // lblIgnoreFileSizeUnit
@@ -335,7 +345,7 @@
             this.btnLoadTsv.Location = new System.Drawing.Point(728, 208);
             this.btnLoadTsv.Name = "btnLoadTsv";
             this.btnLoadTsv.Size = new System.Drawing.Size(107, 28);
-            this.btnLoadTsv.TabIndex = 20;
+            this.btnLoadTsv.TabIndex = 19;
             this.btnLoadTsv.Text = "TSV読み込み";
             this.btnLoadTsv.UseVisualStyleBackColor = true;
             // 
@@ -345,7 +355,7 @@
             this.txtCellAddress.Location = new System.Drawing.Point(338, 142);
             this.txtCellAddress.Name = "txtCellAddress";
             this.txtCellAddress.Size = new System.Drawing.Size(180, 19);
-            this.txtCellAddress.TabIndex = 8;
+            this.txtCellAddress.TabIndex = 7;
             this.toolTip1.SetToolTip(this.txtCellAddress, "A1形式で指定。半角カンマで複数指定可。");
             // 
             // label2
@@ -363,7 +373,7 @@
             this.chkCellMode.Location = new System.Drawing.Point(524, 145);
             this.chkCellMode.Name = "chkCellMode";
             this.chkCellMode.Size = new System.Drawing.Size(68, 16);
-            this.chkCellMode.TabIndex = 9;
+            this.chkCellMode.TabIndex = 8;
             this.chkCellMode.Text = "ON/OFF";
             this.chkCellMode.UseVisualStyleBackColor = true;
             this.chkCellMode.CheckedChanged += new System.EventHandler(this.ChkCellMode_CheckedChanged);
@@ -374,7 +384,7 @@
             this.chkSearchSubDir.Location = new System.Drawing.Point(107, 35);
             this.chkSearchSubDir.Name = "chkSearchSubDir";
             this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);
-            this.chkSearchSubDir.TabIndex = 3;
+            this.chkSearchSubDir.TabIndex = 2;
             this.chkSearchSubDir.Text = "サブフォルダも対象";
             this.chkSearchSubDir.UseVisualStyleBackColor = true;
             // 
@@ -384,7 +394,7 @@
             this.chkEnableLog.Location = new System.Drawing.Point(352, 178);
             this.chkEnableLog.Name = "chkEnableLog";
             this.chkEnableLog.Size = new System.Drawing.Size(75, 16);
-            this.chkEnableLog.TabIndex = 14;
+            this.chkEnableLog.TabIndex = 13;
             this.chkEnableLog.Text = "ログを出力";
             this.chkEnableLog.UseVisualStyleBackColor = true;
             // 
@@ -394,7 +404,7 @@
             this.chkEnableInvisibleSheet.Location = new System.Drawing.Point(443, 178);
             this.chkEnableInvisibleSheet.Name = "chkEnableInvisibleSheet";
             this.chkEnableInvisibleSheet.Size = new System.Drawing.Size(121, 16);
-            this.chkEnableInvisibleSheet.TabIndex = 15;
+            this.chkEnableInvisibleSheet.TabIndex = 14;
             this.chkEnableInvisibleSheet.Text = "非表示シートも対象";
             this.chkEnableInvisibleSheet.UseVisualStyleBackColor = true;
             // 
@@ -404,7 +414,7 @@
             this.chkDblClickToOpen.Location = new System.Drawing.Point(256, 35);
             this.chkDblClickToOpen.Name = "chkDblClickToOpen";
             this.chkDblClickToOpen.Size = new System.Drawing.Size(153, 16);
-            this.chkDblClickToOpen.TabIndex = 4;
+            this.chkDblClickToOpen.TabIndex = 3;
             this.chkDblClickToOpen.Text = "ダブルクリックでファイルを開く";
             this.chkDblClickToOpen.UseVisualStyleBackColor = true;
             // 
@@ -414,15 +424,105 @@
             this.chkCollectStrInShape.Location = new System.Drawing.Point(633, 144);
             this.chkCollectStrInShape.Name = "chkCollectStrInShape";
             this.chkCollectStrInShape.Size = new System.Drawing.Size(148, 16);
-            this.chkCollectStrInShape.TabIndex = 10;
+            this.chkCollectStrInShape.TabIndex = 9;
             this.chkCollectStrInShape.Text = "図形内文字列収集モード";
             this.chkCollectStrInShape.UseVisualStyleBackColor = true;
+            // 
+            // txtFilePathFilter
+            // 
+            this.txtFilePathFilter.Location = new System.Drawing.Point(13, 305);
+            this.txtFilePathFilter.Name = "txtFilePathFilter";
+            this.txtFilePathFilter.Size = new System.Drawing.Size(86, 19);
+            this.txtFilePathFilter.TabIndex = 20;
+            // 
+            // txtFileNameFilter
+            // 
+            this.txtFileNameFilter.Location = new System.Drawing.Point(105, 305);
+            this.txtFileNameFilter.Name = "txtFileNameFilter";
+            this.txtFileNameFilter.Size = new System.Drawing.Size(86, 19);
+            this.txtFileNameFilter.TabIndex = 21;
+            // 
+            // txtSheetNameFilter
+            // 
+            this.txtSheetNameFilter.Location = new System.Drawing.Point(197, 305);
+            this.txtSheetNameFilter.Name = "txtSheetNameFilter";
+            this.txtSheetNameFilter.Size = new System.Drawing.Size(86, 19);
+            this.txtSheetNameFilter.TabIndex = 22;
+            // 
+            // txtCellAdrFilter
+            // 
+            this.txtCellAdrFilter.Location = new System.Drawing.Point(289, 305);
+            this.txtCellAdrFilter.Name = "txtCellAdrFilter";
+            this.txtCellAdrFilter.Size = new System.Drawing.Size(48, 19);
+            this.txtCellAdrFilter.TabIndex = 23;
+            // 
+            // txtCellValueFilter
+            // 
+            this.txtCellValueFilter.Location = new System.Drawing.Point(343, 305);
+            this.txtCellValueFilter.Name = "txtCellValueFilter";
+            this.txtCellValueFilter.Size = new System.Drawing.Size(93, 19);
+            this.txtCellValueFilter.TabIndex = 24;
+            // 
+            // label1
+            // 
+            this.label1.Location = new System.Drawing.Point(12, 285);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(62, 17);
+            this.label1.TabIndex = 27;
+            this.label1.Text = "ファイルパス";
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // label3
+            // 
+            this.label3.Location = new System.Drawing.Point(105, 285);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(62, 17);
+            this.label3.TabIndex = 28;
+            this.label3.Text = "ファイル名";
+            this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // label4
+            // 
+            this.label4.Location = new System.Drawing.Point(199, 285);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(62, 17);
+            this.label4.TabIndex = 29;
+            this.label4.Text = "シート名";
+            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // label5
+            // 
+            this.label5.Location = new System.Drawing.Point(289, 285);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(50, 17);
+            this.label5.TabIndex = 30;
+            this.label5.Text = "セル位置";
+            this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // label6
+            // 
+            this.label6.Location = new System.Drawing.Point(348, 285);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(50, 17);
+            this.label6.TabIndex = 31;
+            this.label6.Text = "セルの値";
+            this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.txtCellValueFilter);
+            this.Controls.Add(this.txtCellAdrFilter);
+            this.Controls.Add(this.txtSheetNameFilter);
+            this.Controls.Add(this.txtFileNameFilter);
+            this.Controls.Add(this.txtFilePathFilter);
             this.Controls.Add(this.chkCollectStrInShape);
             this.Controls.Add(this.chkDblClickToOpen);
             this.Controls.Add(this.chkEnableInvisibleSheet);
@@ -500,5 +600,15 @@
         private System.Windows.Forms.CheckBox chkEnableInvisibleSheet;
         private System.Windows.Forms.CheckBox chkDblClickToOpen;
         private System.Windows.Forms.CheckBox chkCollectStrInShape;
+        private System.Windows.Forms.TextBox txtFilePathFilter;
+        private System.Windows.Forms.TextBox txtFileNameFilter;
+        private System.Windows.Forms.TextBox txtSheetNameFilter;
+        private System.Windows.Forms.TextBox txtCellAdrFilter;
+        private System.Windows.Forms.TextBox txtCellValueFilter;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label6;
     }
 }

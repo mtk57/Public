@@ -49,6 +49,19 @@ namespace SimpleExcelGrep.Forms
             chkEnableLog.CheckedChanged += ChkEnableLog_CheckedChanged;
             
             chkCellMode.CheckedChanged += ChkCellMode_CheckedChanged;
+
+            var filterTextBoxes = new TextBox[]
+            {
+                txtFilePathFilter,
+                txtFileNameFilter,
+                txtSheetNameFilter,
+                txtCellAdrFilter,
+                txtCellValueFilter
+            };
+            foreach (var filterTextBox in filterTextBoxes)
+            {
+                filterTextBox.TextChanged += GridFilterTextBox_TextChanged;
+            }
         }
 
         /// <summary>
@@ -132,6 +145,15 @@ namespace SimpleExcelGrep.Forms
         {
             txtCellAddress.Enabled = chkCellMode.Checked;
             if (!_isLoading) SaveCurrentSettings();
+        }
+
+        /// <summary>
+        /// グリッドフィルタテキスト変更時の処理
+        /// </summary>
+        private void GridFilterTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (_isUpdatingGridFilter) return;
+            DisplaySearchResults(_searchResults);
         }
 
         /// <summary>

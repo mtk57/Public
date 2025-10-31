@@ -131,19 +131,37 @@ namespace SimpleExcelGrep.Forms
                 this.Invoke(new Action(() => DisplaySearchResults(results)));
                 return;
             }
-            
+
+            string filePathFilter;
+            string fileNameFilter;
+            string sheetNameFilter;
+            string cellAddressFilter;
+            string cellValueFilter;
+            GetCurrentGridFilterStrings(out filePathFilter, out fileNameFilter, out sheetNameFilter, out cellAddressFilter, out cellValueFilter);
+
             grdResults.SuspendLayout();
             grdResults.Rows.Clear();
             var rows = new List<DataGridViewRow>();
             foreach (var result in results)
             {
+                if (!MatchesGridFilters(result, filePathFilter, fileNameFilter, sheetNameFilter, cellAddressFilter, cellValueFilter)) continue;
+
                 var row = new DataGridViewRow();
-                row.CreateCells(grdResults, result.FilePath, Path.GetFileName(result.FilePath), result.SheetName, result.CellPosition, result.CellValue);
+                row.CreateCells(
+                    grdResults,
+                    result.FilePath,
+                    Path.GetFileName(result.FilePath ?? string.Empty),
+                    result.SheetName,
+                    result.CellPosition,
+                    result.CellValue);
                 rows.Add(row);
             }
-            grdResults.Rows.AddRange(rows.ToArray());
+            if (rows.Count > 0)
+            {
+                grdResults.Rows.AddRange(rows.ToArray());
+            }
             grdResults.ResumeLayout();
-            _logService.LogMessage($"グリッドに {results.Count} 件の結果を表示しました");
+            _logService.LogMessage($"グリッドに {rows.Count} 件の結果を表示しました (元件数 {results.Count} 件)");
         }
 
         /// <summary>
@@ -157,11 +175,97 @@ namespace SimpleExcelGrep.Forms
                 return;
             }
 
-            grdResults.Rows.Add(result.FilePath, Path.GetFileName(result.FilePath), result.SheetName, result.CellPosition, result.CellValue);
+            string filePathFilter;
+            string fileNameFilter;
+            string sheetNameFilter;
+            string cellAddressFilter;
+            string cellValueFilter;
+            GetCurrentGridFilterStrings(out filePathFilter, out fileNameFilter, out sheetNameFilter, out cellAddressFilter, out cellValueFilter);
+
+            if (!MatchesGridFilters(result, filePathFilter, fileNameFilter, sheetNameFilter, cellAddressFilter, cellValueFilter)) return;
+
+            grdResults.Rows.Add(
+                result.FilePath,
+                Path.GetFileName(result.FilePath ?? string.Empty),
+                result.SheetName,
+                result.CellPosition,
+                result.CellValue);
             if (_isSearching && grdResults.Rows.Count > 0)
             {
                 grdResults.FirstDisplayedScrollingRowIndex = grdResults.Rows.Count - 1;
             }
+        }
+
+        /// <summary>
+        /// グリッドフィルタ文字列を初期化
+        /// </summary>
+        private void ClearGridFilters()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ClearGridFilters));
+                return;
+            }
+
+            try
+            {
+                _isUpdatingGridFilter = true;
+                txtFilePathFilter.Clear();
+                txtFileNameFilter.Clear();
+                txtSheetNameFilter.Clear();
+                txtCellAdrFilter.Clear();
+                txtCellValueFilter.Clear();
+            }
+            finally
+            {
+                _isUpdatingGridFilter = false;
+            }
+
+            DisplaySearchResults(_searchResults);
+        }
+
+        /// <summary>
+        /// 現在のフィルタ文字列を取得
+        /// </summary>
+        private void GetCurrentGridFilterStrings(out string filePathFilter, out string fileNameFilter, out string sheetNameFilter, out string cellAddressFilter, out string cellValueFilter)
+        {
+            filePathFilter = NormalizeFilterText(txtFilePathFilter.Text);
+            fileNameFilter = NormalizeFilterText(txtFileNameFilter.Text);
+            sheetNameFilter = NormalizeFilterText(txtSheetNameFilter.Text);
+            cellAddressFilter = NormalizeFilterText(txtCellAdrFilter.Text);
+            cellValueFilter = NormalizeFilterText(txtCellValueFilter.Text);
+        }
+
+        /// <summary>
+        /// 指定の結果が現在のフィルタに一致するか判定
+        /// </summary>
+        private bool MatchesGridFilters(SearchResult result, string filePathFilter, string fileNameFilter, string sheetNameFilter, string cellAddressFilter, string cellValueFilter)
+        {
+            string fileName = string.IsNullOrEmpty(result.FilePath) ? string.Empty : Path.GetFileName(result.FilePath);
+
+            return ContainsFilter(result.FilePath, filePathFilter)
+                && ContainsFilter(fileName, fileNameFilter)
+                && ContainsFilter(result.SheetName, sheetNameFilter)
+                && ContainsFilter(result.CellPosition, cellAddressFilter)
+                && ContainsFilter(result.CellValue, cellValueFilter);
+        }
+
+        /// <summary>
+        /// フィルタ文字列を正規化
+        /// </summary>
+        private static string NormalizeFilterText(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        /// <summary>
+        /// 部分一致によるフィルタ判定
+        /// </summary>
+        private static bool ContainsFilter(string target, string filter)
+        {
+            if (string.IsNullOrEmpty(filter)) return true;
+            if (string.IsNullOrEmpty(target)) return false;
+            return target.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

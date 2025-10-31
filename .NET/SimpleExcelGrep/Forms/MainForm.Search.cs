@@ -25,6 +25,8 @@ namespace SimpleExcelGrep.Forms
             _logService.LogMessage("GREP検索モードを開始します");
             if (!ValidateGrepInputs()) return;
 
+            ClearGridFilters();
+
             await ExecuteSearchAsync(async (pendingResults, token) =>
             {
                 var regex = chkRegex.Checked ? new Regex(cmbKeyword.Text, RegexOptions.Compiled | RegexOptions.IgnoreCase) : null;

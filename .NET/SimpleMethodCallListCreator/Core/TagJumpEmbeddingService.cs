@@ -217,9 +217,10 @@ namespace SimpleMethodCallListCreator
             }
 
             var prefixStart = scanIndex;
-            if (HasExistingPrefix(originalText, prefixStart, prefix))
+            var existingPrefix = GetExistingPrefixSegment(originalText, prefixStart, prefix);
+            if (existingPrefix.Length > 0)
             {
-                return null;
+                return new TagInsertion(existingPrefix.Start, existingPrefix.Length, replacement);
             }
 
             return new TagInsertion(insertIndex, 0, replacement);
@@ -760,36 +761,6 @@ namespace SimpleMethodCallListCreator
             public string Text { get; }
         }
 
-        private static bool HasExistingPrefix(string text, int position, string prefix)
-        {
-            if (string.IsNullOrEmpty(text) || position < 0 || position >= text.Length)
-            {
-                return false;
-            }
-
-            if (StartsWithAt(text, position, prefix))
-            {
-                return true;
-            }
-
-            var trimmedPrefix = prefix?.TrimEnd();
-            if (!string.IsNullOrEmpty(trimmedPrefix) &&
-                !string.Equals(trimmedPrefix, prefix, StringComparison.Ordinal) &&
-                StartsWithAt(text, position, trimmedPrefix))
-            {
-                return true;
-            }
-
-            const string defaultPrefix = "//@";
-            const string defaultPrefixWithSpace = "//@ ";
-            if (StartsWithAt(text, position, defaultPrefixWithSpace) || StartsWithAt(text, position, defaultPrefix))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         private static bool StartsWithAt(string text, int position, string value)
         {
             if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(value))
@@ -803,6 +774,72 @@ namespace SimpleMethodCallListCreator
             }
 
             return string.Compare(text, position, value, 0, value.Length, StringComparison.Ordinal) == 0;
+        }
+
+        private static PrefixSegment GetExistingPrefixSegment(string text, int position, string prefix)
+        {
+            if (string.IsNullOrEmpty(text) || position < 0 || position >= text.Length)
+            {
+                return PrefixSegment.Empty;
+            }
+
+            var candidates = new List<string>();
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                candidates.Add(prefix);
+
+                var trimmed = prefix.TrimEnd();
+                if (!string.Equals(trimmed, prefix, StringComparison.Ordinal) && !string.IsNullOrEmpty(trimmed))
+                {
+                    candidates.Add(trimmed);
+                }
+            }
+
+            candidates.Add("//@ ");
+            candidates.Add("//@");
+
+            foreach (var candidate in candidates)
+            {
+                if (StartsWithAt(text, position, candidate))
+                {
+                    var end = position + candidate.Length;
+                    while (end < text.Length)
+                    {
+                        var ch = text[end];
+                        if (ch == '\r' || ch == '\n')
+                        {
+                            break;
+                        }
+
+                        end++;
+                    }
+
+                    return new PrefixSegment(position, end - position);
+                }
+            }
+
+            return PrefixSegment.Empty;
+        }
+
+        private readonly struct PrefixSegment
+        {
+            public static readonly PrefixSegment Empty = new PrefixSegment(-1, 0);
+
+            public PrefixSegment(int start, int length)
+            {
+                Start = start;
+                Length = length < 0 ? 0 : length;
+            }
+
+            public int Start { get; }
+            public int Length { get; }
+
+            public bool HasValue => Start >= 0 && Length > 0;
+
+            public static implicit operator (int Start, int Length)(PrefixSegment segment)
+            {
+                return (segment.Start, segment.Length);
+            }
         }
     }
 }

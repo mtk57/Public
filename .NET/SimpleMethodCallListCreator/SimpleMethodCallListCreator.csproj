@@ -80,6 +80,8 @@
     <Compile Include="Core\JavaParseException.cs" />
     <Compile Include="Core\MethodCallDetail.cs" />
     <Compile Include="Core\MethodDefinitionDetail.cs" />
+    <Compile Include="Core\TagJumpMethodLocator.cs" />
+    <Compile Include="Core\TagJumpSyntaxHelper.cs" />
     <Compile Include="Core\TagJumpEmbeddingResult.cs" />
     <Compile Include="Core\TagJumpEmbeddingService.cs" />
     <Compile Include="Forms\MethodListForm.cs">

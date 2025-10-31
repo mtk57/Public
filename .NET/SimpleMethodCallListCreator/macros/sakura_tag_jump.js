@@ -7,6 +7,9 @@ var lineText = GetLineStr(0);
 // 末尾の改行文字を削除
 lineText = lineText.replace(/\r?\n$/, '');
 
+// ダブルクォーテーションをエスケープ（"を\"に変換）
+lineText = lineText.replace(/"/g, '\\"');
+
 // コマンドライン引数として渡す（ダブルクォートで囲む）
 var args = '"' + lineText + '"' + ' ' + '"' + METHOD_LIST_PATH + '"';
 

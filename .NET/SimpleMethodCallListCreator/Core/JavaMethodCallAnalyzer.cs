@@ -32,7 +32,7 @@ namespace SimpleMethodCallListCreator
         {
             ValidateJavaFile(filePath);
 
-            var originalText = ReadAllTextWithEncoding(filePath);
+            var originalText = ReadAllTextWithEncoding(filePath, out _);
             var cleanedText = RemoveComments(originalText);
             var lineIndexer = new LineIndexer(originalText);
 
@@ -59,7 +59,7 @@ namespace SimpleMethodCallListCreator
         {
             ValidateJavaFile(filePath);
 
-            var originalText = ReadAllTextWithEncoding(filePath);
+            var originalText = ReadAllTextWithEncoding(filePath, out _);
             var cleanedText = RemoveComments(originalText);
             var lineIndexer = new LineIndexer(originalText);
             var packageName = ExtractPackageName(cleanedText);
@@ -89,7 +89,7 @@ namespace SimpleMethodCallListCreator
         {
             ValidateJavaFile(filePath);
 
-            var originalText = ReadAllTextWithEncoding(filePath);
+            var originalText = ReadAllTextWithEncoding(filePath, out var encoding);
             var cleanedText = RemoveComments(originalText);
             var lineIndexer = new LineIndexer(originalText);
 
@@ -97,7 +97,7 @@ namespace SimpleMethodCallListCreator
             var methodStructures = new List<JavaMethodStructure>();
             if (classes.Count == 0)
             {
-                return new JavaFileStructure(filePath, originalText, methodStructures);
+                return new JavaFileStructure(filePath, originalText, encoding, methodStructures);
             }
 
             foreach (var javaClass in classes)
@@ -132,7 +132,7 @@ namespace SimpleMethodCallListCreator
                 }
             }
 
-            return new JavaFileStructure(filePath, originalText, methodStructures);
+            return new JavaFileStructure(filePath, originalText, encoding, methodStructures);
         }
 
         private static Encoding[] CreateCandidateEncodings()
@@ -165,13 +165,13 @@ namespace SimpleMethodCallListCreator
             return encodings.ToArray();
         }
 
-        private static string ReadAllTextWithEncoding(string filePath)
+        private static string ReadAllTextWithEncoding(string filePath, out Encoding encoding)
         {
-            foreach (var encoding in CandidateEncodings)
+            foreach (var candidate in CandidateEncodings)
             {
                 try
                 {
-                    return ReadAllTextInternal(filePath, encoding);
+                    return ReadAllTextInternal(filePath, candidate, out encoding);
                 }
                 catch (DecoderFallbackException)
                 {
@@ -183,14 +183,21 @@ namespace SimpleMethodCallListCreator
                 }
             }
 
-            return File.ReadAllText(filePath);
+            using (var reader = new StreamReader(filePath, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+            {
+                var text = reader.ReadToEnd();
+                encoding = reader.CurrentEncoding ?? Encoding.UTF8;
+                return text;
+            }
         }
 
-        private static string ReadAllTextInternal(string filePath, Encoding encoding)
+        private static string ReadAllTextInternal(string filePath, Encoding encoding, out Encoding detectedEncoding)
         {
             using (var reader = new StreamReader(filePath, encoding, detectEncodingFromByteOrderMarks: true))
             {
-                return reader.ReadToEnd();
+                var text = reader.ReadToEnd();
+                detectedEncoding = reader.CurrentEncoding ?? encoding;
+                return text;
             }
         }
 

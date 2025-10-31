@@ -1,20 +1,25 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace SimpleMethodCallListCreator
 {
     public sealed class JavaFileStructure
     {
-        public JavaFileStructure(string filePath, string originalText, IReadOnlyList<JavaMethodStructure> methods)
+        public JavaFileStructure(string filePath, string originalText, Encoding encoding,
+            IReadOnlyList<JavaMethodStructure> methods)
         {
             FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             OriginalText = originalText ?? string.Empty;
+            Encoding = encoding;
             Methods = methods ?? throw new ArgumentNullException(nameof(methods));
         }
 
         public string FilePath { get; }
 
         public string OriginalText { get; }
+
+        public Encoding Encoding { get; }
 
         public IReadOnlyList<JavaMethodStructure> Methods { get; }
 

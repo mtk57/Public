@@ -133,7 +133,8 @@ namespace SimpleMethodCallListCreator
                 }
 
                 var newText = ApplyInsertions(structure.OriginalText, operations);
-                File.WriteAllText(filePath, newText, Encoding.UTF8);
+                var encoding = structure.Encoding ?? new UTF8Encoding(false);
+                File.WriteAllText(filePath, newText, encoding);
                 updatedFiles.Add(filePath);
             }
 

@@ -10,8 +10,11 @@ lineText = lineText.replace(/\r?\n$/, '');
 // ダブルクォーテーションをエスケープ（"を\"に変換）
 lineText = lineText.replace(/"/g, '\\"');
 
+// METHOD_LIST_PATHもエスケープ（念のため）
+var escapedMethodListPath = METHOD_LIST_PATH.replace(/"/g, '\\"');
+
 // コマンドライン引数として渡す（ダブルクォートで囲む）
-var args = '"' + lineText + '"' + ' ' + '"' + METHOD_LIST_PATH + '"';
+var args = '"' + lineText + '"' + ' ' + '"' + escapedMethodListPath + '"';
 
 // EXEを実行
-ExecCommand(EXE_PATH + " " + args);
+ExecCommand('"' + EXE_PATH + '" ' + args);

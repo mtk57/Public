@@ -1,0 +1,167 @@
+using System;
+using System.Collections.Generic;
+
+namespace SimpleMethodCallListCreator
+{
+    internal static class TagJumpSyntaxHelper
+    {
+        private static readonly string[] DefaultPrefixes = { "//@ ", "//@" };
+
+        public static PrefixSegment FindExistingPrefixSegment(string text, int position, string configuredPrefix)
+        {
+            if (string.IsNullOrEmpty(text) || position < 0 || position >= text.Length)
+            {
+                return PrefixSegment.Empty;
+            }
+
+            foreach (var candidate in EnumeratePrefixCandidates(configuredPrefix))
+            {
+                if (StartsWithAt(text, position, candidate))
+                {
+                    var end = position + candidate.Length;
+                    while (end < text.Length)
+                    {
+                        var ch = text[end];
+                        if (ch == '\r' || ch == '\n')
+                        {
+                            break;
+                        }
+
+                        end++;
+                    }
+
+                    return new PrefixSegment(position, end - position);
+                }
+            }
+
+            return PrefixSegment.Empty;
+        }
+
+        public static bool TryParseTagLine(string lineText, string configuredPrefix,
+            out string filePath, out string methodSignature)
+        {
+            filePath = string.Empty;
+            methodSignature = string.Empty;
+
+            if (string.IsNullOrEmpty(lineText))
+            {
+                return false;
+            }
+
+            var prefixIndex = -1;
+            string matchedPrefix = null;
+
+            foreach (var candidate in EnumeratePrefixCandidates(configuredPrefix))
+            {
+                var index = lineText.LastIndexOf(candidate, StringComparison.Ordinal);
+                if (index >= 0)
+                {
+                    prefixIndex = index;
+                    matchedPrefix = candidate;
+                    break;
+                }
+            }
+
+            if (prefixIndex < 0 || string.IsNullOrEmpty(matchedPrefix))
+            {
+                return false;
+            }
+
+            var contentStart = prefixIndex + matchedPrefix.Length;
+            while (contentStart < lineText.Length && lineText[contentStart] == ' ')
+            {
+                contentStart++;
+            }
+
+            if (contentStart >= lineText.Length)
+            {
+                return false;
+            }
+
+            var content = lineText.Substring(contentStart).Trim();
+            if (content.Length == 0)
+            {
+                return false;
+            }
+
+            var separatorIndex = content.IndexOf('\t');
+            if (separatorIndex < 0)
+            {
+                return false;
+            }
+
+            var pathPart = content.Substring(0, separatorIndex).Trim();
+            var signaturePart = content.Substring(separatorIndex + 1).Trim();
+
+            if (pathPart.Length == 0 || signaturePart.Length == 0)
+            {
+                return false;
+            }
+
+            filePath = pathPart;
+            methodSignature = signaturePart;
+            return true;
+        }
+
+        private static IEnumerable<string> EnumeratePrefixCandidates(string configuredPrefix)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            if (!string.IsNullOrEmpty(configuredPrefix))
+            {
+                if (seen.Add(configuredPrefix))
+                {
+                    yield return configuredPrefix;
+                }
+
+                var trimmed = configuredPrefix.TrimEnd();
+                if (!string.Equals(trimmed, configuredPrefix, StringComparison.Ordinal) && trimmed.Length > 0)
+                {
+                    if (seen.Add(trimmed))
+                    {
+                        yield return trimmed;
+                    }
+                }
+            }
+
+            foreach (var candidate in DefaultPrefixes)
+            {
+                if (seen.Add(candidate))
+                {
+                    yield return candidate;
+                }
+            }
+        }
+
+        private static bool StartsWithAt(string text, int position, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            if (position < 0 || position + value.Length > text.Length)
+            {
+                return false;
+            }
+
+            return string.Compare(text, position, value, 0, value.Length, StringComparison.Ordinal) == 0;
+        }
+
+        internal readonly struct PrefixSegment
+        {
+            public static readonly PrefixSegment Empty = new PrefixSegment(-1, 0);
+
+            public PrefixSegment(int start, int length)
+            {
+                Start = start;
+                Length = length < 0 ? 0 : length;
+            }
+
+            public int Start { get; }
+            public int Length { get; }
+
+            public bool HasValue => Start >= 0 && Length > 0;
+        }
+    }
+}

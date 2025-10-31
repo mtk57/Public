@@ -11,4 +11,4 @@ lineText = lineText.replace(/\r?\n$/, '');
 var args = '"' + lineText + '"' + ' ' + '"' + METHOD_LIST_PATH + '"';
 
 // EXEÇé¿çs
-ExecCommand(exePath + " " + args);
+ExecCommand(EXE_PATH + " " + args);

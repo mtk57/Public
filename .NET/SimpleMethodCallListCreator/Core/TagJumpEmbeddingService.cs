@@ -7,6 +7,8 @@ namespace SimpleMethodCallListCreator
 {
     public sealed class TagJumpEmbeddingService
     {
+        private const string FailureComment = "//★ メソッド特定失敗";
+
         public TagJumpEmbeddingResult Execute(string methodListPath, string startSourceFilePath,
             string startMethodText, string tagPrefix)
         {
@@ -83,11 +85,16 @@ namespace SimpleMethodCallListCreator
                     {
                         calleeEntry = ResolveCallee(index, current, call);
                     }
-                    catch (InvalidOperationException ex)
+                    catch (InvalidOperationException)
                     {
-                        throw new InvalidOperationException(
-                            $"呼び出し先メソッドの特定に失敗しました。ファイル: {current.Detail.FilePath}, 行: {call.LineNumber}, 呼び出し元: {current.Detail.MethodSignature}",
-                            ex);
+                        var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
+                        if (failureInsertion != null)
+                        {
+                            AddInsertion(modifications, structure.FilePath, failureInsertion);
+                            updatedCallCount++;
+                        }
+
+                        continue;
                     }
 
                     if (calleeEntry == null)
@@ -247,6 +254,66 @@ namespace SimpleMethodCallListCreator
             }
 
             return builder.ToString();
+        }
+
+        private static TagInsertion BuildFailureInsertion(string originalText, JavaMethodCallStructure call)
+        {
+            if (call == null || string.IsNullOrEmpty(originalText))
+            {
+                return null;
+            }
+
+            var insertBase = call.CallEndIndex + 1;
+            if (insertBase < 0)
+            {
+                insertBase = 0;
+            }
+
+            if (insertBase > originalText.Length)
+            {
+                insertBase = originalText.Length;
+            }
+
+            var lineEnd = insertBase;
+            while (lineEnd < originalText.Length)
+            {
+                var ch = originalText[lineEnd];
+                if (ch == '\r' || ch == '\n')
+                {
+                    break;
+                }
+
+                lineEnd++;
+            }
+
+            var segmentStart = insertBase;
+            while (segmentStart < lineEnd && (originalText[segmentStart] == ' ' || originalText[segmentStart] == '\t'))
+            {
+                segmentStart++;
+            }
+
+            if (segmentStart < lineEnd && originalText[segmentStart] == ';')
+            {
+                segmentStart++;
+                while (segmentStart < lineEnd && (originalText[segmentStart] == ' ' || originalText[segmentStart] == '\t'))
+                {
+                    segmentStart++;
+                }
+            }
+
+            var existingLength = lineEnd - segmentStart;
+            if (existingLength > 0)
+            {
+                var existing = originalText.Substring(segmentStart, existingLength);
+                if (existing.IndexOf(FailureComment, StringComparison.Ordinal) >= 0)
+                {
+                    return null;
+                }
+            }
+
+            var needSpace = lineEnd > 0 && originalText[lineEnd - 1] != ' ' && originalText[lineEnd - 1] != '\t';
+            var text = (needSpace ? " " : string.Empty) + FailureComment;
+            return new TagInsertion(lineEnd, 0, text);
         }
 
         private static MethodListEntry ResolveStartMethod(MethodListIndex index, string normalizedStartSourcePath,

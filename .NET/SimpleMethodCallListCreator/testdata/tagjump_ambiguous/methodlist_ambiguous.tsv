@@ -1,0 +1,4 @@
+FilePath	FileName	PackageName	ClassName	MethodSignature
+C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\tagjump_ambiguous\src\AmbiguousSample.java	AmbiguousSample.java	tagjump.ambiguous	AmbiguousSample	public void start()
+C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\tagjump_ambiguous\src\AmbiguousSample.java	AmbiguousSample.java	tagjump.ambiguous	AmbiguousSample	public void target()
+C:\_git\Public\.NET\SimpleMethodCallListCreator\testdata\tagjump_ambiguous\src\AmbiguousSample.java	AmbiguousSample.java	tagjump.ambiguous	AmbiguousSample	public void target()

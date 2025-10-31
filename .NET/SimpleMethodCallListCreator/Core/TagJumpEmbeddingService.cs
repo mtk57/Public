@@ -45,6 +45,10 @@ namespace SimpleMethodCallListCreator
 
             var index = new MethodListIndex(entries);
             var startMethod = ResolveStartMethod(index, normalizedStartSourcePath, startMethodText);
+            if (startMethod == null)
+            {
+                return new TagJumpEmbeddingResult(0, 0, Array.Empty<string>());
+            }
             var prefix = tagPrefix ?? string.Empty;
 
             var visited = new HashSet<string>(StringComparer.Ordinal);
@@ -205,29 +209,9 @@ namespace SimpleMethodCallListCreator
             }
 
             var prefixStart = scanIndex;
-            if (!string.IsNullOrEmpty(prefix) &&
-                prefixStart + prefix.Length <= originalText.Length &&
-                string.Compare(originalText, prefixStart, prefix, 0, prefix.Length, StringComparison.Ordinal) == 0)
+            if (HasExistingPrefix(originalText, prefixStart, prefix))
             {
-                var end = prefixStart + prefix.Length;
-                while (end < originalText.Length)
-                {
-                    var ch = originalText[end];
-                    if (ch == '\r' || ch == '\n')
-                    {
-                        break;
-                    }
-
-                    end++;
-                }
-
-                var existing = originalText.Substring(prefixStart, end - prefixStart);
-                if (string.Equals(existing, replacement, StringComparison.Ordinal))
-                {
-                    return null;
-                }
-
-                return new TagInsertion(prefixStart, end - prefixStart, replacement);
+                return null;
             }
 
             return new TagInsertion(insertIndex, 0, replacement);
@@ -271,12 +255,12 @@ namespace SimpleMethodCallListCreator
             var candidates = index.FindByFile(normalizedStartSourcePath);
             if (candidates.Count == 0)
             {
-                throw new InvalidOperationException("メソッドリストに開始ソースファイルの情報が存在しません。");
+                return null;
             }
 
             if (string.IsNullOrWhiteSpace(startMethodText))
             {
-                throw new InvalidOperationException("開始メソッドを入力してください。");
+                return null;
             }
 
             var trimmed = startMethodText.Trim();
@@ -290,7 +274,7 @@ namespace SimpleMethodCallListCreator
                     }
                 }
 
-                throw new InvalidOperationException("指定されたメソッドシグネチャがメソッドリストに存在しません。");
+                return null;
             }
 
             var matched = new List<MethodListEntry>();
@@ -304,7 +288,7 @@ namespace SimpleMethodCallListCreator
 
             if (matched.Count == 0)
             {
-                throw new InvalidOperationException("開始メソッドがメソッドリストに存在しません。");
+                return null;
             }
 
             if (matched.Count > 1)
@@ -706,6 +690,51 @@ namespace SimpleMethodCallListCreator
             public int Index { get; }
             public int Length { get; }
             public string Text { get; }
+        }
+
+        private static bool HasExistingPrefix(string text, int position, string prefix)
+        {
+            if (string.IsNullOrEmpty(text) || position < 0 || position >= text.Length)
+            {
+                return false;
+            }
+
+            if (StartsWithAt(text, position, prefix))
+            {
+                return true;
+            }
+
+            var trimmedPrefix = prefix?.TrimEnd();
+            if (!string.IsNullOrEmpty(trimmedPrefix) &&
+                !string.Equals(trimmedPrefix, prefix, StringComparison.Ordinal) &&
+                StartsWithAt(text, position, trimmedPrefix))
+            {
+                return true;
+            }
+
+            const string defaultPrefix = "//@";
+            const string defaultPrefixWithSpace = "//@ ";
+            if (StartsWithAt(text, position, defaultPrefixWithSpace) || StartsWithAt(text, position, defaultPrefix))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool StartsWithAt(string text, int position, string value)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            if (position < 0 || position + value.Length > text.Length)
+            {
+                return false;
+            }
+
+            return string.Compare(text, position, value, 0, value.Length, StringComparison.Ordinal) == 0;
         }
     }
 }

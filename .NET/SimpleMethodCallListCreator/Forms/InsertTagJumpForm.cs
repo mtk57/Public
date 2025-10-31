@@ -267,13 +267,34 @@ namespace SimpleMethodCallListCreator.Forms
                 }
 
                 MessageBox.Show(this, builder.ToString(), "解析エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                ErrorLogger.LogError(builder.ToString());
+                var logBuilder = new StringBuilder();
+                logBuilder.AppendLine("Javaファイルの解析に失敗しました。");
+                logBuilder.AppendLine($"メソッドリスト: {methodListPath}");
+                logBuilder.AppendLine($"ソースファイル: {sourceFilePath}");
+                logBuilder.AppendLine($"開始メソッド: {startMethod}");
+                logBuilder.AppendLine($"行番号: {ex.LineNumber}");
+                if (!string.IsNullOrEmpty(ex.InvalidContent))
+                {
+                    logBuilder.AppendLine($"内容: {ex.InvalidContent}");
+                }
+
+                logBuilder.AppendLine("例外詳細:");
+                logBuilder.AppendLine(ex.ToString());
+                ErrorLogger.LogError(logBuilder.ToString());
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, $"タグジャンプ情報の挿入に失敗しました。\n{ex.Message}",
                     "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                ErrorLogger.LogException(ex);
+                var logBuilder = new StringBuilder();
+                logBuilder.AppendLine("タグジャンプ情報の挿入に失敗しました。");
+                logBuilder.AppendLine($"メソッドリスト: {methodListPath}");
+                logBuilder.AppendLine($"ソースファイル: {sourceFilePath}");
+                logBuilder.AppendLine($"開始メソッド: {startMethod}");
+                logBuilder.AppendLine("行番号: 不明");
+                logBuilder.AppendLine("例外詳細:");
+                logBuilder.AppendLine(ex.ToString());
+                ErrorLogger.LogError(logBuilder.ToString());
             }
             finally
             {

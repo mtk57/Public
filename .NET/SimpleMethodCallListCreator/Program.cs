@@ -50,6 +50,7 @@ namespace SimpleMethodCallListCreator
         {
             string filePath = string.Empty;
             string methodSignature = string.Empty;
+            string tagMethodListPath = string.Empty;
             string resolvedMethodListPath = string.Empty;
 
             try
@@ -61,14 +62,12 @@ namespace SimpleMethodCallListCreator
                     prefix = "//@ ";
                 }
 
-                if (string.IsNullOrWhiteSpace(methodListPath))
+                if (!TagJumpSyntaxHelper.TryParseTagLine(lineText, prefix, out filePath, out methodSignature, out tagMethodListPath))
                 {
-                    methodListPath = settings?.LastTagJumpMethodListPath ?? string.Empty;
-                }
-
-                if (string.IsNullOrWhiteSpace(methodListPath))
-                {
-                    var message = "メソッドリストのパスが指定されていません。アプリ側で設定してください。";
+                    var builder = new StringBuilder();
+                    builder.AppendLine("タグジャンプ情報を解析できませんでした。");
+                    builder.AppendLine($"行内容: {lineText}");
+                    var message = builder.ToString().TrimEnd();
                     Console.Error.WriteLine(message);
                     ErrorLogger.LogError(message);
                     MessageBox.Show(message, "タグジャンプエラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -76,13 +75,10 @@ namespace SimpleMethodCallListCreator
                     return;
                 }
 
-                resolvedMethodListPath = methodListPath;
-                if (!TagJumpSyntaxHelper.TryParseTagLine(lineText, prefix, out filePath, out methodSignature))
+                resolvedMethodListPath = SelectMethodListPath(tagMethodListPath, methodListPath, settings?.LastTagJumpMethodListPath);
+                if (string.IsNullOrWhiteSpace(resolvedMethodListPath))
                 {
-                    var builder = new StringBuilder();
-                    builder.AppendLine("タグジャンプ情報を解析できませんでした。");
-                    builder.AppendLine($"行内容: {lineText}");
-                    var message = builder.ToString().TrimEnd();
+                    var message = "メソッドリストのパスが指定されていません。タグに含めるか、アプリ側で設定してください。";
                     Console.Error.WriteLine(message);
                     ErrorLogger.LogError(message);
                     MessageBox.Show(message, "タグジャンプエラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -157,6 +153,24 @@ namespace SimpleMethodCallListCreator
                 MessageBox.Show(message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Environment.ExitCode = 1;
             }
+        }
+
+        private static string SelectMethodListPath(params string[] candidates)
+        {
+            if (candidates == null || candidates.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            foreach (var candidate in candidates)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    return candidate.Trim();
+                }
+            }
+
+            return string.Empty;
         }
 
     }

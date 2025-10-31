@@ -102,7 +102,7 @@ namespace SimpleMethodCallListCreator
                         continue;
                     }
 
-                    var insertion = BuildInsertion(structure.OriginalText, call, calleeEntry, prefix);
+                    var insertion = BuildInsertion(structure.OriginalText, call, calleeEntry, prefix, normalizedMethodListPath);
                     if (insertion != null)
                     {
                         AddInsertion(modifications, structure.FilePath, insertion);
@@ -176,7 +176,7 @@ namespace SimpleMethodCallListCreator
         }
 
         private static TagInsertion BuildInsertion(string originalText, JavaMethodCallStructure call,
-            MethodListEntry calleeEntry, string prefix)
+            MethodListEntry calleeEntry, string prefix, string methodListPath)
         {
             if (call == null || calleeEntry == null)
             {
@@ -189,7 +189,16 @@ namespace SimpleMethodCallListCreator
                 return null;
             }
 
-            var tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature);
+            var methodListSegment = methodListPath ?? string.Empty;
+            string tagContent;
+            if (string.IsNullOrEmpty(methodListSegment))
+            {
+                tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature);
+            }
+            else
+            {
+                tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature, "\t", methodListSegment);
+            }
             var replacement = (prefix ?? string.Empty) + tagContent;
 
             var insertIndex = baseIndex;

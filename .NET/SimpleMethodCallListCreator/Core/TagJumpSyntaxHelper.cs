@@ -38,10 +38,11 @@ namespace SimpleMethodCallListCreator
         }
 
         public static bool TryParseTagLine(string lineText, string configuredPrefix,
-            out string filePath, out string methodSignature)
+            out string filePath, out string methodSignature, out string methodListPath)
         {
             filePath = string.Empty;
             methodSignature = string.Empty;
+            methodListPath = string.Empty;
 
             if (string.IsNullOrEmpty(lineText))
             {
@@ -84,14 +85,19 @@ namespace SimpleMethodCallListCreator
                 return false;
             }
 
-            var separatorIndex = content.IndexOf('\t');
-            if (separatorIndex < 0)
+            var parts = content.Split('\t');
+            if (parts.Length < 2)
             {
                 return false;
             }
 
-            var pathPart = content.Substring(0, separatorIndex).Trim();
-            var signaturePart = content.Substring(separatorIndex + 1).Trim();
+            var pathPart = parts[0].Trim();
+            var signaturePart = parts[1].Trim();
+            var methodListPart = string.Empty;
+            if (parts.Length >= 3)
+            {
+                methodListPart = parts[2].Trim();
+            }
 
             if (pathPart.Length == 0 || signaturePart.Length == 0)
             {
@@ -100,6 +106,7 @@ namespace SimpleMethodCallListCreator
 
             filePath = pathPart;
             methodSignature = signaturePart;
+            methodListPath = methodListPart;
             return true;
         }
 

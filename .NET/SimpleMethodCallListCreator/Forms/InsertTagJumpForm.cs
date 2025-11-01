@@ -354,8 +354,17 @@ namespace SimpleMethodCallListCreator.Forms
 
                 if (!string.IsNullOrEmpty(detail.Reason))
                 {
+                    var reasonText = detail.Reason.Replace("\r\n", "\n");
                     builder.Append(", 理由: ");
-                    builder.Append(detail.Reason);
+                    if (reasonText.IndexOf('\n') >= 0)
+                    {
+                        builder.AppendLine();
+                        builder.Append(reasonText);
+                    }
+                    else
+                    {
+                        builder.Append(reasonText);
+                    }
                 }
 
                 builder.AppendLine();

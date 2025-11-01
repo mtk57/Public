@@ -87,9 +87,11 @@ namespace SimpleMethodCallListCreator
                     {
                         calleeEntry = ResolveCallee(index, current, call);
                     }
-                    catch (InvalidOperationException ex)
+                    catch (MethodAmbiguityException ex)
                     {
-                        failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
+                        failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call,
+                            "メソッドリストに同名メソッドが複数存在するため特定できませんでした。",
+                            ex.Candidates, normalizedMethodListPath));
                         var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
                         if (failureInsertion != null)
                         {
@@ -97,6 +99,11 @@ namespace SimpleMethodCallListCreator
                             updatedCallCount++;
                         }
 
+                        continue;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
                         continue;
                     }
 
@@ -342,12 +349,14 @@ namespace SimpleMethodCallListCreator
         }
 
         private static TagJumpFailureDetail CreateFailureDetail(MethodListEntry currentMethod, string filePath,
-            JavaMethodCallStructure call, string reason)
+            JavaMethodCallStructure call, string reason,
+            IReadOnlyList<MethodListEntry> candidates = null, string methodListPath = null)
         {
             var callerSignature = currentMethod?.Detail?.MethodSignature ?? string.Empty;
             var callExpression = BuildCallExpression(call);
             var lineNumber = call?.LineNumber ?? 0;
-            return new TagJumpFailureDetail(filePath, lineNumber, callerSignature, callExpression, reason ?? string.Empty);
+            var reasonText = BuildReasonText(reason, candidates, methodListPath);
+            return new TagJumpFailureDetail(filePath, lineNumber, callerSignature, callExpression, reasonText);
         }
 
         private static string BuildCallExpression(JavaMethodCallStructure call)
@@ -376,6 +385,47 @@ namespace SimpleMethodCallListCreator
             }
 
             return builder.ToString();
+        }
+
+        private static string BuildReasonText(string reason,
+            IReadOnlyList<MethodListEntry> candidates, string methodListPath)
+        {
+            var builder = new StringBuilder();
+            if (!string.IsNullOrEmpty(reason))
+            {
+                builder.Append(reason);
+            }
+
+            if (candidates != null && candidates.Count > 0)
+            {
+                if (builder.Length > 0)
+                {
+                    builder.AppendLine();
+                }
+
+                builder.AppendLine("候補一覧:");
+                foreach (var candidate in candidates)
+                {
+                    if (candidate == null)
+                    {
+                        continue;
+                    }
+
+                    builder.Append(" - //@ ");
+                    builder.Append(candidate.Detail?.FilePath ?? string.Empty);
+                    builder.Append('\t');
+                    builder.Append(candidate.Detail?.MethodSignature ?? string.Empty);
+                    if (!string.IsNullOrEmpty(methodListPath))
+                    {
+                        builder.Append('\t');
+                        builder.Append(methodListPath);
+                    }
+
+                    builder.AppendLine();
+                }
+            }
+
+            return builder.ToString().TrimEnd('\r', '\n');
         }
 
         private static MethodListEntry ResolveStartMethod(MethodListIndex index, string normalizedStartSourcePath,
@@ -506,7 +556,7 @@ namespace SimpleMethodCallListCreator
             return new List<MethodListEntry>(source);
         }
 
-        private static InvalidOperationException BuildAmbiguousCallException(MethodListEntry currentMethod,
+        private static MethodAmbiguityException BuildAmbiguousCallException(MethodListEntry currentMethod,
             JavaMethodCallStructure call, IReadOnlyCollection<MethodListEntry> candidates)
         {
             var builder = new StringBuilder();
@@ -524,7 +574,7 @@ namespace SimpleMethodCallListCreator
                 builder.AppendLine();
             }
 
-            return new InvalidOperationException(builder.ToString());
+            return new MethodAmbiguityException(builder.ToString(), new List<MethodListEntry>(candidates));
         }
 
         private static List<MethodListEntry> LoadMethodList(string methodListPath)
@@ -708,6 +758,17 @@ namespace SimpleMethodCallListCreator
             public string NormalizedFilePath { get; }
             public string MethodName { get; }
             public int ParameterCount { get; }
+        }
+
+        private sealed class MethodAmbiguityException : InvalidOperationException
+        {
+            public MethodAmbiguityException(string message, IReadOnlyList<MethodListEntry> candidates)
+                : base(message)
+            {
+                Candidates = candidates ?? Array.Empty<MethodListEntry>();
+            }
+
+            public IReadOnlyList<MethodListEntry> Candidates { get; }
         }
 
         private sealed class MethodListIndex

@@ -12,6 +12,7 @@ public class MainWorkflow {
         Helper helper = new Helper();
         helper.prepare();
         logInfo();
+        overloadFunc1("123");
     }
 
     void initialize() {
@@ -21,5 +22,11 @@ public class MainWorkflow {
 
     private void logInfo() {
         logger.debug("start");
+    }
+
+    private void overloadFunc1(String a) {
+    }
+
+    private void overloadFunc1(int a) {
     }
 }

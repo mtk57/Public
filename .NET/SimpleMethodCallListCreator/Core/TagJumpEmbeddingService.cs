@@ -49,13 +49,15 @@ namespace SimpleMethodCallListCreator
             var startMethod = ResolveStartMethod(index, normalizedStartSourcePath, startMethodText);
             if (startMethod == null)
             {
-                return new TagJumpEmbeddingResult(0, 0, Array.Empty<string>());
+                return new TagJumpEmbeddingResult(0, 0, Array.Empty<string>(), 0,
+                    Array.Empty<TagJumpFailureDetail>());
             }
             var prefix = tagPrefix ?? string.Empty;
 
             var visited = new HashSet<string>(StringComparer.Ordinal);
             var analysisCache = new Dictionary<string, JavaFileStructure>(StringComparer.OrdinalIgnoreCase);
             var modifications = new Dictionary<string, List<TagInsertion>>(StringComparer.OrdinalIgnoreCase);
+            var failureDetails = new List<TagJumpFailureDetail>();
             var updatedCallCount = 0;
 
             var stack = new Stack<MethodListEntry>();
@@ -85,8 +87,9 @@ namespace SimpleMethodCallListCreator
                     {
                         calleeEntry = ResolveCallee(index, current, call);
                     }
-                    catch (InvalidOperationException)
+                    catch (InvalidOperationException ex)
                     {
+                        failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
                         var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
                         if (failureInsertion != null)
                         {
@@ -101,6 +104,8 @@ namespace SimpleMethodCallListCreator
                     {
                         if (call.HasExplicitCallee)
                         {
+                            failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call,
+                                "メソッドリストに該当するメソッドが見つかりませんでした。"));
                             var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
                             if (failureInsertion != null)
                             {
@@ -148,7 +153,8 @@ namespace SimpleMethodCallListCreator
                 updatedFiles.Add(filePath);
             }
 
-            return new TagJumpEmbeddingResult(updatedFiles.Count, updatedCallCount, updatedFiles);
+            return new TagJumpEmbeddingResult(updatedFiles.Count, updatedCallCount, updatedFiles,
+                failureDetails.Count, failureDetails);
         }
 
         private static JavaFileStructure GetOrAnalyzeStructure(string filePath,
@@ -345,6 +351,43 @@ namespace SimpleMethodCallListCreator
             var needSpace = lineEnd > 0 && originalText[lineEnd - 1] != ' ' && originalText[lineEnd - 1] != '\t';
             var text = (needSpace ? " " : string.Empty) + FailureComment;
             return new TagInsertion(lineEnd, 0, text);
+        }
+
+        private static TagJumpFailureDetail CreateFailureDetail(MethodListEntry currentMethod, string filePath,
+            JavaMethodCallStructure call, string reason)
+        {
+            var callerSignature = currentMethod?.Detail?.MethodSignature ?? string.Empty;
+            var callExpression = BuildCallExpression(call);
+            var lineNumber = call?.LineNumber ?? 0;
+            return new TagJumpFailureDetail(filePath, lineNumber, callerSignature, callExpression, reason ?? string.Empty);
+        }
+
+        private static string BuildCallExpression(JavaMethodCallStructure call)
+        {
+            if (call == null)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder();
+            if (call.HasExplicitCallee && !string.IsNullOrEmpty(call.CalleeIdentifier))
+            {
+                builder.Append(call.CalleeIdentifier);
+                builder.Append('.');
+            }
+
+            builder.Append(call.MethodName);
+            var arguments = call.ArgumentsText;
+            if (!string.IsNullOrEmpty(arguments))
+            {
+                builder.Append(arguments);
+            }
+            else
+            {
+                builder.Append("()");
+            }
+
+            return builder.ToString();
         }
 
         private static MethodListEntry ResolveStartMethod(MethodListIndex index, string normalizedStartSourcePath,

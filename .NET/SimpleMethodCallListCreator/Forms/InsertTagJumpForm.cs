@@ -241,12 +241,22 @@ namespace SimpleMethodCallListCreator.Forms
                 var result = _service.Execute(methodListPath, sourceFilePath, startMethod, prefix);
                 SaveSettings();
 
-                if (result.UpdatedCallCount > 0)
+                var hasFailures = result.FailureCount > 0;
+                var hasUpdates = result.UpdatedCallCount > 0;
+
+                if (hasUpdates || hasFailures)
                 {
                     var message = new StringBuilder();
-                    message.AppendLine("タグジャンプ情報を挿入しました。");
+                    message.AppendLine("処理が完了しました。");
                     message.AppendLine($"更新ファイル数: {result.UpdatedFileCount}");
                     message.AppendLine($"更新箇所数: {result.UpdatedCallCount}");
+                    if (hasFailures)
+                    {
+                        message.AppendLine($"メソッド特定失敗: {result.FailureCount}");
+                        message.AppendLine("詳細は error.log を参照してください。");
+                        LogFailureDetails(methodListPath, sourceFilePath, startMethod, result);
+                    }
+
                     MessageBox.Show(this, message.ToString(), "処理完了",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -300,6 +310,58 @@ namespace SimpleMethodCallListCreator.Forms
             {
                 Cursor = Cursors.Default;
             }
+        }
+
+        private static void LogFailureDetails(string methodListPath, string sourceFilePath,
+            string startMethod, TagJumpEmbeddingResult result)
+        {
+            if (result == null || result.FailureCount <= 0)
+            {
+                return;
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine("メソッド特定に失敗した呼び出しがあります。");
+            builder.AppendLine($"メソッドリスト: {methodListPath}");
+            builder.AppendLine($"ソースファイル: {sourceFilePath}");
+            builder.AppendLine($"開始メソッド: {startMethod}");
+            builder.AppendLine($"失敗件数: {result.FailureCount}");
+            builder.AppendLine("詳細:");
+
+            foreach (var detail in result.FailureDetails)
+            {
+                if (detail == null)
+                {
+                    continue;
+                }
+
+                builder.Append("  - ファイル: ");
+                builder.Append(detail.FilePath);
+                builder.Append(", 行番号: ");
+                builder.Append(detail.LineNumber);
+
+                if (!string.IsNullOrEmpty(detail.CallerMethodSignature))
+                {
+                    builder.Append(", 呼出元: ");
+                    builder.Append(detail.CallerMethodSignature);
+                }
+
+                if (!string.IsNullOrEmpty(detail.CallExpression))
+                {
+                    builder.Append(", 呼び出し: ");
+                    builder.Append(detail.CallExpression);
+                }
+
+                if (!string.IsNullOrEmpty(detail.Reason))
+                {
+                    builder.Append(", 理由: ");
+                    builder.Append(detail.Reason);
+                }
+
+                builder.AppendLine();
+            }
+
+            ErrorLogger.LogError(builder.ToString());
         }
     }
 }

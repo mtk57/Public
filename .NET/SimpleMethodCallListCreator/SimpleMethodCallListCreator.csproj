@@ -83,6 +83,7 @@
     <Compile Include="Core\TagJumpMethodLocator.cs" />
     <Compile Include="Core\TagJumpSyntaxHelper.cs" />
     <Compile Include="Core\TagJumpEmbeddingResult.cs" />
+    <Compile Include="Core\TagJumpFailureDetail.cs" />
     <Compile Include="Core\TagJumpEmbeddingService.cs" />
     <Compile Include="Forms\MethodListForm.cs">
       <SubType>Form</SubType>

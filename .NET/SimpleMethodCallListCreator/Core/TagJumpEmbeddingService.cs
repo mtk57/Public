@@ -102,18 +102,6 @@ namespace SimpleMethodCallListCreator
 
                     if (calleeEntry == null)
                     {
-                        if (call.HasExplicitCallee)
-                        {
-                            failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call,
-                                "メソッドリストに該当するメソッドが見つかりませんでした。"));
-                            var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
-                            if (failureInsertion != null)
-                            {
-                                AddInsertion(modifications, structure.FilePath, failureInsertion);
-                                updatedCallCount++;
-                            }
-                        }
-
                         continue;
                     }
 

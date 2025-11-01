@@ -43,6 +43,7 @@
             this.btnRefSrcRootDirPath = new System.Windows.Forms.Button();
             this.txtTagJumpPrefix = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
+            this.lblFailed = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btnRun
@@ -176,11 +177,22 @@
             this.label7.TabIndex = 24;
             this.label7.Text = "タグジャンプ情報の前につける文字列";
             // 
+            // lblFailed
+            // 
+            this.lblFailed.AutoSize = true;
+            this.lblFailed.ForeColor = System.Drawing.Color.Red;
+            this.lblFailed.Location = new System.Drawing.Point(459, 331);
+            this.lblFailed.Name = "lblFailed";
+            this.lblFailed.Size = new System.Drawing.Size(88, 12);
+            this.lblFailed.TabIndex = 25;
+            this.lblFailed.Text = "メソッド特定失敗:";
+            // 
             // InsertTagJumpForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 383);
+            this.Controls.Add(this.lblFailed);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.txtTagJumpPrefix);
             this.Controls.Add(this.txtSrcRootDirPath);
@@ -219,5 +231,6 @@
         private System.Windows.Forms.Button btnRefSrcRootDirPath;
         private System.Windows.Forms.TextBox txtTagJumpPrefix;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Label lblFailed;
     }
 }

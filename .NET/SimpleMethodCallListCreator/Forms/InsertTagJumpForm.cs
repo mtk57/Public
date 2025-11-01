@@ -16,6 +16,7 @@ namespace SimpleMethodCallListCreator.Forms
             InitializeComponent();
             HookEvents();
             LoadSettings();
+            UpdateFailedLabel(0);
         }
 
         private void HookEvents()
@@ -259,11 +260,13 @@ namespace SimpleMethodCallListCreator.Forms
 
                     MessageBox.Show(this, message.ToString(), "処理完了",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    UpdateFailedLabel(result.FailureCount);
                 }
                 else
                 {
                     MessageBox.Show(this, "タグジャンプ対象の呼び出しは見つかりませんでした。", "処理完了",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    UpdateFailedLabel(0);
                 }
             }
             catch (JavaParseException ex)
@@ -291,6 +294,7 @@ namespace SimpleMethodCallListCreator.Forms
                 logBuilder.AppendLine("例外詳細:");
                 logBuilder.AppendLine(ex.ToString());
                 ErrorLogger.LogError(logBuilder.ToString());
+                UpdateFailedLabel(0);
             }
             catch (Exception ex)
             {
@@ -305,6 +309,7 @@ namespace SimpleMethodCallListCreator.Forms
                 logBuilder.AppendLine("例外詳細:");
                 logBuilder.AppendLine(ex.ToString());
                 ErrorLogger.LogError(logBuilder.ToString());
+                UpdateFailedLabel(0);
             }
             finally
             {
@@ -371,6 +376,19 @@ namespace SimpleMethodCallListCreator.Forms
             }
 
             ErrorLogger.LogError(builder.ToString());
+        }
+
+        private void UpdateFailedLabel(int failureCount)
+        {
+            if (failureCount > 0)
+            {
+                lblFailed.Text = $"メソッド特定失敗：{failureCount}件";
+                lblFailed.Visible = true;
+            }
+            else
+            {
+                lblFailed.Visible = false;
+            }
         }
     }
 }

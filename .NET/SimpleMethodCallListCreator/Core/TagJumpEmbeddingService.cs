@@ -99,6 +99,16 @@ namespace SimpleMethodCallListCreator
 
                     if (calleeEntry == null)
                     {
+                        if (call.HasExplicitCallee)
+                        {
+                            var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
+                            if (failureInsertion != null)
+                            {
+                                AddInsertion(modifications, structure.FilePath, failureInsertion);
+                                updatedCallCount++;
+                            }
+                        }
+
                         continue;
                     }
 

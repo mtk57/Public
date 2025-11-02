@@ -22,7 +22,7 @@ public class MainWorkflow {
     }
 
     private void logInfo() {
-        logger.debug("start"); //★ メソッド特定失敗
+        logger.debug("start");
     }
 
     private void overloadFunc1(String a) {

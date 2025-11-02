@@ -10,6 +10,6 @@ public class Worker {
     }
 
     public static void performStatic() {
-        Utility.touch(); //★ メソッド特定失敗
+        Utility.touch();
     }
 }

@@ -92,7 +92,7 @@ namespace SimpleMethodCallListCreator
                         failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call,
                             "メソッドリストに同名メソッドが複数存在するため特定できませんでした。",
                             ex.Candidates, normalizedMethodListPath));
-                        var failureInsertion = BuildFailureInsertion(structure.OriginalText, call);
+                        var failureInsertion = BuildFailureInsertion(structure.OriginalText, call, prefix);
                         if (failureInsertion != null)
                         {
                             AddInsertion(modifications, structure.FilePath, failureInsertion);
@@ -288,7 +288,7 @@ namespace SimpleMethodCallListCreator
             return builder.ToString();
         }
 
-        private static TagInsertion BuildFailureInsertion(string originalText, JavaMethodCallStructure call)
+        private static TagInsertion BuildFailureInsertion(string originalText, JavaMethodCallStructure call, string configuredPrefix)
         {
             if (call == null || string.IsNullOrEmpty(originalText))
             {
@@ -334,6 +334,16 @@ namespace SimpleMethodCallListCreator
             }
 
             var existingLength = lineEnd - segmentStart;
+            if (existingLength >= 0)
+            {
+                var prefixSegment =
+                    TagJumpSyntaxHelper.FindExistingPrefixSegment(originalText, segmentStart, configuredPrefix);
+                if (prefixSegment.HasValue)
+                {
+                    return null;
+                }
+            }
+
             if (existingLength > 0)
             {
                 var existing = originalText.Substring(segmentStart, existingLength);

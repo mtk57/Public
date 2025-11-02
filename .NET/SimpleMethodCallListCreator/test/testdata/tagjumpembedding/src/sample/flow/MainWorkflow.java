@@ -13,6 +13,7 @@ public class MainWorkflow {
         helper.prepare();
         logInfo();
         overloadFunc1("123");
+        notExistMethidInList();  //@ hoge
     }
 
     void initialize() {

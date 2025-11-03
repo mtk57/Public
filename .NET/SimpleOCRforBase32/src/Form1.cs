@@ -91,23 +91,14 @@ namespace SimpleOCRforBase32
 
                 if ( directMatch.Info != null )
                 {
-                    var formattedDirect = $"{FormatPrefix( directMatch.Info.Chunk )}{ChecksumSeparator}{directMatch.Info.Checksum}";
+                    var directChunk = directMatch.Info.Chunk;
+                    var directChecksum = directMatch.Info.Checksum;
+                    var formattedDirect = $"{FormatPrefix( directChunk )}{ChecksumSeparator}{directChecksum}";
                     mergedLines.Add( formattedDirect );
                     continue;
                 }
 
-                var sanitizedLength = lineCandidates
-                    .Select( c => c.LineInfos[lineIndex].CombinedLength )
-                    .Where( length => length >= ChunkLength )
-                    .DefaultIfEmpty( 0 )
-                    .Max();
-
-                if ( sanitizedLength < ChunkLength )
-                {
-                    continue;
-                }
-
-                sanitizedLength = Math.Min( sanitizedLength, ChunkLength + 2 );
+                var sanitizedLength = ChunkLength;
 
                 var votesByPosition = new Dictionary<int, List<CharVote>>();
 
@@ -163,10 +154,10 @@ namespace SimpleOCRforBase32
                     chunkChars[posLoop] = SelectCharacterForPosition( votes );
                 }
 
-                ApplyBigramAdjustments( chunkChars, votesByPosition );
-
                 var targetChecksum = DetermineTargetChecksum( lineCandidates, lineIndex );
                 var chunk = new string( chunkChars );
+                ApplyBigramAdjustments( chunkChars, votesByPosition );
+
                 var checksum = ComputeChecksum( chunk );
 
                 if ( !string.IsNullOrEmpty( targetChecksum )
@@ -190,13 +181,14 @@ namespace SimpleOCRforBase32
                     {
                         x.Info,
                         Weight = x.Candidate.Weight,
-                        Distance = ComputeHammingDistance( chunk, x.Info.Chunk )
+                        Distance = ComputeHammingDistance( chunk, x.Info.Chunk ),
+                        OriginalWeight = x.Candidate.Weight
                     } )
                     .OrderBy( x => x.Distance )
                     .ThenByDescending( x => x.Weight )
                     .FirstOrDefault();
 
-                if ( bestAligned?.Info != null && bestAligned.Distance > 0 && bestAligned.Distance <= 4 )
+                if ( bestAligned?.Info != null && bestAligned.Distance > 0 && bestAligned.Distance <= 6 )
                 {
                     var candidateChecksum = ComputeChecksum( bestAligned.Info.Chunk );
                     var matchesTarget = string.IsNullOrEmpty( targetChecksum )
@@ -207,6 +199,7 @@ namespace SimpleOCRforBase32
                     {
                         chunk = bestAligned.Info.Chunk;
                         checksum = candidateChecksum;
+                        chunkChars = chunk.ToCharArray();
                     }
                 }
 
@@ -777,13 +770,13 @@ namespace SimpleOCRforBase32
         private static readonly Dictionary<char, char[]> AmbiguityMap = new Dictionary<char, char[]>
         {
             { '5', new[] { 'S' } },
-            { 'S', new[] { '5' } },
+            { 'S', new[] { '5', '8' } },
             { '4', new[] { 'A' } },
             { 'A', new[] { '4' } },
             { 'I', new[] { 'J', '1', 'L' } },
-            { 'J', new[] { 'I', 'L' } },
-            { '1', new[] { 'I', 'L' } },
-            { 'L', new[] { '1', 'I' } },
+            { 'J', new[] { 'I', 'L', '1' } },
+            { '1', new[] { 'I', 'L', 'J' } },
+            { 'L', new[] { '1', 'I', 'J' } },
             { '2', new[] { 'Z' } },
             { 'Z', new[] { '2' } }
         };

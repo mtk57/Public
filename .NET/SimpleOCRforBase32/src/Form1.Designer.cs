@@ -28,13 +28,80 @@
         /// </summary>
         private void InitializeComponent ()
         {
-            this.components = new System.ComponentModel.Container();
+            this.label1 = new System.Windows.Forms.Label();
+            this.txtImgFilePath = new System.Windows.Forms.TextBox();
+            this.btnRefImgFilePath = new System.Windows.Forms.Button();
+            this.txtResultOCR = new System.Windows.Forms.TextBox();
+            this.btnStart = new System.Windows.Forms.Button();
+            this.SuspendLayout();
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(26, 21);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(82, 12);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "画像ファイルパス";
+            // 
+            // txtImgFilePath
+            // 
+            this.txtImgFilePath.Location = new System.Drawing.Point(28, 36);
+            this.txtImgFilePath.Name = "txtImgFilePath";
+            this.txtImgFilePath.Size = new System.Drawing.Size(669, 19);
+            this.txtImgFilePath.TabIndex = 1;
+            // 
+            // btnRefImgFilePath
+            // 
+            this.btnRefImgFilePath.Location = new System.Drawing.Point(703, 36);
+            this.btnRefImgFilePath.Name = "btnRefImgFilePath";
+            this.btnRefImgFilePath.Size = new System.Drawing.Size(37, 23);
+            this.btnRefImgFilePath.TabIndex = 2;
+            this.btnRefImgFilePath.Text = "参照";
+            this.btnRefImgFilePath.UseVisualStyleBackColor = true;
+            // 
+            // txtResultOCR
+            // 
+            this.txtResultOCR.Location = new System.Drawing.Point(28, 128);
+            this.txtResultOCR.MaxLength = 0;
+            this.txtResultOCR.Multiline = true;
+            this.txtResultOCR.Name = "txtResultOCR";
+            this.txtResultOCR.Size = new System.Drawing.Size(669, 285);
+            this.txtResultOCR.TabIndex = 3;
+            // 
+            // btnStart
+            // 
+            this.btnStart.Location = new System.Drawing.Point(277, 79);
+            this.btnStart.Name = "btnStart";
+            this.btnStart.Size = new System.Drawing.Size(108, 23);
+            this.btnStart.TabIndex = 4;
+            this.btnStart.Text = "START";
+            this.btnStart.UseVisualStyleBackColor = true;
+            // 
+            // Form1
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size( 800, 450 );
-            this.Text = "Form1";
+            this.ClientSize = new System.Drawing.Size(759, 450);
+            this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.txtResultOCR);
+            this.Controls.Add(this.btnRefImgFilePath);
+            this.Controls.Add(this.txtImgFilePath);
+            this.Controls.Add(this.label1);
+            this.Name = "Form1";
+            this.Text = "Simple OCR for Base32";
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
         }
 
         #endregion
+
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox txtImgFilePath;
+        private System.Windows.Forms.Button btnRefImgFilePath;
+        private System.Windows.Forms.TextBox txtResultOCR;
+        private System.Windows.Forms.Button btnStart;
     }
 }
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using OpenCvSharp;
 using Tesseract;
 
 namespace SimpleOCRforBase32
@@ -104,22 +105,63 @@ namespace SimpleOCRforBase32
                 throw new DirectoryNotFoundException( $"tessdata フォルダーが見つかりません。以下に配置してください。\n{tessdataPath}" );
             }
 
-            using ( var engine = new TesseractEngine( tessdataPath, "eng", EngineMode.Default ) )
+            string preprocessedPath = null;
+
+            try
             {
-                engine.SetVariable( "tessedit_char_whitelist", AllowedCharacters );
-                engine.SetVariable( "preserve_interword_spaces", "1" );
-                engine.SetVariable( "load_system_dawg", "0" );
-                engine.SetVariable( "load_freq_dawg", "0" );
-                engine.SetVariable( "wordrec_enable_assoc", "0" );
-                engine.SetVariable( "language_model_penalty_non_dict_word", "0.15" );
-                engine.SetVariable( "language_model_penalty_non_freq_dict_word", "0.25" );
-                engine.SetVariable( "classify_bln_numeric_mode", "1" );
-                engine.DefaultPageSegMode = PageSegMode.SingleColumn;
-                using ( var img = Pix.LoadFromFile( filePath ) )
-                using ( var page = engine.Process( img, PageSegMode.SingleColumn ) )
+                preprocessedPath = PreprocessImage( filePath );
+            }
+            catch
+            {
+                preprocessedPath = null;
+            }
+
+            try
+            {
+                using ( var engine = new TesseractEngine( tessdataPath, "eng", EngineMode.Default ) )
                 {
-                    var rawText = page.GetText() ?? string.Empty;
-                    return NormalizeText( rawText );
+                    engine.SetVariable( "tessedit_char_whitelist", AllowedCharacters );
+                    engine.SetVariable( "preserve_interword_spaces", "1" );
+                    engine.SetVariable( "load_system_dawg", "0" );
+                    engine.SetVariable( "load_freq_dawg", "0" );
+                    engine.SetVariable( "wordrec_enable_assoc", "0" );
+                    engine.SetVariable( "language_model_penalty_non_dict_word", "0.15" );
+                    engine.SetVariable( "language_model_penalty_non_freq_dict_word", "0.25" );
+                    engine.SetVariable( "classify_bln_numeric_mode", "1" );
+                    engine.DefaultPageSegMode = PageSegMode.SingleColumn;
+
+                    var candidates = new List<Tuple<string, float>>();
+
+                    if ( !string.IsNullOrEmpty( preprocessedPath ) && File.Exists( preprocessedPath ) )
+                    {
+                        using ( var img = Pix.LoadFromFile( preprocessedPath ) )
+                        using ( var page = engine.Process( img, PageSegMode.SingleColumn ) )
+                        {
+                            var rawText = page.GetText() ?? string.Empty;
+                            candidates.Add( Tuple.Create( NormalizeText( rawText ), page.GetMeanConfidence() ) );
+                        }
+                    }
+
+                    using ( var img = Pix.LoadFromFile( filePath ) )
+                    using ( var page = engine.Process( img, PageSegMode.SingleColumn ) )
+                    {
+                        var rawText = page.GetText() ?? string.Empty;
+                        candidates.Add( Tuple.Create( NormalizeText( rawText ), page.GetMeanConfidence() ) );
+                    }
+
+                    var best = candidates
+                        .OrderByDescending( c => CountValidLines( c.Item1 ) )
+                        .ThenByDescending( c => c.Item2 )
+                        .FirstOrDefault();
+
+                    return best?.Item1 ?? string.Empty;
+                }
+            }
+            finally
+            {
+                if ( !string.IsNullOrEmpty( preprocessedPath ) && File.Exists( preprocessedPath ) )
+                {
+                    File.Delete( preprocessedPath );
                 }
             }
         }
@@ -172,7 +214,7 @@ namespace SimpleOCRforBase32
                 .Select( c => SoftEquivalents.TryGetValue( c, out var mapped ) ? mapped : c )
                 .ToArray() );
 
-            if ( lettersOnly.Length == 0 )
+            if ( lettersOnly.Length < 32 )
             {
                 return string.Empty;
             }
@@ -198,10 +240,80 @@ namespace SimpleOCRforBase32
 
             if ( remainder.Length == 0 )
             {
-                return prefix;
+                return FormatPrefix( prefix );
             }
 
-            return $"{prefix}-{remainder}";
+            return $"{FormatPrefix( prefix )}-{remainder}";
+        }
+
+        private static int CountValidLines ( string normalizedText )
+        {
+            if ( string.IsNullOrEmpty( normalizedText ) )
+            {
+                return 0;
+            }
+
+            return normalizedText
+                .Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries )
+                .Count( line => line.Length >= 32 );
+        }
+
+        private static string FormatPrefix ( string prefix )
+        {
+            if ( string.IsNullOrEmpty( prefix ) )
+            {
+                return string.Empty;
+            }
+
+            var groups = new List<string>();
+            for ( var i = 0; i < prefix.Length; i += 4 )
+            {
+                var length = Math.Min( 4, prefix.Length - i );
+                groups.Add( prefix.Substring( i, length ) );
+            }
+
+            return string.Join( " ", groups );
+        }
+
+        private static string PreprocessImage ( string originalPath )
+        {
+            var tempPath = Path.Combine( Path.GetTempPath(), $"simpleocr-pre-{Guid.NewGuid():N}.png" );
+
+            using ( var src = Cv2.ImRead( originalPath, ImreadModes.Color ) )
+            {
+                if ( src.Empty() )
+                {
+                    throw new InvalidOperationException( "画像を読み込めませんでした。" );
+                }
+
+                using ( var gray = new Mat() )
+                using ( var blurred = new Mat() )
+                using ( var binary = new Mat() )
+                using ( var closed = new Mat() )
+                using ( var scaled = new Mat() )
+                {
+                    Cv2.CvtColor( src, gray, ColorConversionCodes.BGR2GRAY );
+                    Cv2.GaussianBlur( gray, blurred, new OpenCvSharp.Size( 3, 3 ), 0 );
+                    Cv2.AdaptiveThreshold(
+                        blurred,
+                        binary,
+                        maxValue: 255,
+                        adaptiveMethod: AdaptiveThresholdTypes.MeanC,
+                        thresholdType: ThresholdTypes.Binary,
+                        blockSize: 17,
+                        c: 10 );
+
+                    using ( var kernel = Cv2.GetStructuringElement( MorphShapes.Rect, new OpenCvSharp.Size( 2, 2 ) ) )
+                    {
+                        Cv2.MorphologyEx( binary, closed, MorphTypes.Close, kernel );
+                    }
+
+                    Cv2.Resize( closed, scaled, new OpenCvSharp.Size(), 1.6, 1.6, InterpolationFlags.Linear );
+                    Cv2.ImWrite( tempPath, scaled );
+                }
+            }
+
+            return tempPath;
         }
     }
 }

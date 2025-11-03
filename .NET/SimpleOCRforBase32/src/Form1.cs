@@ -83,6 +83,19 @@ namespace SimpleOCRforBase32
                     continue;
                 }
 
+                var directMatch = lineCandidates
+                    .Select( c => ( Candidate: c, Info: c.GetLineInfo( lineIndex ) ) )
+                    .Where( x => x.Info != null && x.Info.ChecksumMatches )
+                    .OrderByDescending( x => x.Candidate.Weight )
+                    .FirstOrDefault();
+
+                if ( directMatch.Info != null )
+                {
+                    var formattedDirect = $"{FormatPrefix( directMatch.Info.Chunk )}{ChecksumSeparator}{directMatch.Info.Checksum}";
+                    mergedLines.Add( formattedDirect );
+                    continue;
+                }
+
                 var sanitizedLength = lineCandidates
                     .Select( c => c.LineInfos[lineIndex].CombinedLength )
                     .Where( length => length >= ChunkLength )
@@ -370,17 +383,47 @@ namespace SimpleOCRforBase32
         {
             var result = new List<AlternativeChar>();
 
-            if ( votesByPosition == null || !votesByPosition.TryGetValue( position, out var votes ) )
+            List<CharVote> votes = null;
+            if ( votesByPosition != null )
             {
-                return result;
+                votesByPosition.TryGetValue( position, out votes );
             }
 
-            result.AddRange( votes
-                .GroupBy( vote => vote.Character )
-                .Select( g => new AlternativeChar( g.Key, g.Sum( vote => vote.Weight ) ) )
-                .Where( alt => IsAmbiguousPair( alt.Character, currentChar ) && alt.Character != currentChar )
-                .OrderByDescending( alt => alt.Weight )
-                .Take( 2 ) );
+            if ( votes != null )
+            {
+                result.AddRange( votes
+                    .GroupBy( vote => vote.Character )
+                    .Select( g => new AlternativeChar( g.Key, g.Sum( vote => vote.Weight ) ) )
+                    .Where( alt => IsAmbiguousPair( alt.Character, currentChar ) && alt.Character != currentChar )
+                    .OrderByDescending( alt => alt.Weight )
+                    .Take( 2 ) );
+            }
+
+            if ( AmbiguityMap.TryGetValue( currentChar, out var mappedChars ) )
+            {
+                var baseWeight = votes?.Where( vote => vote.Character == currentChar ).Sum( vote => vote.Weight ) ?? 1f;
+                foreach ( var mapped in mappedChars )
+                {
+                    if ( result.Any( alt => alt.Character == mapped ) )
+                    {
+                        continue;
+                    }
+
+                    var mappedWeight = baseWeight * 0.8f;
+                    if ( votes != null )
+                    {
+                        var existing = votes
+                            .Where( vote => vote.Character == mapped )
+                            .Sum( vote => vote.Weight );
+                        if ( existing > 0f )
+                        {
+                            mappedWeight = Math.Max( mappedWeight, existing );
+                        }
+                    }
+
+                    result.Add( new AlternativeChar( mapped, mappedWeight ) );
+                }
+            }
 
             return result;
         }
@@ -429,10 +472,7 @@ namespace SimpleOCRforBase32
 
         private static bool IsAmbiguousPair ( char a, char b )
         {
-            return
-                ( a == '5' && b == 'S' ) || ( a == 'S' && b == '5' ) ||
-                ( a == '4' && b == 'A' ) || ( a == 'A' && b == '4' ) ||
-                ( a == 'I' && b == 'J' ) || ( a == 'J' && b == 'I' );
+            return AmbiguityMap.TryGetValue( a, out var mapped ) && mapped.Contains( b );
         }
 
         private static char ResolveAmbiguousPair ( VoteSummary primary, VoteSummary secondary )
@@ -684,6 +724,29 @@ namespace SimpleOCRforBase32
         private const int ChunkLength = 32;
         private const char ChecksumSeparator = '-';
         private const string ChecksumAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+        private static readonly Dictionary<char, char[]> AmbiguityMap = new Dictionary<char, char[]>
+        {
+            { '5', new[] { 'S', 'B' } },
+            { 'S', new[] { '5' } },
+            { '4', new[] { 'A' } },
+            { 'A', new[] { '4' } },
+            { 'I', new[] { 'J', '1', 'L' } },
+            { 'J', new[] { 'I', 'L' } },
+            { '1', new[] { 'I', 'L' } },
+            { 'L', new[] { '1', 'I' } },
+            { '0', new[] { 'O' } },
+            { 'O', new[] { '0', 'Q' } },
+            { 'Q', new[] { 'O' } },
+            { '2', new[] { 'Z' } },
+            { 'Z', new[] { '2' } },
+            { '8', new[] { 'B' } },
+            { 'B', new[] { '8', '5' } },
+            { '6', new[] { 'G' } },
+            { 'G', new[] { '6' } },
+            { 'E', new[] { 'F' } },
+            { 'F', new[] { 'E' } }
+        };
 
         private static readonly string AllowedCharacters = $"{ChecksumAlphabet}{ChecksumSeparator}";
         private static readonly HashSet<char> AllowedCharacterSet = new HashSet<char>( AllowedCharacters );

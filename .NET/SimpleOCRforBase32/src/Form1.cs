@@ -181,26 +181,17 @@ namespace SimpleOCRforBase32
                     {
                         x.Info,
                         Weight = x.Candidate.Weight,
-                        Distance = ComputeHammingDistance( chunk, x.Info.Chunk ),
-                        OriginalWeight = x.Candidate.Weight
+                        Distance = ComputeHammingDistance( chunk, x.Info.Chunk )
                     } )
                     .OrderBy( x => x.Distance )
                     .ThenByDescending( x => x.Weight )
                     .FirstOrDefault();
 
-                if ( bestAligned?.Info != null && bestAligned.Distance > 0 && bestAligned.Distance <= 6 )
+                if ( bestAligned?.Info != null && bestAligned.Distance <= 4 )
                 {
-                    var candidateChecksum = ComputeChecksum( bestAligned.Info.Chunk );
-                    var matchesTarget = string.IsNullOrEmpty( targetChecksum )
-                        ? bestAligned.Info.ChecksumMatches
-                        : string.Equals( candidateChecksum, targetChecksum, StringComparison.OrdinalIgnoreCase );
-
-                    if ( matchesTarget )
-                    {
-                        chunk = bestAligned.Info.Chunk;
-                        checksum = candidateChecksum;
-                        chunkChars = chunk.ToCharArray();
-                    }
+                    chunk = bestAligned.Info.Chunk;
+                    checksum = ComputeChecksum( chunk );
+                    chunkChars = chunk.ToCharArray();
                 }
 
                 var formatted = $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";

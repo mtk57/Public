@@ -62,6 +62,7 @@
             // 
             // txtResultOCR
             // 
+            this.txtResultOCR.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txtResultOCR.Location = new System.Drawing.Point(28, 128);
             this.txtResultOCR.MaxLength = 0;
             this.txtResultOCR.Multiline = true;

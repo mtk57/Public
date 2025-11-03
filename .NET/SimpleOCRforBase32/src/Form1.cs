@@ -17,6 +17,319 @@ namespace SimpleOCRforBase32
             InitializeEvents();
         }
 
+        private static void AddCandidateFromRawText ( List<CandidateResult> candidates, string rawText, float confidence, bool numericMode, string source )
+        {
+            if ( candidates == null )
+            {
+                return;
+            }
+
+            var normalized = NormalizeText( rawText ?? string.Empty );
+            if ( string.IsNullOrWhiteSpace( normalized ) )
+            {
+                return;
+            }
+
+            candidates.Add( new CandidateResult( normalized, confidence, numericMode, source ) );
+        }
+
+        private static void AddCandidateFromNormalizedLines ( List<CandidateResult> candidates, IEnumerable<string> lines, float confidence, bool numericMode, string source )
+        {
+            if ( candidates == null || lines == null )
+            {
+                return;
+            }
+
+            var materialized = lines
+                .Where( line => !string.IsNullOrWhiteSpace( line ) )
+                .ToList();
+
+            if ( materialized.Count == 0 )
+            {
+                return;
+            }
+
+            var text = string.Join( Environment.NewLine, materialized );
+            candidates.Add( new CandidateResult( text, confidence, numericMode, source ) );
+        }
+
+        private static string MergeCandidates ( List<CandidateResult> candidates )
+        {
+            if ( candidates == null || candidates.Count == 0 )
+            {
+                return string.Empty;
+            }
+
+            var activeCandidates = candidates
+                .Where( c => c.ValidLineCount > 0 )
+                .ToList();
+
+            if ( activeCandidates.Count == 0 )
+            {
+                activeCandidates = candidates;
+            }
+
+            var lineCount = activeCandidates.Max( c => c.Lines.Length );
+            var mergedLines = new List<string>( lineCount );
+
+            for ( var lineIndex = 0; lineIndex < lineCount; lineIndex++ )
+            {
+                var lineCandidates = activeCandidates
+                    .Where( c => lineIndex < c.Lines.Length )
+                    .ToList();
+
+                if ( lineCandidates.Count == 0 )
+                {
+                    continue;
+                }
+
+                var sanitizedLength = lineCandidates
+                    .Select( c => lineIndex < c.SanitizedLines.Length ? c.SanitizedLines[lineIndex].Length : 0 )
+                    .Where( length => length >= ChunkLength )
+                    .DefaultIfEmpty( 0 )
+                    .Max();
+
+                if ( sanitizedLength < ChunkLength )
+                {
+                    continue;
+                }
+
+                sanitizedLength = Math.Min( sanitizedLength, ChunkLength + 2 );
+
+                var votesByPosition = new Dictionary<int, List<CharVote>>();
+
+                foreach ( var candidate in lineCandidates )
+                {
+                    if ( lineIndex >= candidate.SanitizedLines.Length )
+                    {
+                        continue;
+                    }
+
+                    var sanitized = candidate.SanitizedLines[lineIndex];
+                    if ( string.IsNullOrEmpty( sanitized ) )
+                    {
+                        continue;
+                    }
+
+                    for ( var pos = 0; pos < Math.Min( sanitizedLength, sanitized.Length ); pos++ )
+                    {
+                        if ( !votesByPosition.TryGetValue( pos, out var list ) )
+                        {
+                            list = new List<CharVote>();
+                            votesByPosition[pos] = list;
+                        }
+
+                        list.Add( new CharVote( sanitized[pos], candidate.Weight, candidate ) );
+                    }
+                }
+
+                if ( votesByPosition.Count == 0 )
+                {
+                    continue;
+                }
+
+                var finalChars = new char[sanitizedLength];
+
+                var orderedLineCandidates = lineCandidates
+                    .OrderByDescending( c => c.Weight )
+                    .ToList();
+
+                for ( var pos = 0; pos < sanitizedLength; pos++ )
+                {
+                    if ( !votesByPosition.TryGetValue( pos, out var votes ) || votes.Count == 0 )
+                    {
+                        finalChars[pos] = GetFallbackCharacter( orderedLineCandidates, lineIndex, pos );
+                        continue;
+                    }
+
+                    finalChars[pos] = SelectCharacterForPosition( votes );
+                }
+
+                ApplyBigramAdjustments( finalChars, votesByPosition );
+
+                var sanitizedFinal = new string( finalChars
+                    .Where( char.IsLetterOrDigit )
+                    .ToArray() );
+
+                if ( sanitizedFinal.Length < ChunkLength )
+                {
+                    continue;
+                }
+
+                var chunk = sanitizedFinal.Substring( 0, Math.Min( ChunkLength, sanitizedFinal.Length ) );
+                var checksum = ComputeChecksum( chunk );
+                var formatted = $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";
+
+                if ( !string.IsNullOrWhiteSpace( formatted ) )
+                {
+                    mergedLines.Add( formatted );
+                }
+            }
+
+            if ( mergedLines.Count == 0 )
+            {
+                var fallback = activeCandidates
+                    .OrderByDescending( c => c.ValidLineCount )
+                    .ThenByDescending( c => c.Confidence )
+                    .FirstOrDefault();
+                return fallback?.Text ?? string.Empty;
+            }
+
+            return string.Join( Environment.NewLine, mergedLines );
+        }
+
+        private static char SelectCharacterForPosition ( List<CharVote> votes )
+        {
+            if ( votes == null || votes.Count == 0 )
+            {
+                return ' ';
+            }
+
+            var summaries = votes
+                .GroupBy( v => v.Character )
+                .Select( g => new VoteSummary( g.Key, g.ToList() ) )
+                .OrderByDescending( summary => summary.Weight )
+                .ToList();
+
+            var primary = summaries[0];
+            if ( summaries.Count == 1 )
+            {
+                return primary.Character;
+            }
+
+            var secondary = summaries[1];
+            var diff = primary.Weight - secondary.Weight;
+
+            if ( IsAmbiguousPair( primary.Character, secondary.Character ) && diff < 0.05f )
+            {
+                return ResolveAmbiguousPair( primary, secondary );
+            }
+
+            return primary.Character;
+        }
+
+        private static char GetFallbackCharacter ( IReadOnlyList<CandidateResult> orderedCandidates, int lineIndex, int position )
+        {
+            if ( orderedCandidates == null )
+            {
+                return ' ';
+            }
+
+            foreach ( var candidate in orderedCandidates )
+            {
+                if ( lineIndex >= candidate.SanitizedLines.Length )
+                {
+                    continue;
+                }
+
+                var sanitized = candidate.SanitizedLines[lineIndex];
+                if ( sanitized.Length > position )
+                {
+                    return sanitized[position];
+                }
+            }
+
+            return ' ';
+        }
+
+        private static void ApplyBigramAdjustments ( char[] finalChars, Dictionary<int, List<CharVote>> votesByPosition )
+        {
+            if ( finalChars == null || finalChars.Length < 2 )
+            {
+                return;
+            }
+
+            for ( var i = 0; i < finalChars.Length - 1; i++ )
+            {
+                var current = finalChars[i];
+                var next = finalChars[i + 1];
+
+                if ( ( current == '5' && next == 'S' ) || ( current == 'S' && next == '5' ) )
+                {
+                    var weight5 = GetCharWeight( votesByPosition, i, '5' ) + GetCharWeight( votesByPosition, i + 1, '5' );
+                    var weightS = GetCharWeight( votesByPosition, i, 'S' ) + GetCharWeight( votesByPosition, i + 1, 'S' );
+
+                    if ( weight5 > weightS * 1.1f )
+                    {
+                        finalChars[i] = '5';
+                        finalChars[i + 1] = '5';
+                    }
+                    else if ( weightS > weight5 * 1.1f )
+                    {
+                        finalChars[i] = 'S';
+                        finalChars[i + 1] = 'S';
+                    }
+                }
+            }
+        }
+
+        private static float GetCharWeight ( Dictionary<int, List<CharVote>> votesByPosition, int position, char character )
+        {
+            if ( votesByPosition == null || !votesByPosition.TryGetValue( position, out var votes ) )
+            {
+                return 0f;
+            }
+
+            return votes
+                .Where( vote => vote.Character == character )
+                .Sum( vote => vote.Weight );
+        }
+
+        private static bool IsAmbiguousPair ( char a, char b )
+        {
+            return
+                ( a == '5' && b == 'S' ) || ( a == 'S' && b == '5' ) ||
+                ( a == '4' && b == 'A' ) || ( a == 'A' && b == '4' ) ||
+                ( a == 'I' && b == 'J' ) || ( a == 'J' && b == 'I' );
+        }
+
+        private static char ResolveAmbiguousPair ( VoteSummary primary, VoteSummary secondary )
+        {
+            if ( primary == null || secondary == null )
+            {
+                return primary?.Character ?? secondary?.Character ?? ' ';
+            }
+
+            if ( IsDigit( primary.Character ) != IsDigit( secondary.Character ) )
+            {
+                var digit = IsDigit( primary.Character ) ? primary : secondary;
+                var letter = IsDigit( primary.Character ) ? secondary : primary;
+
+                if ( digit.NumericWeight > letter.AlphaWeight * 1.1f )
+                {
+                    return digit.Character;
+                }
+
+                if ( letter.AlphaWeight > digit.NumericWeight * 1.05f )
+                {
+                    return letter.Character;
+                }
+            }
+
+            if ( IsIOrJPair( primary.Character, secondary.Character ) )
+            {
+                if ( primary.AlphaWeight > secondary.AlphaWeight * 1.05f )
+                {
+                    return primary.Character;
+                }
+
+                if ( secondary.AlphaWeight > primary.AlphaWeight * 1.05f )
+                {
+                    return secondary.Character;
+                }
+            }
+
+            return primary.Weight >= secondary.Weight
+                ? primary.Character
+                : secondary.Character;
+        }
+
+        private static bool IsDigit ( char c ) =>
+            c >= '0' && c <= '9';
+
+        private static bool IsIOrJPair ( char a, char b ) =>
+            ( a == 'I' && b == 'J' ) || ( a == 'J' && b == 'I' );
+
         private void InitializeEvents ()
         {
             txtImgFilePath.AllowDrop = true;
@@ -105,15 +418,15 @@ namespace SimpleOCRforBase32
                 throw new DirectoryNotFoundException( $"tessdata フォルダーが見つかりません。以下に配置してください。\n{tessdataPath}" );
             }
 
-            string preprocessedPath = null;
+            PreprocessResult preprocessResult = null;
 
             try
             {
-                preprocessedPath = PreprocessImage( filePath );
+                preprocessResult = PreprocessImage( filePath );
             }
             catch
             {
-                preprocessedPath = null;
+                preprocessResult = null;
             }
 
             try
@@ -127,44 +440,98 @@ namespace SimpleOCRforBase32
                     engine.SetVariable( "wordrec_enable_assoc", "0" );
                     engine.SetVariable( "language_model_penalty_non_dict_word", "0.15" );
                     engine.SetVariable( "language_model_penalty_non_freq_dict_word", "0.25" );
-                    engine.SetVariable( "classify_bln_numeric_mode", "1" );
                     engine.DefaultPageSegMode = PageSegMode.SingleColumn;
 
-                    var candidates = new List<Tuple<string, float>>();
+                    var candidates = new List<CandidateResult>();
 
-                    if ( !string.IsNullOrEmpty( preprocessedPath ) && File.Exists( preprocessedPath ) )
+                    var sources = new List<ProcessingSource>();
+
+                    if ( preprocessResult != null
+                        && !string.IsNullOrEmpty( preprocessResult.ProcessedImagePath )
+                        && File.Exists( preprocessResult.ProcessedImagePath ) )
                     {
-                        using ( var img = Pix.LoadFromFile( preprocessedPath ) )
-                        using ( var page = engine.Process( img, PageSegMode.SingleColumn ) )
+                        sources.Add( new ProcessingSource(
+                            preprocessResult.ProcessedImagePath,
+                            preprocessResult.LineRectangles,
+                            "preprocessed" ) );
+                    }
+
+                    sources.Add( new ProcessingSource(
+                        filePath,
+                        Array.Empty<OpenCvSharp.Rect>(),
+                        "original" ) );
+
+                    foreach ( var numericMode in new[] { true, false } )
+                    {
+                        engine.SetVariable( "classify_bln_numeric_mode", numericMode ? "1" : "0" );
+
+                        foreach ( var source in sources )
                         {
-                            var rawText = page.GetText() ?? string.Empty;
-                            candidates.Add( Tuple.Create( NormalizeText( rawText ), page.GetMeanConfidence() ) );
+                            using ( var pix = Pix.LoadFromFile( source.Path ) )
+                            {
+                                using ( var page = engine.Process( pix, PageSegMode.SingleColumn ) )
+                                {
+                                    AddCandidateFromRawText(
+                                        candidates,
+                                        page.GetText(),
+                                        page.GetMeanConfidence(),
+                                        numericMode,
+                                        $"{source.Name}:column" );
+                                }
+
+                                if ( source.LineRectangles.Count > 0 )
+                                {
+                                    var lineTexts = new List<string>();
+                                    var lineConfidences = new List<float>();
+
+                                    foreach ( var rect in source.LineRectangles )
+                                    {
+                                        using ( var page = engine.Process( pix, new Tesseract.Rect( rect.X, rect.Y, rect.Width, rect.Height ), PageSegMode.SingleLine ) )
+                                        {
+                                            var normalizedLine = NormalizeLine( page.GetText() ?? string.Empty );
+                                            if ( !string.IsNullOrWhiteSpace( normalizedLine ) )
+                                            {
+                                                lineTexts.Add( normalizedLine );
+                                                lineConfidences.Add( page.GetMeanConfidence() );
+                                            }
+                                        }
+                                    }
+
+                                    if ( lineTexts.Count > 0 )
+                                    {
+                                        var averageConfidence = lineConfidences.Count > 0
+                                            ? (float)lineConfidences.Average()
+                                            : 0f;
+                                        AddCandidateFromNormalizedLines(
+                                            candidates,
+                                            lineTexts,
+                                            averageConfidence,
+                                            numericMode,
+                                            $"{source.Name}:lines" );
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    using ( var img = Pix.LoadFromFile( filePath ) )
-                    using ( var page = engine.Process( img, PageSegMode.SingleColumn ) )
-                    {
-                        var rawText = page.GetText() ?? string.Empty;
-                        candidates.Add( Tuple.Create( NormalizeText( rawText ), page.GetMeanConfidence() ) );
-                    }
-
-                    var best = candidates
-                        .OrderByDescending( c => CountValidLines( c.Item1 ) )
-                        .ThenByDescending( c => c.Item2 )
-                        .FirstOrDefault();
-
-                    return best?.Item1 ?? string.Empty;
+                    var mergedText = MergeCandidates( candidates );
+                    return mergedText;
                 }
             }
             finally
             {
-                if ( !string.IsNullOrEmpty( preprocessedPath ) && File.Exists( preprocessedPath ) )
+                if ( preprocessResult != null
+                    && !string.IsNullOrEmpty( preprocessResult.ProcessedImagePath )
+                    && File.Exists( preprocessResult.ProcessedImagePath ) )
                 {
-                    File.Delete( preprocessedPath );
+                    File.Delete( preprocessResult.ProcessedImagePath );
                 }
             }
         }
+
+        private const int ChunkLength = 32;
+        private const char ChecksumSeparator = '-';
+        private const string ChecksumAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
         private static readonly string AllowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567-";
         private static readonly HashSet<char> AllowedCharacterSet = new HashSet<char>( AllowedCharacters );
@@ -214,48 +581,14 @@ namespace SimpleOCRforBase32
                 .Select( c => SoftEquivalents.TryGetValue( c, out var mapped ) ? mapped : c )
                 .ToArray() );
 
-            if ( lettersOnly.Length < 32 )
+            if ( lettersOnly.Length < ChunkLength )
             {
                 return string.Empty;
             }
 
-            var prefixLength = Math.Min( 32, lettersOnly.Length );
-            var prefix = lettersOnly.Substring( 0, prefixLength );
-
-            var remainder = lettersOnly.Length > 32
-                ? lettersOnly.Substring( 32 )
-                : string.Empty;
-
-            if ( prefix.Length < 32 && remainder.Length > 0 )
-            {
-                var needed = Math.Min( 32 - prefix.Length, remainder.Length );
-                prefix += remainder.Substring( 0, needed );
-                remainder = remainder.Substring( needed );
-            }
-
-            if ( remainder.Length > 2 )
-            {
-                remainder = remainder.Substring( 0, 2 );
-            }
-
-            if ( remainder.Length == 0 )
-            {
-                return FormatPrefix( prefix );
-            }
-
-            return $"{FormatPrefix( prefix )}-{remainder}";
-        }
-
-        private static int CountValidLines ( string normalizedText )
-        {
-            if ( string.IsNullOrEmpty( normalizedText ) )
-            {
-                return 0;
-            }
-
-            return normalizedText
-                .Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries )
-                .Count( line => line.Length >= 32 );
+            var chunk = lettersOnly.Substring( 0, ChunkLength );
+            var checksum = ComputeChecksum( chunk );
+            return $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";
         }
 
         private static string FormatPrefix ( string prefix )
@@ -275,9 +608,47 @@ namespace SimpleOCRforBase32
             return string.Join( " ", groups );
         }
 
-        private static string PreprocessImage ( string originalPath )
+        private static string ComputeChecksum ( string chunk )
+        {
+            if ( string.IsNullOrEmpty( chunk ) )
+            {
+                return new string( ChecksumAlphabet[0], 2 );
+            }
+
+            unchecked
+            {
+                var hash = 0;
+                foreach ( var ch in chunk )
+                {
+                    hash = ( hash * 33 ) ^ ch;
+                }
+
+                hash &= 0x3FF; // 10 bits
+                var first = hash / ChecksumAlphabet.Length;
+                var second = hash % ChecksumAlphabet.Length;
+                return new string( new[] { ChecksumAlphabet[first], ChecksumAlphabet[second] } );
+            }
+        }
+
+        private static string SanitizeLine ( string formattedLine )
+        {
+            if ( string.IsNullOrWhiteSpace( formattedLine ) )
+            {
+                return string.Empty;
+            }
+
+            var chars = formattedLine
+                .Where( char.IsLetterOrDigit )
+                .Select( char.ToUpperInvariant )
+                .ToArray();
+
+            return new string( chars );
+        }
+
+        private static PreprocessResult PreprocessImage ( string originalPath )
         {
             var tempPath = Path.Combine( Path.GetTempPath(), $"simpleocr-pre-{Guid.NewGuid():N}.png" );
+            var lineRects = new List<OpenCvSharp.Rect>();
 
             using ( var src = Cv2.ImRead( originalPath, ImreadModes.Color ) )
             {
@@ -309,11 +680,191 @@ namespace SimpleOCRforBase32
                     }
 
                     Cv2.Resize( closed, scaled, new OpenCvSharp.Size(), 1.6, 1.6, InterpolationFlags.Linear );
+                    var width = scaled.Cols;
+                    var height = scaled.Rows;
+                    var rowThreshold = Math.Max( 1, width / 25 );
+                    var minLineHeight = Math.Max( 5, height / 200 );
+
+                    var y = 0;
+                    while ( y < height )
+                    {
+                        int rowCount;
+                        using ( var row = scaled.Row( y ) )
+                        {
+                            rowCount = Cv2.CountNonZero( row );
+                        }
+
+                        if ( rowCount > rowThreshold )
+                        {
+                            var start = y;
+                            do
+                            {
+                                y++;
+                                if ( y >= height )
+                                {
+                                    break;
+                                }
+
+                                using ( var nextRow = scaled.Row( y ) )
+                                {
+                                    rowCount = Cv2.CountNonZero( nextRow );
+                                }
+                            }
+                            while ( rowCount > rowThreshold );
+
+                            var end = Math.Min( height - 1, y - 1 );
+                            var top = Math.Max( 0, start - 2 );
+                            var bottom = Math.Min( height - 1, end + 2 );
+                            var lineHeight = bottom - top + 1;
+                            if ( lineHeight < minLineHeight )
+                            {
+                                continue;
+                            }
+
+                            var roiRect = new OpenCvSharp.Rect( 0, top, width, lineHeight );
+                            using ( var roi = new Mat( scaled, roiRect ) )
+                            {
+                                var columnCounts = new int[width];
+                                for ( var x = 0; x < width; x++ )
+                                {
+                                    using ( var col = roi.Col( x ) )
+                                    {
+                                        columnCounts[x] = Cv2.CountNonZero( col );
+                                    }
+                                }
+
+                                var columnThreshold = Math.Max( 1, lineHeight / 8 );
+                                var left = 0;
+                                var right = width - 1;
+
+                                while ( left < width && columnCounts[left] <= columnThreshold )
+                                {
+                                    left++;
+                                }
+
+                                while ( right >= 0 && columnCounts[right] <= columnThreshold )
+                                {
+                                    right--;
+                                }
+
+                                if ( right <= left )
+                                {
+                                    lineRects.Add( roiRect );
+                                }
+                                else
+                                {
+                                    const int margin = 2;
+                                    var adjustedLeft = Math.Max( 0, left - margin );
+                                    var adjustedRight = Math.Min( width - 1, right + margin );
+                                    var rect = new OpenCvSharp.Rect(
+                                        adjustedLeft,
+                                        top,
+                                        adjustedRight - adjustedLeft + 1,
+                                        lineHeight );
+                                    lineRects.Add( rect );
+                                }
+                            }
+                        }
+                        else
+                        {
+                            y++;
+                        }
+                    }
+
                     Cv2.ImWrite( tempPath, scaled );
                 }
             }
 
-            return tempPath;
+            lineRects.Sort( ( a, b ) => a.Y.CompareTo( b.Y ) );
+            return new PreprocessResult( tempPath, lineRects );
+        }
+
+        private sealed class ProcessingSource
+        {
+            public ProcessingSource ( string path, IReadOnlyList<OpenCvSharp.Rect> lineRectangles, string name )
+            {
+                Path = path;
+                LineRectangles = lineRectangles ?? Array.Empty<OpenCvSharp.Rect>();
+                Name = name ?? string.Empty;
+            }
+
+            public string Path { get; }
+            public IReadOnlyList<OpenCvSharp.Rect> LineRectangles { get; }
+            public string Name { get; }
+        }
+
+        private sealed class CandidateResult
+        {
+            public CandidateResult ( string text, float confidence, bool numericMode, string source )
+            {
+                Text = text ?? string.Empty;
+                Confidence = Math.Max( confidence, 0f );
+                NumericMode = numericMode;
+                Source = source ?? string.Empty;
+
+                Lines = Text
+                    .Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries )
+                    .ToArray();
+
+                SanitizedLines = Lines
+                    .Select( SanitizeLine )
+                    .ToArray();
+
+                ValidLineCount = SanitizedLines.Count( line => line.Length >= ChunkLength );
+            }
+
+            public string Text { get; }
+            public float Confidence { get; }
+            public bool NumericMode { get; }
+            public string Source { get; }
+            public string[] Lines { get; }
+            public string[] SanitizedLines { get; }
+            public int ValidLineCount { get; }
+            public float Weight => Confidence + ValidLineCount * 0.001f;
+        }
+
+        private sealed class CharVote
+        {
+            public CharVote ( char character, float weight, CandidateResult candidate )
+            {
+                Character = character;
+                Weight = weight;
+                Candidate = candidate;
+            }
+
+            public char Character { get; }
+            public float Weight { get; }
+            public CandidateResult Candidate { get; }
+        }
+
+        private sealed class VoteSummary
+        {
+            public VoteSummary ( char character, List<CharVote> votes )
+            {
+                Character = character;
+                Votes = votes ?? new List<CharVote>();
+                Weight = Votes.Sum( v => v.Weight );
+                NumericWeight = Votes.Where( v => v.Candidate.NumericMode ).Sum( v => v.Weight );
+                AlphaWeight = Votes.Where( v => !v.Candidate.NumericMode ).Sum( v => v.Weight );
+            }
+
+            public char Character { get; }
+            public List<CharVote> Votes { get; }
+            public float Weight { get; }
+            public float NumericWeight { get; }
+            public float AlphaWeight { get; }
+        }
+
+        private sealed class PreprocessResult
+        {
+            public PreprocessResult ( string processedImagePath, IReadOnlyList<OpenCvSharp.Rect> lineRectangles )
+            {
+                ProcessedImagePath = processedImagePath;
+                LineRectangles = lineRectangles ?? Array.Empty<OpenCvSharp.Rect>();
+            }
+
+            public string ProcessedImagePath { get; }
+            public IReadOnlyList<OpenCvSharp.Rect> LineRectangles { get; }
         }
     }
 }

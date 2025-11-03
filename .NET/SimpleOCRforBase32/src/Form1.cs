@@ -520,12 +520,15 @@ namespace SimpleOCRforBase32
                 var digit = IsDigit( primary.Character ) ? primary : secondary;
                 var letter = IsDigit( primary.Character ) ? secondary : primary;
 
-                if ( digit.NumericWeight > letter.AlphaWeight * 1.1f )
+                var digitWeight = digit.DigitWeight > 0f ? digit.DigitWeight : digit.NumericWeight;
+                var letterWeight = letter.LetterWeight > 0f ? letter.LetterWeight : letter.AlphaWeight;
+
+                if ( digitWeight > letterWeight * 1.05f )
                 {
                     return digit.Character;
                 }
 
-                if ( letter.AlphaWeight > digit.NumericWeight * 1.05f )
+                if ( letterWeight > digitWeight * 1.05f )
                 {
                     return letter.Character;
                 }
@@ -533,12 +536,12 @@ namespace SimpleOCRforBase32
 
             if ( IsIOrJPair( primary.Character, secondary.Character ) )
             {
-                if ( primary.AlphaWeight > secondary.AlphaWeight * 1.05f )
+                if ( primary.LetterWeight > secondary.LetterWeight * 1.05f )
                 {
                     return primary.Character;
                 }
 
-                if ( secondary.AlphaWeight > primary.AlphaWeight * 1.05f )
+                if ( secondary.LetterWeight > primary.LetterWeight * 1.05f )
                 {
                     return secondary.Character;
                 }
@@ -760,16 +763,18 @@ namespace SimpleOCRforBase32
 
         private static readonly Dictionary<char, char[]> AmbiguityMap = new Dictionary<char, char[]>
         {
-            { '5', new[] { 'S' } },
-            { 'S', new[] { '5', '8' } },
+            { '5', new[] { 'S', 'A' } },
+            { 'S', new[] { '5', '8', 'A' } },
             { '4', new[] { 'A' } },
-            { 'A', new[] { '4' } },
+            { 'A', new[] { '4', '5', 'S' } },
             { 'I', new[] { 'J', '1', 'L' } },
             { 'J', new[] { 'I', 'L', '1' } },
             { '1', new[] { 'I', 'L', 'J' } },
             { 'L', new[] { '1', 'I', 'J' } },
             { '2', new[] { 'Z' } },
-            { 'Z', new[] { '2' } }
+            { 'Z', new[] { '2', '3' } },
+            { '3', new[] { 'R', 'Z' } },
+            { 'R', new[] { '3' } }
         };
 
         private static readonly string AllowedCharacters = $"{ChecksumAlphabet}{ChecksumSeparator}";
@@ -1021,7 +1026,7 @@ namespace SimpleOCRforBase32
                                     }
                                 }
 
-                                var columnThreshold = Math.Max( 1, lineHeight / 8 );
+                                var columnThreshold = Math.Max( 1, lineHeight / 12 );
                                 var left = 0;
                                 var right = width - 1;
 
@@ -1041,7 +1046,7 @@ namespace SimpleOCRforBase32
                                 }
                                 else
                                 {
-                                    const int margin = 2;
+                                    const int margin = 4;
                                     var adjustedLeft = Math.Max( 0, left - margin );
                                     var adjustedRight = Math.Min( width - 1, right + margin );
                                     var rect = new OpenCvSharp.Rect(
@@ -1195,6 +1200,8 @@ namespace SimpleOCRforBase32
                 Weight = Votes.Sum( v => v.Weight );
                 NumericWeight = Votes.Where( v => v.Candidate.NumericMode ).Sum( v => v.Weight );
                 AlphaWeight = Votes.Where( v => !v.Candidate.NumericMode ).Sum( v => v.Weight );
+                DigitWeight = Votes.Where( v => char.IsDigit( v.Character ) ).Sum( v => v.Weight );
+                LetterWeight = Votes.Where( v => char.IsLetter( v.Character ) ).Sum( v => v.Weight );
             }
 
             public char Character { get; }
@@ -1202,6 +1209,8 @@ namespace SimpleOCRforBase32
             public float Weight { get; }
             public float NumericWeight { get; }
             public float AlphaWeight { get; }
+            public float DigitWeight { get; }
+            public float LetterWeight { get; }
         }
 
         private sealed class AmbiguousPosition

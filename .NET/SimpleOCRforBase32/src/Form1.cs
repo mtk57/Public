@@ -183,6 +183,33 @@ namespace SimpleOCRforBase32
                     checksum = ComputeChecksum( chunk );
                 }
 
+                var bestAligned = lineCandidates
+                    .Select( c => ( Candidate: c, Info: c.GetLineInfo( lineIndex ) ) )
+                    .Where( x => x.Info != null )
+                    .Select( x => new
+                    {
+                        x.Info,
+                        Weight = x.Candidate.Weight,
+                        Distance = ComputeHammingDistance( chunk, x.Info.Chunk )
+                    } )
+                    .OrderBy( x => x.Distance )
+                    .ThenByDescending( x => x.Weight )
+                    .FirstOrDefault();
+
+                if ( bestAligned?.Info != null && bestAligned.Distance > 0 && bestAligned.Distance <= 4 )
+                {
+                    var candidateChecksum = ComputeChecksum( bestAligned.Info.Chunk );
+                    var matchesTarget = string.IsNullOrEmpty( targetChecksum )
+                        ? bestAligned.Info.ChecksumMatches
+                        : string.Equals( candidateChecksum, targetChecksum, StringComparison.OrdinalIgnoreCase );
+
+                    if ( matchesTarget )
+                    {
+                        chunk = bestAligned.Info.Chunk;
+                        checksum = candidateChecksum;
+                    }
+                }
+
                 var formatted = $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";
                 mergedLines.Add( formatted );
             }
@@ -296,6 +323,28 @@ namespace SimpleOCRforBase32
                 .Where( vote => vote.Character == character )
                 .Sum( vote => vote.Weight );
         }
+
+        private static int ComputeHammingDistance ( string left, string right )
+        {
+            if ( string.IsNullOrEmpty( left ) || string.IsNullOrEmpty( right ) )
+            {
+                return int.MaxValue;
+            }
+
+            var length = Math.Min( left.Length, right.Length );
+            var distance = 0;
+            for ( var i = 0; i < length; i++ )
+            {
+                if ( left[i] != right[i] )
+                {
+                    distance++;
+                }
+            }
+
+            distance += Math.Abs( left.Length - right.Length );
+            return distance;
+        }
+
         private static string DetermineTargetChecksum ( IEnumerable<CandidateResult> lineCandidates, int lineIndex )
         {
             if ( lineCandidates == null )
@@ -727,7 +776,7 @@ namespace SimpleOCRforBase32
 
         private static readonly Dictionary<char, char[]> AmbiguityMap = new Dictionary<char, char[]>
         {
-            { '5', new[] { 'S', 'B' } },
+            { '5', new[] { 'S' } },
             { 'S', new[] { '5' } },
             { '4', new[] { 'A' } },
             { 'A', new[] { '4' } },
@@ -735,17 +784,8 @@ namespace SimpleOCRforBase32
             { 'J', new[] { 'I', 'L' } },
             { '1', new[] { 'I', 'L' } },
             { 'L', new[] { '1', 'I' } },
-            { '0', new[] { 'O' } },
-            { 'O', new[] { '0', 'Q' } },
-            { 'Q', new[] { 'O' } },
             { '2', new[] { 'Z' } },
-            { 'Z', new[] { '2' } },
-            { '8', new[] { 'B' } },
-            { 'B', new[] { '8', '5' } },
-            { '6', new[] { 'G' } },
-            { 'G', new[] { '6' } },
-            { 'E', new[] { 'F' } },
-            { 'F', new[] { 'E' } }
+            { 'Z', new[] { '2' } }
         };
 
         private static readonly string AllowedCharacters = $"{ChecksumAlphabet}{ChecksumSeparator}";

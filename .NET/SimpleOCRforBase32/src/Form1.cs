@@ -155,9 +155,9 @@ namespace SimpleOCRforBase32
                 }
 
                 var targetChecksum = DetermineTargetChecksum( lineCandidates, lineIndex );
-                var chunk = new string( chunkChars );
                 ApplyBigramAdjustments( chunkChars, votesByPosition );
 
+                var chunk = new string( chunkChars );
                 var checksum = ComputeChecksum( chunk );
 
                 if ( !string.IsNullOrEmpty( targetChecksum )
@@ -889,6 +889,47 @@ namespace SimpleOCRforBase32
             return builder.ToString();
         }
 
+        private static Mat DeskewImage ( Mat src )
+        {
+            if ( src == null || src.Empty() )
+            {
+                return new Mat();
+            }
+
+            using ( var gray = new Mat() )
+            using ( var inverted = new Mat() )
+            using ( var nonZero = new Mat() )
+            {
+                Cv2.CvtColor( src, gray, ColorConversionCodes.BGR2GRAY );
+                Cv2.BitwiseNot( gray, inverted );
+
+                Cv2.FindNonZero( inverted, nonZero );
+                if ( nonZero.Empty() )
+                {
+                    return src.Clone();
+                }
+
+                var rect = Cv2.MinAreaRect( nonZero );
+                var angle = rect.Angle;
+                if ( angle < -45 )
+                {
+                    angle = -( 90 + angle );
+                }
+                else
+                {
+                    angle = -angle;
+                }
+
+                var center = rect.Center;
+                using ( var rotMat = Cv2.GetRotationMatrix2D( center, angle, 1.0 ) )
+                {
+                    var deskewed = new Mat();
+                    Cv2.WarpAffine( src, deskewed, rotMat, src.Size(), InterpolationFlags.Cubic, BorderTypes.Replicate );
+                    return deskewed;
+                }
+            }
+        }
+
         private static PreprocessResult PreprocessImage ( string originalPath )
         {
             var tempPath = Path.Combine( Path.GetTempPath(), $"simpleocr-pre-{Guid.NewGuid():N}.png" );
@@ -901,13 +942,16 @@ namespace SimpleOCRforBase32
                     throw new InvalidOperationException( "画像を読み込めませんでした。" );
                 }
 
+                using ( var deskewed = DeskewImage( src ) )
                 using ( var gray = new Mat() )
                 using ( var blurred = new Mat() )
                 using ( var binary = new Mat() )
                 using ( var closed = new Mat() )
                 using ( var scaled = new Mat() )
                 {
-                    Cv2.CvtColor( src, gray, ColorConversionCodes.BGR2GRAY );
+                    var sourceForProcessing = deskewed.Empty() ? src : deskewed;
+
+                    Cv2.CvtColor( sourceForProcessing, gray, ColorConversionCodes.BGR2GRAY );
                     Cv2.GaussianBlur( gray, blurred, new OpenCvSharp.Size( 3, 3 ), 0 );
                     Cv2.AdaptiveThreshold(
                         blurred,

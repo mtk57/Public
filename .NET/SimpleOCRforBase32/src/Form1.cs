@@ -61,7 +61,7 @@ namespace SimpleOCRforBase32
             }
 
             var activeCandidates = candidates
-                .Where( c => c.ValidLineCount > 0 )
+                .Where( c => c.LineInfos.Length > 0 )
                 .ToList();
 
             if ( activeCandidates.Count == 0 )
@@ -69,13 +69,13 @@ namespace SimpleOCRforBase32
                 activeCandidates = candidates;
             }
 
-            var lineCount = activeCandidates.Max( c => c.Lines.Length );
+            var lineCount = activeCandidates.Max( c => c.LineInfos.Length );
             var mergedLines = new List<string>( lineCount );
 
             for ( var lineIndex = 0; lineIndex < lineCount; lineIndex++ )
             {
                 var lineCandidates = activeCandidates
-                    .Where( c => lineIndex < c.Lines.Length )
+                    .Where( c => lineIndex < c.LineInfos.Length && c.LineInfos[lineIndex].IsChunkComplete )
                     .ToList();
 
                 if ( lineCandidates.Count == 0 )
@@ -84,7 +84,7 @@ namespace SimpleOCRforBase32
                 }
 
                 var sanitizedLength = lineCandidates
-                    .Select( c => lineIndex < c.SanitizedLines.Length ? c.SanitizedLines[lineIndex].Length : 0 )
+                    .Select( c => c.LineInfos[lineIndex].CombinedLength )
                     .Where( length => length >= ChunkLength )
                     .DefaultIfEmpty( 0 )
                     .Max();
@@ -100,26 +100,30 @@ namespace SimpleOCRforBase32
 
                 foreach ( var candidate in lineCandidates )
                 {
-                    if ( lineIndex >= candidate.SanitizedLines.Length )
+                    var info = candidate.LineInfos[lineIndex];
+                    var combined = info.Combined;
+                    if ( string.IsNullOrEmpty( combined ) )
                     {
                         continue;
                     }
 
-                    var sanitized = candidate.SanitizedLines[lineIndex];
-                    if ( string.IsNullOrEmpty( sanitized ) )
+                    var length = Math.Min( sanitizedLength, combined.Length );
+                    for ( var posLoop = 0; posLoop < length; posLoop++ )
                     {
-                        continue;
-                    }
-
-                    for ( var pos = 0; pos < Math.Min( sanitizedLength, sanitized.Length ); pos++ )
-                    {
-                        if ( !votesByPosition.TryGetValue( pos, out var list ) )
+                        var chLoop = combined[posLoop];
+                        if ( !char.IsLetterOrDigit( chLoop ) )
                         {
-                            list = new List<CharVote>();
-                            votesByPosition[pos] = list;
+                            continue;
                         }
 
-                        list.Add( new CharVote( sanitized[pos], candidate.Weight, candidate ) );
+                        if ( !votesByPosition.TryGetValue( posLoop, out var list ) )
+                        {
+                            list = new List<CharVote>();
+                            votesByPosition[posLoop] = list;
+                        }
+
+                        var weightMultiplier = info.ChecksumMatches ? 1.1f : 1.0f;
+                        list.Add( new CharVote( chLoop, candidate.Weight * weightMultiplier, candidate ) );
                     }
                 }
 
@@ -128,47 +132,51 @@ namespace SimpleOCRforBase32
                     continue;
                 }
 
-                var finalChars = new char[sanitizedLength];
+                var chunkLength = Math.Min( ChunkLength, sanitizedLength );
+                var chunkChars = new char[chunkLength];
 
                 var orderedLineCandidates = lineCandidates
                     .OrderByDescending( c => c.Weight )
                     .ToList();
 
-                for ( var pos = 0; pos < sanitizedLength; pos++ )
+                for ( var posLoop = 0; posLoop < chunkLength; posLoop++ )
                 {
-                    if ( !votesByPosition.TryGetValue( pos, out var votes ) || votes.Count == 0 )
+                    if ( !votesByPosition.TryGetValue( posLoop, out var votes ) || votes.Count == 0 )
                     {
-                        finalChars[pos] = GetFallbackCharacter( orderedLineCandidates, lineIndex, pos );
+                        chunkChars[posLoop] = GetFallbackCharacter( orderedLineCandidates, lineIndex, posLoop );
                         continue;
                     }
 
-                    finalChars[pos] = SelectCharacterForPosition( votes );
+                    chunkChars[posLoop] = SelectCharacterForPosition( votes );
                 }
 
-                ApplyBigramAdjustments( finalChars, votesByPosition );
+                ApplyBigramAdjustments( chunkChars, votesByPosition );
 
-                var sanitizedFinal = new string( finalChars
-                    .Where( char.IsLetterOrDigit )
-                    .ToArray() );
-
-                if ( sanitizedFinal.Length < ChunkLength )
-                {
-                    continue;
-                }
-
-                var chunk = sanitizedFinal.Substring( 0, Math.Min( ChunkLength, sanitizedFinal.Length ) );
+                var targetChecksum = DetermineTargetChecksum( lineCandidates, lineIndex );
+                var chunk = new string( chunkChars );
                 var checksum = ComputeChecksum( chunk );
-                var formatted = $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";
 
-                if ( !string.IsNullOrWhiteSpace( formatted ) )
+                if ( !string.IsNullOrEmpty( targetChecksum )
+                    && targetChecksum.Length == 2
+                    && !string.Equals( checksum, targetChecksum, StringComparison.OrdinalIgnoreCase )
+                    && TryAdjustChunkWithChecksum( chunkChars, votesByPosition, targetChecksum, out var correctedChunk ) )
                 {
-                    mergedLines.Add( formatted );
+                    chunk = correctedChunk;
+                    chunkChars = correctedChunk.ToCharArray();
+                    checksum = targetChecksum;
                 }
+                else
+                {
+                    checksum = ComputeChecksum( chunk );
+                }
+
+                var formatted = $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";
+                mergedLines.Add( formatted );
             }
 
             if ( mergedLines.Count == 0 )
             {
-                var fallback = activeCandidates
+                var fallback = candidates
                     .OrderByDescending( c => c.ValidLineCount )
                     .ThenByDescending( c => c.Confidence )
                     .FirstOrDefault();
@@ -177,6 +185,7 @@ namespace SimpleOCRforBase32
 
             return string.Join( Environment.NewLine, mergedLines );
         }
+
 
         private static char SelectCharacterForPosition ( List<CharVote> votes )
         {
@@ -217,32 +226,32 @@ namespace SimpleOCRforBase32
 
             foreach ( var candidate in orderedCandidates )
             {
-                if ( lineIndex >= candidate.SanitizedLines.Length )
+                var info = candidate.GetLineInfo( lineIndex );
+                if ( info == null )
                 {
                     continue;
                 }
 
-                var sanitized = candidate.SanitizedLines[lineIndex];
-                if ( sanitized.Length > position )
+                if ( position < info.Chunk.Length )
                 {
-                    return sanitized[position];
+                    return info.Chunk[position];
                 }
             }
 
             return ' ';
         }
 
-        private static void ApplyBigramAdjustments ( char[] finalChars, Dictionary<int, List<CharVote>> votesByPosition )
+        private static void ApplyBigramAdjustments ( char[] chunkChars, Dictionary<int, List<CharVote>> votesByPosition )
         {
-            if ( finalChars == null || finalChars.Length < 2 )
+            if ( chunkChars == null || chunkChars.Length < 2 )
             {
                 return;
             }
 
-            for ( var i = 0; i < finalChars.Length - 1; i++ )
+            for ( var i = 0; i < chunkChars.Length - 1; i++ )
             {
-                var current = finalChars[i];
-                var next = finalChars[i + 1];
+                var current = chunkChars[i];
+                var next = chunkChars[i + 1];
 
                 if ( ( current == '5' && next == 'S' ) || ( current == 'S' && next == '5' ) )
                 {
@@ -251,13 +260,13 @@ namespace SimpleOCRforBase32
 
                     if ( weight5 > weightS * 1.1f )
                     {
-                        finalChars[i] = '5';
-                        finalChars[i + 1] = '5';
+                        chunkChars[i] = '5';
+                        chunkChars[i + 1] = '5';
                     }
                     else if ( weightS > weight5 * 1.1f )
                     {
-                        finalChars[i] = 'S';
-                        finalChars[i + 1] = 'S';
+                        chunkChars[i] = 'S';
+                        chunkChars[i + 1] = 'S';
                     }
                 }
             }
@@ -274,6 +283,149 @@ namespace SimpleOCRforBase32
                 .Where( vote => vote.Character == character )
                 .Sum( vote => vote.Weight );
         }
+        private static string DetermineTargetChecksum ( IEnumerable<CandidateResult> lineCandidates, int lineIndex )
+        {
+            if ( lineCandidates == null )
+            {
+                return null;
+            }
+
+            var votes = new Dictionary<string, float>( StringComparer.Ordinal );
+
+            foreach ( var candidate in lineCandidates )
+            {
+                var info = candidate.GetLineInfo( lineIndex );
+                if ( info == null || !info.HasChecksum )
+                {
+                    continue;
+                }
+
+                if ( !votes.TryGetValue( info.Checksum, out var weight ) )
+                {
+                    votes[info.Checksum] = 0f;
+                }
+
+                var weightContribution = candidate.Weight * ( info.ChecksumMatches ? 1.2f : 1.0f );
+                votes[info.Checksum] += weightContribution;
+            }
+
+            if ( votes.Count == 0 )
+            {
+                return null;
+            }
+
+            return votes
+                .OrderByDescending( kvp => kvp.Value )
+                .First()
+                .Key;
+        }
+
+        private static bool TryAdjustChunkWithChecksum ( char[] chunkChars, Dictionary<int, List<CharVote>> votesByPosition, string targetChecksum, out string corrected )
+        {
+            corrected = null;
+
+            if ( chunkChars == null || chunkChars.Length == 0 || string.IsNullOrEmpty( targetChecksum ) )
+            {
+                return false;
+            }
+
+            var currentChecksum = ComputeChecksum( new string( chunkChars ) );
+            if ( string.Equals( currentChecksum, targetChecksum, StringComparison.OrdinalIgnoreCase ) )
+            {
+                corrected = new string( chunkChars );
+                return true;
+            }
+
+            var positions = new List<AmbiguousPosition>();
+
+            for ( var pos = 0; pos < chunkChars.Length; pos++ )
+            {
+                var alternatives = GetAmbiguousAlternatives( pos, chunkChars[pos], votesByPosition );
+                if ( alternatives.Count > 0 )
+                {
+                    positions.Add( new AmbiguousPosition( pos, alternatives ) );
+                }
+            }
+
+            if ( positions.Count == 0 )
+            {
+                return false;
+            }
+
+            positions = positions
+                .OrderByDescending( p => p.Alternatives.Count > 0 ? p.Alternatives[0].Weight : 0f )
+                .ToList();
+
+            var maxDepth = Math.Min( 3, positions.Count );
+            if ( TryAdjustRecursive( chunkChars, positions, 0, maxDepth, targetChecksum, out corrected ) )
+            {
+                return true;
+            }
+
+            corrected = null;
+            return false;
+        }
+
+        private static List<AlternativeChar> GetAmbiguousAlternatives ( int position, char currentChar, Dictionary<int, List<CharVote>> votesByPosition )
+        {
+            var result = new List<AlternativeChar>();
+
+            if ( votesByPosition == null || !votesByPosition.TryGetValue( position, out var votes ) )
+            {
+                return result;
+            }
+
+            result.AddRange( votes
+                .GroupBy( vote => vote.Character )
+                .Select( g => new AlternativeChar( g.Key, g.Sum( vote => vote.Weight ) ) )
+                .Where( alt => IsAmbiguousPair( alt.Character, currentChar ) && alt.Character != currentChar )
+                .OrderByDescending( alt => alt.Weight )
+                .Take( 2 ) );
+
+            return result;
+        }
+
+        private static bool TryAdjustRecursive ( char[] chunkChars, List<AmbiguousPosition> positions, int index, int depthRemaining, string targetChecksum, out string corrected )
+        {
+            var currentChecksum = ComputeChecksum( new string( chunkChars ) );
+            if ( string.Equals( currentChecksum, targetChecksum, StringComparison.OrdinalIgnoreCase ) )
+            {
+                corrected = new string( chunkChars );
+                return true;
+            }
+
+            if ( depthRemaining == 0 || index >= positions.Count )
+            {
+                corrected = null;
+                return false;
+            }
+
+            for ( var i = index; i < positions.Count; i++ )
+            {
+                var position = positions[i];
+                var original = chunkChars[position.Index];
+
+                foreach ( var alternative in position.Alternatives )
+                {
+                    if ( alternative.Character == original )
+                    {
+                        continue;
+                    }
+
+                    chunkChars[position.Index] = alternative.Character;
+                    if ( TryAdjustRecursive( chunkChars, positions, i + 1, depthRemaining - 1, targetChecksum, out corrected ) )
+                    {
+                        return true;
+                    }
+                }
+
+                chunkChars[position.Index] = original;
+            }
+
+            corrected = null;
+            return false;
+        }
+
 
         private static bool IsAmbiguousPair ( char a, char b )
         {
@@ -533,7 +685,7 @@ namespace SimpleOCRforBase32
         private const char ChecksumSeparator = '-';
         private const string ChecksumAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-        private static readonly string AllowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567-";
+        private static readonly string AllowedCharacters = $"{ChecksumAlphabet}{ChecksumSeparator}";
         private static readonly HashSet<char> AllowedCharacterSet = new HashSet<char>( AllowedCharacters );
         private static readonly Dictionary<char, char> SoftEquivalents = new Dictionary<char, char>
         {
@@ -565,30 +717,18 @@ namespace SimpleOCRforBase32
                 return string.Empty;
             }
 
-            var filteredChars = rawLine
-                .Select( char.ToUpperInvariant )
-                .Where( AllowedCharacterSet.Contains )
-                .ToArray();
-
-            if ( filteredChars.Length == 0 )
+            var sanitized = SanitizeLine( rawLine );
+            if ( sanitized.Length < ChunkLength )
             {
                 return string.Empty;
             }
 
-            var filtered = new string( filteredChars );
-            var lettersOnly = new string( filtered
-                .Replace( "-", string.Empty )
-                .Select( c => SoftEquivalents.TryGetValue( c, out var mapped ) ? mapped : c )
-                .ToArray() );
-
-            if ( lettersOnly.Length < ChunkLength )
+            if ( sanitized.Length > ChunkLength + 2 )
             {
-                return string.Empty;
+                sanitized = sanitized.Substring( 0, ChunkLength + 2 );
             }
 
-            var chunk = lettersOnly.Substring( 0, ChunkLength );
-            var checksum = ComputeChecksum( chunk );
-            return $"{FormatPrefix( chunk )}{ChecksumSeparator}{checksum}";
+            return sanitized;
         }
 
         private static string FormatPrefix ( string prefix )
@@ -637,12 +777,29 @@ namespace SimpleOCRforBase32
                 return string.Empty;
             }
 
-            var chars = formattedLine
-                .Where( char.IsLetterOrDigit )
-                .Select( char.ToUpperInvariant )
-                .ToArray();
+            var builder = new System.Text.StringBuilder( formattedLine.Length );
 
-            return new string( chars );
+            foreach ( var ch in formattedLine )
+            {
+                var upper = char.ToUpperInvariant( ch );
+                if ( upper == ChecksumSeparator )
+                {
+                    continue;
+                }
+
+                if ( SoftEquivalents.TryGetValue( upper, out var mapped ) )
+                {
+                    builder.Append( mapped );
+                    continue;
+                }
+
+                if ( AllowedCharacterSet.Contains( upper ) && char.IsLetterOrDigit( upper ) )
+                {
+                    builder.Append( upper );
+                }
+            }
+
+            return builder.ToString();
         }
 
         private static PreprocessResult PreprocessImage ( string originalPath )
@@ -806,11 +963,16 @@ namespace SimpleOCRforBase32
                     .Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries )
                     .ToArray();
 
-                SanitizedLines = Lines
-                    .Select( SanitizeLine )
+                LineInfos = Lines
+                    .Select( CreateLineInfo )
+                    .Where( info => info != null )
                     .ToArray();
 
-                ValidLineCount = SanitizedLines.Count( line => line.Length >= ChunkLength );
+                ValidLineCount = LineInfos.Count( info => info.IsChunkComplete );
+                ChecksumMatchLineCount = LineInfos.Count( info => info.ChecksumMatches );
+                Weight = Confidence
+                    + ValidLineCount * 0.001f
+                    + ChecksumMatchLineCount * 0.01f;
             }
 
             public string Text { get; }
@@ -818,9 +980,65 @@ namespace SimpleOCRforBase32
             public bool NumericMode { get; }
             public string Source { get; }
             public string[] Lines { get; }
-            public string[] SanitizedLines { get; }
+            public CandidateLineInfo[] LineInfos { get; }
             public int ValidLineCount { get; }
-            public float Weight => Confidence + ValidLineCount * 0.001f;
+            public int ChecksumMatchLineCount { get; }
+            public float Weight { get; }
+
+            public CandidateLineInfo GetLineInfo ( int index )
+            {
+                return index >= 0 && index < LineInfos.Length
+                    ? LineInfos[index]
+                    : null;
+            }
+
+            private static CandidateLineInfo CreateLineInfo ( string line )
+            {
+                var sanitized = SanitizeLine( line );
+                if ( string.IsNullOrEmpty( sanitized ) )
+                {
+                    return null;
+                }
+
+                if ( sanitized.Length > ChunkLength + 2 )
+                {
+                    sanitized = sanitized.Substring( 0, ChunkLength + 2 );
+                }
+
+                if ( sanitized.Length < ChunkLength )
+                {
+                    return null;
+                }
+
+                var chunk = sanitized.Substring( 0, ChunkLength );
+                var checksum = sanitized.Length >= ChunkLength + 2
+                    ? sanitized.Substring( ChunkLength, 2 )
+                    : string.Empty;
+
+                var checksumMatches = checksum.Length == 2
+                    && string.Equals( ComputeChecksum( chunk ), checksum, StringComparison.OrdinalIgnoreCase );
+
+                return new CandidateLineInfo( chunk, checksum, checksumMatches );
+            }
+        }
+
+        private sealed class CandidateLineInfo
+        {
+            public CandidateLineInfo ( string chunk, string checksum, bool checksumMatches )
+            {
+                Chunk = chunk ?? string.Empty;
+                Checksum = checksum ?? string.Empty;
+                ChecksumMatches = checksumMatches;
+                Combined = Chunk + Checksum;
+            }
+
+            public string Chunk { get; }
+            public string Checksum { get; }
+            public bool ChecksumMatches { get; }
+            public string Combined { get; }
+            public int CombinedLength => Combined.Length;
+            public bool HasChecksum => Checksum.Length == 2;
+            public bool IsChunkComplete => Chunk.Length >= ChunkLength;
         }
 
         private sealed class CharVote
@@ -853,6 +1071,30 @@ namespace SimpleOCRforBase32
             public float Weight { get; }
             public float NumericWeight { get; }
             public float AlphaWeight { get; }
+        }
+
+        private sealed class AmbiguousPosition
+        {
+            public AmbiguousPosition ( int index, IReadOnlyList<AlternativeChar> alternatives )
+            {
+                Index = index;
+                Alternatives = alternatives?.ToList() ?? new List<AlternativeChar>();
+            }
+
+            public int Index { get; }
+            public List<AlternativeChar> Alternatives { get; }
+        }
+
+        private sealed class AlternativeChar
+        {
+            public AlternativeChar ( char character, float weight )
+            {
+                Character = character;
+                Weight = weight;
+            }
+
+            public char Character { get; }
+            public float Weight { get; }
         }
 
         private sealed class PreprocessResult

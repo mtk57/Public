@@ -111,6 +111,9 @@ namespace SimpleOCRforBase32
                 engine.SetVariable( "load_system_dawg", "0" );
                 engine.SetVariable( "load_freq_dawg", "0" );
                 engine.SetVariable( "wordrec_enable_assoc", "0" );
+                engine.SetVariable( "language_model_penalty_non_dict_word", "0.15" );
+                engine.SetVariable( "language_model_penalty_non_freq_dict_word", "0.25" );
+                engine.SetVariable( "classify_bln_numeric_mode", "1" );
                 engine.DefaultPageSegMode = PageSegMode.SingleColumn;
                 using ( var img = Pix.LoadFromFile( filePath ) )
                 using ( var page = engine.Process( img, PageSegMode.SingleColumn ) )
@@ -123,6 +126,12 @@ namespace SimpleOCRforBase32
 
         private static readonly string AllowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567-";
         private static readonly HashSet<char> AllowedCharacterSet = new HashSet<char>( AllowedCharacters );
+        private static readonly Dictionary<char, char> SoftEquivalents = new Dictionary<char, char>
+        {
+            { '0', 'O' },
+            { '1', 'I' },
+            { '8', 'B' }
+        };
 
         private static string NormalizeText ( string rawText )
         {
@@ -158,7 +167,10 @@ namespace SimpleOCRforBase32
             }
 
             var filtered = new string( filteredChars );
-            var lettersOnly = filtered.Replace( "-", string.Empty );
+            var lettersOnly = new string( filtered
+                .Replace( "-", string.Empty )
+                .Select( c => SoftEquivalents.TryGetValue( c, out var mapped ) ? mapped : c )
+                .ToArray() );
 
             if ( lettersOnly.Length == 0 )
             {

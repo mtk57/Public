@@ -82,6 +82,12 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="OpenCvSharp4">
+      <Version>4.11.0.20250507</Version>
+    </PackageReference>
+    <PackageReference Include="OpenCvSharp4.runtime.win">
+      <Version>4.11.0.20250507</Version>
+    </PackageReference>
     <PackageReference Include="Tesseract">
       <Version>5.2.0</Version>
     </PackageReference>

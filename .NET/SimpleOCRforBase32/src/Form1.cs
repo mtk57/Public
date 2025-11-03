@@ -126,8 +126,8 @@ namespace SimpleOCRforBase32
                             votesByPosition[posLoop] = list;
                         }
 
-                        var weightMultiplier = info.ChecksumMatches ? 1.1f : 1.0f;
-                        list.Add( new CharVote( chLoop, candidate.Weight * weightMultiplier, candidate ) );
+                        var weightMultiplier = info.ChecksumMatches ? 1.25f : 1.0f;
+                        list.Add( new CharVote( chLoop, candidate.Weight * weightMultiplier, candidate, info.ChecksumMatches ) );
                     }
                 }
 
@@ -156,6 +156,7 @@ namespace SimpleOCRforBase32
 
                 var targetChecksum = DetermineTargetChecksum( lineCandidates, lineIndex );
                 ApplyBigramAdjustments( chunkChars, votesByPosition );
+                ApplyChecksumPreference( chunkChars, votesByPosition );
 
                 var chunk = new string( chunkChars );
                 var checksum = ComputeChecksum( chunk );
@@ -225,12 +226,36 @@ namespace SimpleOCRforBase32
                 .ToList();
 
             var primary = summaries[0];
+
+            var checksumLeader = summaries
+                .Where( summary => summary.ChecksumWeight > 0f )
+                .OrderByDescending( summary => summary.ChecksumWeight )
+                .ThenByDescending( summary => summary.Weight )
+                .FirstOrDefault();
+
+            if ( checksumLeader != null && checksumLeader.Character != primary.Character )
+            {
+                if ( primary.ChecksumWeight == 0f
+                    || checksumLeader.ChecksumWeight >= primary.ChecksumWeight * 1.05f
+                    || checksumLeader.ChecksumWeight >= primary.Weight * 0.6f )
+                {
+                    primary = checksumLeader;
+                }
+            }
+
             if ( summaries.Count == 1 )
             {
                 return primary.Character;
             }
 
-            var secondary = summaries[1];
+            var secondary = summaries
+                .FirstOrDefault( summary => summary.Character != primary.Character );
+
+            if ( secondary == null )
+            {
+                return primary.Character;
+            }
+
             var diff = primary.Weight - secondary.Weight;
 
             if ( IsAmbiguousPair( primary.Character, secondary.Character ) && diff < 0.05f )
@@ -274,25 +299,11 @@ namespace SimpleOCRforBase32
 
             for ( var i = 0; i < chunkChars.Length - 1; i++ )
             {
-                var current = chunkChars[i];
-                var next = chunkChars[i + 1];
-
-                if ( ( current == '5' && next == 'S' ) || ( current == 'S' && next == '5' ) )
-                {
-                    var weight5 = GetCharWeight( votesByPosition, i, '5' ) + GetCharWeight( votesByPosition, i + 1, '5' );
-                    var weightS = GetCharWeight( votesByPosition, i, 'S' ) + GetCharWeight( votesByPosition, i + 1, 'S' );
-
-                    if ( weight5 > weightS * 1.1f )
-                    {
-                        chunkChars[i] = '5';
-                        chunkChars[i + 1] = '5';
-                    }
-                    else if ( weightS > weight5 * 1.1f )
-                    {
-                        chunkChars[i] = 'S';
-                        chunkChars[i + 1] = 'S';
-                    }
-                }
+                AdjustAmbiguousBigram( chunkChars, votesByPosition, i, '5', 'S' );
+                AdjustAmbiguousBigram( chunkChars, votesByPosition, i, '5', 'A' );
+                AdjustAmbiguousBigram( chunkChars, votesByPosition, i, 'S', 'A' );
+                AdjustAmbiguousBigram( chunkChars, votesByPosition, i, 'Z', '3' );
+                AdjustAmbiguousBigram( chunkChars, votesByPosition, i, 'R', '3' );
             }
         }
 
@@ -306,6 +317,78 @@ namespace SimpleOCRforBase32
             return votes
                 .Where( vote => vote.Character == character )
                 .Sum( vote => vote.Weight );
+        }
+
+        private static void AdjustAmbiguousBigram ( char[] chunkChars, Dictionary<int, List<CharVote>> votesByPosition, int index, char optionA, char optionB )
+        {
+            if ( chunkChars == null || index < 0 || index >= chunkChars.Length - 1 )
+            {
+                return;
+            }
+
+            var current = chunkChars[index];
+            var next = chunkChars[index + 1];
+
+            if ( ( current == optionA && next == optionB ) || ( current == optionB && next == optionA ) )
+            {
+                var weightA = GetCharWeight( votesByPosition, index, optionA ) + GetCharWeight( votesByPosition, index + 1, optionA );
+                var weightB = GetCharWeight( votesByPosition, index, optionB ) + GetCharWeight( votesByPosition, index + 1, optionB );
+
+                if ( weightA > weightB * 1.1f )
+                {
+                    chunkChars[index] = optionA;
+                    chunkChars[index + 1] = optionA;
+                }
+                else if ( weightB > weightA * 1.1f )
+                {
+                    chunkChars[index] = optionB;
+                    chunkChars[index + 1] = optionB;
+                }
+            }
+        }
+
+        private static void ApplyChecksumPreference ( char[] chunkChars, Dictionary<int, List<CharVote>> votesByPosition )
+        {
+            if ( chunkChars == null || votesByPosition == null )
+            {
+                return;
+            }
+
+            for ( var i = 0; i < chunkChars.Length; i++ )
+            {
+                if ( !votesByPosition.TryGetValue( i, out var votes ) || votes.Count == 0 )
+                {
+                    continue;
+                }
+
+                var currentChar = chunkChars[i];
+                var currentChecksumWeight = votes
+                    .Where( vote => vote.Character == currentChar && vote.ChecksumMatches )
+                    .Sum( vote => vote.Weight );
+
+                var bestCandidate = votes
+                    .GroupBy( vote => vote.Character )
+                    .Select( group => new
+                    {
+                        Character = group.Key,
+                        ChecksumWeight = group.Where( vote => vote.ChecksumMatches ).Sum( vote => vote.Weight ),
+                        TotalWeight = group.Sum( vote => vote.Weight )
+                    } )
+                    .OrderByDescending( summary => summary.ChecksumWeight )
+                    .ThenByDescending( summary => summary.TotalWeight )
+                    .FirstOrDefault();
+
+                if ( bestCandidate == null || bestCandidate.ChecksumWeight <= 0f )
+                {
+                    continue;
+                }
+
+                if ( currentChecksumWeight <= 0f
+                    || bestCandidate.ChecksumWeight >= currentChecksumWeight * 1.1f )
+                {
+                    chunkChars[i] = bestCandidate.Character;
+                }
+            }
         }
 
         private static int ComputeHammingDistance ( string left, string right )
@@ -402,7 +485,7 @@ namespace SimpleOCRforBase32
                 .OrderByDescending( p => p.Alternatives.Count > 0 ? p.Alternatives[0].Weight : 0f )
                 .ToList();
 
-            var maxDepth = Math.Min( 3, positions.Count );
+            var maxDepth = Math.Min( 5, positions.Count );
             if ( TryAdjustRecursive( chunkChars, positions, 0, maxDepth, targetChecksum, out corrected ) )
             {
                 return true;
@@ -1179,16 +1262,18 @@ namespace SimpleOCRforBase32
 
         private sealed class CharVote
         {
-            public CharVote ( char character, float weight, CandidateResult candidate )
+            public CharVote ( char character, float weight, CandidateResult candidate, bool checksumMatches )
             {
                 Character = character;
                 Weight = weight;
                 Candidate = candidate;
+                ChecksumMatches = checksumMatches;
             }
 
             public char Character { get; }
             public float Weight { get; }
             public CandidateResult Candidate { get; }
+            public bool ChecksumMatches { get; }
         }
 
         private sealed class VoteSummary
@@ -1202,6 +1287,7 @@ namespace SimpleOCRforBase32
                 AlphaWeight = Votes.Where( v => !v.Candidate.NumericMode ).Sum( v => v.Weight );
                 DigitWeight = Votes.Where( v => char.IsDigit( v.Character ) ).Sum( v => v.Weight );
                 LetterWeight = Votes.Where( v => char.IsLetter( v.Character ) ).Sum( v => v.Weight );
+                ChecksumWeight = Votes.Where( v => v.ChecksumMatches ).Sum( v => v.Weight );
             }
 
             public char Character { get; }
@@ -1211,6 +1297,7 @@ namespace SimpleOCRforBase32
             public float AlphaWeight { get; }
             public float DigitWeight { get; }
             public float LetterWeight { get; }
+            public float ChecksumWeight { get; }
         }
 
         private sealed class AmbiguousPosition

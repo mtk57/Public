@@ -212,16 +212,7 @@ namespace SimpleMethodCallListCreator
             }
             var replacement = (prefix ?? string.Empty) + tagContent;
 
-            var insertIndex = baseIndex;
-            while (insertIndex < originalText.Length && (originalText[insertIndex] == ' ' || originalText[insertIndex] == '\t'))
-            {
-                insertIndex++;
-            }
-
-            if (insertIndex < originalText.Length && originalText[insertIndex] == ';')
-            {
-                insertIndex++;
-            }
+            var insertIndex = AdjustInsertIndexAfterCall(originalText, baseIndex);
 
             var scanIndex = insertIndex;
             while (scanIndex < originalText.Length)
@@ -254,6 +245,66 @@ namespace SimpleMethodCallListCreator
             }
 
             return new TagInsertion(insertIndex, 0, replacement);
+        }
+
+        private static int AdjustInsertIndexAfterCall(string text, int startIndex)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return startIndex;
+            }
+
+            var index = startIndex;
+            var length = text.Length;
+
+            while (index < length)
+            {
+                index = SkipInlineWhitespace(text, index);
+                if (index >= length)
+                {
+                    break;
+                }
+
+                var c = text[index];
+                if (c == ')')
+                {
+                    index++;
+                    continue;
+                }
+
+                if (c == ';')
+                {
+                    index++;
+                    continue;
+                }
+
+                if (c == '{')
+                {
+                    index++;
+                    break;
+                }
+
+                break;
+            }
+
+            return index;
+        }
+
+        private static int SkipInlineWhitespace(string text, int index)
+        {
+            while (index < text.Length)
+            {
+                var c = text[index];
+                if (c == ' ' || c == '\t')
+                {
+                    index++;
+                    continue;
+                }
+
+                break;
+            }
+
+            return index;
         }
 
         private static string ApplyInsertions(string originalText, List<TagInsertion> insertions)

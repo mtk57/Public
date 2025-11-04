@@ -592,13 +592,15 @@ namespace SimpleMethodCallListCreator
                 var methodNameInfo = GetMethodNameInfo(text, method.BodyStartIndex + 1, index - 1);
                 if (methodNameInfo == null)
                 {
-                    index = closeParen + 1;
+                    // Keep scanning inside the parentheses to detect nested calls.
+                    index++;
                     continue;
                 }
 
                 if (ReservedKeywords.Contains(methodNameInfo.MethodName) || methodNameInfo.IsConstructorCall)
                 {
-                    index = closeParen + 1;
+                    // Skip keywords (if/for/while...) but still analyze their conditions.
+                    index++;
                     continue;
                 }
 
@@ -623,7 +625,8 @@ namespace SimpleMethodCallListCreator
                     closeParen,
                     lineNumber);
 
-                index = closeParen + 1;
+                // Do not jump to closeParen; advance stepwise to inspect nested invocations.
+                index++;
             }
         }
 

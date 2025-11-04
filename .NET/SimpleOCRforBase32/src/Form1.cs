@@ -977,19 +977,25 @@ namespace SimpleOCRforBase32
             return builder.ToString();
         }
 
-        private static Mat DeskewImage ( Mat src )
+        private static Mat DeskewImage ( Mat src, out double appliedAngle )
         {
+            appliedAngle = 0d;
+
             if ( src == null || src.Empty() )
             {
                 return new Mat();
             }
 
             using ( var gray = new Mat() )
+            using ( var blurred = new Mat() )
+            using ( var binary = new Mat() )
             using ( var inverted = new Mat() )
             using ( var nonZero = new Mat() )
             {
                 Cv2.CvtColor( src, gray, ColorConversionCodes.BGR2GRAY );
-                Cv2.BitwiseNot( gray, inverted );
+                Cv2.GaussianBlur( gray, blurred, new OpenCvSharp.Size( 3, 3 ), 0 );
+                Cv2.Threshold( blurred, binary, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu );
+                Cv2.BitwiseNot( binary, inverted );
 
                 Cv2.FindNonZero( inverted, nonZero );
                 if ( nonZero.Empty() )
@@ -1008,13 +1014,46 @@ namespace SimpleOCRforBase32
                     angle = -angle;
                 }
 
-                var center = rect.Center;
+                appliedAngle = angle;
+
+                if ( Math.Abs( angle ) < 0.01 )
+                {
+                    return src.Clone();
+                }
+
+                var center = new Point2f( src.Cols / 2f, src.Rows / 2f );
                 using ( var rotMat = Cv2.GetRotationMatrix2D( center, angle, 1.0 ) )
                 {
                     var deskewed = new Mat();
-                    Cv2.WarpAffine( src, deskewed, rotMat, src.Size(), InterpolationFlags.Cubic, BorderTypes.Replicate );
+                    Cv2.WarpAffine(
+                        src,
+                        deskewed,
+                        rotMat,
+                        src.Size(),
+                        InterpolationFlags.Cubic,
+                        BorderTypes.Replicate );
                     return deskewed;
                 }
+            }
+        }
+
+        private static void SaveDeskewedImage ( Mat deskewed )
+        {
+            if ( deskewed == null || deskewed.Empty() )
+            {
+                return;
+            }
+
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var fileName = $"deskew_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+                var outputPath = Path.Combine( baseDir, fileName );
+                Cv2.ImWrite( outputPath, deskewed );
+            }
+            catch
+            {
+                // ファイル出力に失敗しても処理継続
             }
         }
 
@@ -1030,13 +1069,15 @@ namespace SimpleOCRforBase32
                     throw new InvalidOperationException( "画像を読み込めませんでした。" );
                 }
 
-                using ( var deskewed = DeskewImage( src ) )
+                using ( var deskewed = DeskewImage( src, out _ ) )
                 using ( var gray = new Mat() )
                 using ( var blurred = new Mat() )
                 using ( var binary = new Mat() )
                 using ( var closed = new Mat() )
                 using ( var scaled = new Mat() )
                 {
+                    SaveDeskewedImage( deskewed );
+
                     var sourceForProcessing = deskewed.Empty() ? src : deskewed;
 
                     Cv2.CvtColor( sourceForProcessing, gray, ColorConversionCodes.BGR2GRAY );

@@ -14,6 +14,10 @@ public class MainWorkflow {
         logInfo();
         overloadFunc1("123");
         overloadFunc1("123");  //@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\MainWorkflow.java	private void overloadFunc1(String)	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
+
+        if(isCorrect("hoge")){
+            logInfo();
+        }
     }
 
     void initialize() {
@@ -23,6 +27,10 @@ public class MainWorkflow {
 
     private void logInfo() {
         logger.debug("start");
+    }
+
+    private boolean isCorrect(String prm) {
+        return true;
     }
 
     private void overloadFunc1(String a) {

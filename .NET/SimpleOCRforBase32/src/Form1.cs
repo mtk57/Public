@@ -1057,6 +1057,26 @@ namespace SimpleOCRforBase32
             }
         }
 
+        private static void SaveBinaryImage ( Mat binary )
+        {
+            if ( binary == null || binary.Empty() )
+            {
+                return;
+            }
+
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var fileName = $"binary_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+                var outputPath = Path.Combine( baseDir, fileName );
+                Cv2.ImWrite( outputPath, binary );
+            }
+            catch
+            {
+                // ファイル出力に失敗しても処理継続
+            }
+        }
+
         private static PreprocessResult PreprocessImage ( string originalPath )
         {
             var tempPath = Path.Combine( Path.GetTempPath(), $"simpleocr-pre-{Guid.NewGuid():N}.png" );
@@ -1090,6 +1110,8 @@ namespace SimpleOCRforBase32
                         thresholdType: ThresholdTypes.Binary,
                         blockSize: 17,
                         c: 10 );
+
+                    SaveBinaryImage( binary );
 
                     using ( var kernel = Cv2.GetStructuringElement( MorphShapes.Rect, new OpenCvSharp.Size( 2, 2 ) ) )
                     {

@@ -33,7 +33,7 @@
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
             this.clmExt = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmCount = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btnDeleteSelected = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -67,6 +67,9 @@
             this.dataGridViewResults.Location = new System.Drawing.Point(21, 58);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
+            this.dataGridViewResults.MultiSelect = true;
+            this.dataGridViewResults.RowHeadersVisible = false;
+            this.dataGridViewResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dataGridViewResults.Size = new System.Drawing.Size(298, 134);
             this.dataGridViewResults.TabIndex = 21;
             // 
@@ -84,25 +87,25 @@
             this.clmCount.Name = "clmCount";
             this.clmCount.ReadOnly = true;
             // 
-            // button1
+            // btnDeleteSelected
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.btnDeleteSelected.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(89, 201);
-            this.button1.MaximumSize = new System.Drawing.Size(189, 23);
-            this.button1.MinimumSize = new System.Drawing.Size(189, 23);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(189, 23);
-            this.button1.TabIndex = 28;
-            this.button1.Text = "選択行の拡張子のファイルを削除";
-            this.button1.UseVisualStyleBackColor = true;
+            this.btnDeleteSelected.Location = new System.Drawing.Point(89, 201);
+            this.btnDeleteSelected.MaximumSize = new System.Drawing.Size(189, 23);
+            this.btnDeleteSelected.MinimumSize = new System.Drawing.Size(189, 23);
+            this.btnDeleteSelected.Name = "btnDeleteSelected";
+            this.btnDeleteSelected.Size = new System.Drawing.Size(189, 23);
+            this.btnDeleteSelected.TabIndex = 28;
+            this.btnDeleteSelected.Text = "選択行の拡張子のファイルを削除";
+            this.btnDeleteSelected.UseVisualStyleBackColor = true;
             // 
             // DeleteByExtensionForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(331, 233);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.btnDeleteSelected);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.txtExtFilter);
             this.Controls.Add(this.dataGridViewResults);
@@ -121,6 +124,6 @@
         private System.Windows.Forms.DataGridView dataGridViewResults;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmExt;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmCount;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button btnDeleteSelected;
     }
 }

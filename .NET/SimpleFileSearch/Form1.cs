@@ -17,18 +17,10 @@ namespace SimpleFileSearch
         private const int MaxHistoryItems = 20;
         private const string SettingsFileName = "SimpleFileSearch.json";
         private List<SearchResult> _allResults = new List<SearchResult>();
+        private List<SearchResult> _filteredResults = new List<SearchResult>();
         private string _currentSortColumn;
         private bool _sortAscending = true;
         private bool _suppressFilterEvent;
-
-        private class SearchResult
-        {
-            public string FilePath { get; set; }
-            public string FileName { get; set; }
-            public string Extension { get; set; }
-            public long Size { get; set; }
-            public DateTime LastWriteTime { get; set; }
-        }
 
         public MainForm()
         {
@@ -50,6 +42,8 @@ namespace SimpleFileSearch
             {
                 column.SortMode = DataGridViewColumnSortMode.Programmatic;
             }
+
+            btnDeleteByExt.Enabled = false;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -148,13 +142,13 @@ namespace SimpleFileSearch
                 {
                     // 部分一致モードまたはワイルドカードモード
                     bool usePartialMatch = chkPartialMatch.Checked;
-    
+
                     try
                     {
                         if (usePartialMatch)
                         {
                             // 部分一致モード - 正規表現に変換して検索
-                            Regex regex = new Regex(Regex.Escape(searchPattern), RegexOptions.IgnoreCase);
+                            Regex regex = CreateWildcardRegex(searchPattern, anchorMatch: false);
                             string rootPath = cmbFolderPath.Text;
                             SearchFilesAndFoldersWithRegex(rootPath, regex, includeFolderNames, foundFiles, searchSubDir);
                         }
@@ -163,7 +157,7 @@ namespace SimpleFileSearch
                             // 通常のワイルドカードモード
                             SearchOption searchOption = searchSubDir ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
                             foundFiles.AddRange(Directory.GetFiles(cmbFolderPath.Text, searchPattern, searchOption));
-            
+
                             // フォルダ名も検索対象に含める場合
                             if (includeFolderNames)
                             {
@@ -283,16 +277,7 @@ namespace SimpleFileSearch
         {
             try
             {
-                // 指定されたパターンに合致するかテスト用の関数
-                Func<string, bool> matchesPattern = (name) => 
-                {
-                    // ワイルドカードをRegexのパターンに変換
-                    string regexPattern = "^" + Regex.Escape(searchPattern)
-                        .Replace("\\*", ".*")
-                        .Replace("\\?", ".") + "$";
-                    
-                    return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
-                };
+                Regex folderRegex = CreateWildcardRegex(searchPattern, anchorMatch: true);
 
                 // サブフォルダを処理
                 if (searchSubDir)
@@ -302,7 +287,7 @@ namespace SimpleFileSearch
                         string dirName = Path.GetFileName(dir);
 
                         // フォルダ名がパターンに合致する場合
-                        if (matchesPattern(dirName))
+                        if (folderRegex.IsMatch(dirName))
                         {
                             // フォルダが見つかった場合、そのフォルダ内のすべてのファイルを追加
                             results.AddRange(Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories));
@@ -321,6 +306,26 @@ namespace SimpleFileSearch
             {
                 // その他のエラーも無視して次へ
             }
+        }
+
+        private static Regex CreateWildcardRegex(string pattern, bool anchorMatch)
+        {
+            string regexPattern = ConvertWildcardToRegexPattern(pattern, anchorMatch);
+            return new Regex(regexPattern, RegexOptions.IgnoreCase);
+        }
+
+        private static string ConvertWildcardToRegexPattern(string pattern, bool anchorMatch)
+        {
+            string escaped = Regex.Escape(pattern ?? string.Empty)
+                .Replace("\\*", ".*")
+                .Replace("\\?", ".");
+
+            if (anchorMatch)
+            {
+                return "^" + escaped + "$";
+            }
+
+            return escaped;
         }
 
         private void FilterTextBox_TextChanged(object sender, EventArgs e)
@@ -356,12 +361,7 @@ namespace SimpleFileSearch
 
         private void ApplyFilterAndSort()
         {
-            if (_allResults == null)
-            {
-                return;
-            }
-
-            IEnumerable<SearchResult> query = _allResults;
+            IEnumerable<SearchResult> query = _allResults ?? Enumerable.Empty<SearchResult>();
 
             string filePathFilter = txtFilePathFilter.Text.Trim();
             if (!string.IsNullOrEmpty(filePathFilter))
@@ -397,8 +397,8 @@ namespace SimpleFileSearch
                     break;
                 case nameof(clmExt):
                     ordered = _sortAscending
-                        ? query.OrderBy(r => r.Extension, StringComparer.OrdinalIgnoreCase)
-                        : query.OrderByDescending(r => r.Extension, StringComparer.OrdinalIgnoreCase);
+                        ? query.OrderBy(r => r.Extension ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                        : query.OrderByDescending(r => r.Extension ?? string.Empty, StringComparer.OrdinalIgnoreCase);
                     break;
                 case nameof(clmSize):
                     ordered = _sortAscending
@@ -410,6 +410,11 @@ namespace SimpleFileSearch
                         ? query.OrderBy(r => r.LastWriteTime)
                         : query.OrderByDescending(r => r.LastWriteTime);
                     break;
+                case nameof(columnFilePath):
+                    ordered = _sortAscending
+                        ? query.OrderBy(r => r.FilePath, StringComparer.OrdinalIgnoreCase)
+                        : query.OrderByDescending(r => r.FilePath, StringComparer.OrdinalIgnoreCase);
+                    break;
                 default:
                     ordered = _sortAscending
                         ? query.OrderBy(r => r.FilePath, StringComparer.OrdinalIgnoreCase)
@@ -418,6 +423,7 @@ namespace SimpleFileSearch
             }
 
             List<SearchResult> displayList = ordered.ToList();
+            _filteredResults = displayList;
 
             dataGridViewResults.SuspendLayout();
             dataGridViewResults.Rows.Clear();
@@ -448,7 +454,10 @@ namespace SimpleFileSearch
             dataGridViewResults.ResumeLayout();
 
             int filteredCount = displayList.Count;
-            int totalCount = _allResults.Count;
+            int totalCount = _allResults?.Count ?? 0;
+            btnDeleteByExt.Enabled = filteredCount > 0;
+
+            this.Text = $"シンプルなファイル検索 - {totalCount} 件のファイルが見つかりました";
             if (filteredCount == totalCount)
             {
                 labelResult.Text = $"Result: {filteredCount} hit";
@@ -752,7 +761,36 @@ namespace SimpleFileSearch
 
         private void btnDeleteByExt_Click ( object sender, EventArgs e )
         {
-            // TBD
+            if (_filteredResults == null || _filteredResults.Count == 0)
+            {
+                return;
+            }
+
+            using (var dialog = new DeleteByExtensionForm(_filteredResults))
+            {
+                dialog.ShowDialog(this);
+                IReadOnlyList<string> deletedFiles = dialog.DeletedFiles;
+                if (deletedFiles != null && deletedFiles.Count > 0)
+                {
+                    RemoveDeletedFiles(deletedFiles);
+                }
+            }
+        }
+
+        private void RemoveDeletedFiles(IReadOnlyCollection<string> deletedFiles)
+        {
+            if (deletedFiles == null || deletedFiles.Count == 0 || _allResults == null)
+            {
+                return;
+            }
+
+            HashSet<string> deletedSet = new HashSet<string>(deletedFiles, StringComparer.OrdinalIgnoreCase);
+            _allResults = _allResults
+                .Where(r => !deletedSet.Contains(r.FilePath))
+                .ToList();
+
+            // 表示から削除されたファイルを除外するため再描画
+            ApplyFilterAndSort();
         }
     }
 }

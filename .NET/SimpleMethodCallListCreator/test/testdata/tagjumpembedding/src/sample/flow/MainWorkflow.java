@@ -18,6 +18,10 @@ public class MainWorkflow {
         if(isCorrect("hoge")){
             logInfo();
         }
+
+        if(isCorrect("hoge") != false){
+            logInfo();
+        }
     }
 
     void initialize() {

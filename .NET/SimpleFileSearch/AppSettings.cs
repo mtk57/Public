@@ -14,5 +14,7 @@ namespace SimpleFileSearch
         public bool UsePartialMatch { get; set; } = false;
         public bool SearchSubDir { get; set; } = true;
         public bool DblClickToOpen { get; set; } = false;
+        public string LastKeyword { get; set; } = string.Empty;
+        public string LastFolderPath { get; set; } = string.Empty;
     }
 }

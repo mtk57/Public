@@ -483,6 +483,46 @@ namespace SimpleFileSearch
             }
         }
 
+        private static void RestoreComboBoxText(ComboBox comboBox, string storedValue)
+        {
+            if (comboBox == null)
+            {
+                return;
+            }
+
+            if (storedValue == null)
+            {
+                if (comboBox.Items.Count > 0)
+                {
+                    comboBox.SelectedIndex = 0;
+                }
+                else
+                {
+                    comboBox.SelectedIndex = -1;
+                    comboBox.Text = string.Empty;
+                }
+                return;
+            }
+
+            if (storedValue.Length == 0)
+            {
+                comboBox.SelectedIndex = -1;
+                comboBox.Text = string.Empty;
+                return;
+            }
+
+            int index = comboBox.Items.IndexOf(storedValue);
+            if (index >= 0)
+            {
+                comboBox.SelectedIndex = index;
+            }
+            else
+            {
+                comboBox.SelectedIndex = -1;
+                comboBox.Text = storedValue;
+            }
+        }
+
         private void dataGridViewResults_CellDoubleClick ( object sender, DataGridViewCellEventArgs e )
         {
             if (e.RowIndex >= 0 && dataGridViewResults.Rows[e.RowIndex].Cells[0].Value != null)
@@ -576,6 +616,9 @@ namespace SimpleFileSearch
                     settings.FolderPathHistory.Add(item.ToString());
                 }
 
+                settings.LastKeyword = cmbKeyword.Text ?? string.Empty;
+                settings.LastFolderPath = cmbFolderPath.Text ?? string.Empty;
+
                 // JavaScriptSerializerを使用してJSONに変換
                 JavaScriptSerializer serializer = new JavaScriptSerializer();
                 string json = serializer.Serialize(settings);
@@ -638,16 +681,9 @@ namespace SimpleFileSearch
                     // ダブルクリックでファイルを開くの設定を読み込み
                     chkDblClickToOpen.Checked = settings.DblClickToOpen;
 
-                    // 最新の項目をテキストボックスに表示
-                    if (cmbKeyword.Items.Count > 0)
-                    {
-                        cmbKeyword.SelectedIndex = 0;
-                    }
-
-                    if (cmbFolderPath.Items.Count > 0)
-                    {
-                        cmbFolderPath.SelectedIndex = 0;
-                    }
+                    // 最新の入力値を再現
+                    RestoreComboBoxText(cmbKeyword, settings.LastKeyword);
+                    RestoreComboBoxText(cmbFolderPath, settings.LastFolderPath);
                 }
             }
             catch (Exception ex)

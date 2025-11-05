@@ -36,13 +36,24 @@
             this.btnSearch = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
-            this.columnFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.chkIncludeFolderNames = new System.Windows.Forms.CheckBox();
             this.labelResult = new System.Windows.Forms.Label();
             this.chkPartialMatch = new System.Windows.Forms.CheckBox();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkDblClickToOpen = new System.Windows.Forms.CheckBox();
             this.btnFileCopy = new System.Windows.Forms.Button();
+            this.btnDeleteByExt = new System.Windows.Forms.Button();
+            this.txtFilePathFilter = new System.Windows.Forms.TextBox();
+            this.columnFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmExt = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmSize = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmUpdateDate = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.txtFileNameFilter = new System.Windows.Forms.TextBox();
+            this.txtExtFilter = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -126,20 +137,17 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.dataGridViewResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.columnFilePath});
-            this.dataGridViewResults.Location = new System.Drawing.Point(12, 206);
+            this.columnFilePath,
+            this.clmFileName,
+            this.clmExt,
+            this.clmSize,
+            this.clmUpdateDate});
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 251);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(655, 164);
+            this.dataGridViewResults.Size = new System.Drawing.Size(655, 119);
             this.dataGridViewResults.TabIndex = 11;
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
-            // 
-            // columnFilePath
-            // 
-            this.columnFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.columnFilePath.HeaderText = "ファイルパス";
-            this.columnFilePath.Name = "columnFilePath";
-            this.columnFilePath.ReadOnly = true;
             // 
             // chkIncludeFolderNames
             // 
@@ -200,11 +208,111 @@
             this.btnFileCopy.UseVisualStyleBackColor = true;
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
             // 
+            // btnDeleteByExt
+            // 
+            this.btnDeleteByExt.Location = new System.Drawing.Point(14, 156);
+            this.btnDeleteByExt.Name = "btnDeleteByExt";
+            this.btnDeleteByExt.Size = new System.Drawing.Size(83, 27);
+            this.btnDeleteByExt.TabIndex = 12;
+            this.btnDeleteByExt.Text = "拡張子で削除";
+            this.btnDeleteByExt.UseVisualStyleBackColor = true;
+            this.btnDeleteByExt.Click += new System.EventHandler(this.btnDeleteByExt_Click);
+            // 
+            // txtFilePathFilter
+            // 
+            this.txtFilePathFilter.Location = new System.Drawing.Point(12, 226);
+            this.txtFilePathFilter.Name = "txtFilePathFilter";
+            this.txtFilePathFilter.Size = new System.Drawing.Size(100, 19);
+            this.txtFilePathFilter.TabIndex = 13;
+            // 
+            // columnFilePath
+            // 
+            this.columnFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.columnFilePath.HeaderText = "ファイルパス";
+            this.columnFilePath.Name = "columnFilePath";
+            this.columnFilePath.ReadOnly = true;
+            // 
+            // clmFileName
+            // 
+            this.clmFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFileName.HeaderText = "ファイル名";
+            this.clmFileName.Name = "clmFileName";
+            this.clmFileName.ReadOnly = true;
+            // 
+            // clmExt
+            // 
+            this.clmExt.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmExt.HeaderText = "拡張子";
+            this.clmExt.Name = "clmExt";
+            this.clmExt.ReadOnly = true;
+            // 
+            // clmSize
+            // 
+            this.clmSize.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmSize.HeaderText = "サイズ";
+            this.clmSize.Name = "clmSize";
+            this.clmSize.ReadOnly = true;
+            // 
+            // clmUpdateDate
+            // 
+            this.clmUpdateDate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmUpdateDate.HeaderText = "更新日時";
+            this.clmUpdateDate.Name = "clmUpdateDate";
+            this.clmUpdateDate.ReadOnly = true;
+            // 
+            // txtFileNameFilter
+            // 
+            this.txtFileNameFilter.Location = new System.Drawing.Point(118, 226);
+            this.txtFileNameFilter.Name = "txtFileNameFilter";
+            this.txtFileNameFilter.Size = new System.Drawing.Size(100, 19);
+            this.txtFileNameFilter.TabIndex = 14;
+            // 
+            // txtExtFilter
+            // 
+            this.txtExtFilter.Location = new System.Drawing.Point(224, 226);
+            this.txtExtFilter.Name = "txtExtFilter";
+            this.txtExtFilter.Size = new System.Drawing.Size(61, 19);
+            this.txtExtFilter.TabIndex = 15;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(15, 211);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(58, 12);
+            this.label3.TabIndex = 18;
+            this.label3.Text = "ファイルパス";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(119, 211);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(51, 12);
+            this.label4.TabIndex = 19;
+            this.label4.Text = "ファイル名";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(222, 211);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(41, 12);
+            this.label5.TabIndex = 20;
+            this.label5.Text = "拡張子";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(679, 382);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.txtExtFilter);
+            this.Controls.Add(this.txtFileNameFilter);
+            this.Controls.Add(this.txtFilePathFilter);
+            this.Controls.Add(this.btnDeleteByExt);
             this.Controls.Add(this.btnFileCopy);
             this.Controls.Add(this.chkDblClickToOpen);
             this.Controls.Add(this.chkSearchSubDir);
@@ -239,7 +347,6 @@
         private System.Windows.Forms.Button btnSearch;
         private System.Windows.Forms.CheckBox chkUseRegex;
         private System.Windows.Forms.DataGridView dataGridViewResults;
-        private System.Windows.Forms.DataGridViewTextBoxColumn columnFilePath;
         private System.Windows.Forms.CheckBox chkIncludeFolderNames;
         private System.Windows.Forms.Label labelResult;
 
@@ -248,6 +355,18 @@
         private System.Windows.Forms.CheckBox chkSearchSubDir;
         private System.Windows.Forms.CheckBox chkDblClickToOpen;
         private System.Windows.Forms.Button btnFileCopy;
+        private System.Windows.Forms.Button btnDeleteByExt;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnFilePath;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmFileName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmExt;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmSize;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmUpdateDate;
+        private System.Windows.Forms.TextBox txtFilePathFilter;
+        private System.Windows.Forms.TextBox txtFileNameFilter;
+        private System.Windows.Forms.TextBox txtExtFilter;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label label5;
     }
 }
 

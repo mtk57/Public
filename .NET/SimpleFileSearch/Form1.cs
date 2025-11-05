@@ -543,5 +543,10 @@ namespace SimpleFileSearch
                 MessageBox.Show($"コピー処理中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void btnDeleteByExt_Click ( object sender, EventArgs e )
+        {
+            // TBD
+        }
     }
 }

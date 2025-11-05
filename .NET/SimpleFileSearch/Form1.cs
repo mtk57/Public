@@ -16,6 +16,19 @@ namespace SimpleFileSearch
     {
         private const int MaxHistoryItems = 20;
         private const string SettingsFileName = "SimpleFileSearch.json";
+        private List<SearchResult> _allResults = new List<SearchResult>();
+        private string _currentSortColumn;
+        private bool _sortAscending = true;
+        private bool _suppressFilterEvent;
+
+        private class SearchResult
+        {
+            public string FilePath { get; set; }
+            public string FileName { get; set; }
+            public string Extension { get; set; }
+            public long Size { get; set; }
+            public DateTime LastWriteTime { get; set; }
+        }
 
         public MainForm()
         {
@@ -24,6 +37,19 @@ namespace SimpleFileSearch
             // ドラッグアンドドロップを有効にする
             this.cmbFolderPath.DragEnter += new DragEventHandler(cmbFolderPath_DragEnter);
             this.cmbFolderPath.DragDrop += new DragEventHandler(cmbFolderPath_DragDrop);
+
+            // フィルタ入力時に結果を反映
+            txtFilePathFilter.TextChanged += FilterTextBox_TextChanged;
+            txtFileNameFilter.TextChanged += FilterTextBox_TextChanged;
+            txtExtFilter.TextChanged += FilterTextBox_TextChanged;
+
+            // 列ヘッダークリックでソート
+            dataGridViewResults.ColumnHeaderMouseClick += dataGridViewResults_ColumnHeaderMouseClick;
+            dataGridViewResults.AutoGenerateColumns = false;
+            foreach (DataGridViewColumn column in dataGridViewResults.Columns)
+            {
+                column.SortMode = DataGridViewColumnSortMode.Programmatic;
+            }
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -156,16 +182,45 @@ namespace SimpleFileSearch
                 // 重複を削除してソート
                 foundFiles = foundFiles.Distinct().OrderBy(f => f).ToList();
 
-                // 結果を表示
+                // 検索結果リストを構築
+                List<SearchResult> results = new List<SearchResult>();
                 foreach (string file in foundFiles)
                 {
-                    dataGridViewResults.Rows.Add(file);
+                    try
+                    {
+                        if (!File.Exists(file))
+                        {
+                            continue;
+                        }
+
+                        FileInfo info = new FileInfo(file);
+                        results.Add(new SearchResult
+                        {
+                            FilePath = file,
+                            FileName = Path.GetFileName(file),
+                            Extension = info.Extension?.TrimStart('.'),
+                            Size = info.Length,
+                            LastWriteTime = info.LastWriteTime
+                        });
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // アクセスできないファイルは無視
+                    }
+                    catch (Exception)
+                    {
+                        // その他の例外も無視して次へ
+                    }
                 }
 
-                // 結果件数を表示
-                this.Text = $"シンプルなファイル検索 - {foundFiles.Count} 件のファイルが見つかりました";
+                _allResults = results;
+                _currentSortColumn = columnFilePath.Name;
+                _sortAscending = true;
+                ClearFilters();
+                ApplyFilterAndSort();
 
-                labelResult.Text = $"Result: {foundFiles.Count} hit";
+                // 結果件数を表示
+                //this.Text = $"シンプルなファイル検索 - {foundFiles.Count} 件のファイルが見つかりました";
             }
             catch (Exception ex)
             {
@@ -265,6 +320,157 @@ namespace SimpleFileSearch
             catch (Exception)
             {
                 // その他のエラーも無視して次へ
+            }
+        }
+
+        private void FilterTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (_suppressFilterEvent)
+            {
+                return;
+            }
+
+            ApplyFilterAndSort();
+        }
+
+        private void dataGridViewResults_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            var column = dataGridViewResults.Columns[e.ColumnIndex];
+            if (column == null || string.IsNullOrEmpty(column.Name))
+            {
+                return;
+            }
+
+            if (_currentSortColumn == column.Name)
+            {
+                _sortAscending = !_sortAscending;
+            }
+            else
+            {
+                _currentSortColumn = column.Name;
+                _sortAscending = true;
+            }
+
+            ApplyFilterAndSort();
+        }
+
+        private void ApplyFilterAndSort()
+        {
+            if (_allResults == null)
+            {
+                return;
+            }
+
+            IEnumerable<SearchResult> query = _allResults;
+
+            string filePathFilter = txtFilePathFilter.Text.Trim();
+            if (!string.IsNullOrEmpty(filePathFilter))
+            {
+                query = query.Where(r => r.FilePath.IndexOf(filePathFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            string fileNameFilter = txtFileNameFilter.Text.Trim();
+            if (!string.IsNullOrEmpty(fileNameFilter))
+            {
+                query = query.Where(r => r.FileName.IndexOf(fileNameFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            string extFilter = txtExtFilter.Text.Trim();
+            if (!string.IsNullOrEmpty(extFilter))
+            {
+                string normalized = extFilter.TrimStart('.');
+                query = query.Where(r => (r.Extension ?? string.Empty).IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            if (string.IsNullOrEmpty(_currentSortColumn))
+            {
+                _currentSortColumn = columnFilePath.Name;
+            }
+
+            IOrderedEnumerable<SearchResult> ordered;
+            switch (_currentSortColumn)
+            {
+                case nameof(clmFileName):
+                    ordered = _sortAscending
+                        ? query.OrderBy(r => r.FileName, StringComparer.OrdinalIgnoreCase)
+                        : query.OrderByDescending(r => r.FileName, StringComparer.OrdinalIgnoreCase);
+                    break;
+                case nameof(clmExt):
+                    ordered = _sortAscending
+                        ? query.OrderBy(r => r.Extension, StringComparer.OrdinalIgnoreCase)
+                        : query.OrderByDescending(r => r.Extension, StringComparer.OrdinalIgnoreCase);
+                    break;
+                case nameof(clmSize):
+                    ordered = _sortAscending
+                        ? query.OrderBy(r => r.Size)
+                        : query.OrderByDescending(r => r.Size);
+                    break;
+                case nameof(clmUpdateDate):
+                    ordered = _sortAscending
+                        ? query.OrderBy(r => r.LastWriteTime)
+                        : query.OrderByDescending(r => r.LastWriteTime);
+                    break;
+                default:
+                    ordered = _sortAscending
+                        ? query.OrderBy(r => r.FilePath, StringComparer.OrdinalIgnoreCase)
+                        : query.OrderByDescending(r => r.FilePath, StringComparer.OrdinalIgnoreCase);
+                    break;
+            }
+
+            List<SearchResult> displayList = ordered.ToList();
+
+            dataGridViewResults.SuspendLayout();
+            dataGridViewResults.Rows.Clear();
+            foreach (SearchResult result in displayList)
+            {
+                dataGridViewResults.Rows.Add(
+                    result.FilePath,
+                    result.FileName,
+                    result.Extension,
+                    result.Size.ToString("N0"),
+                    result.LastWriteTime.ToString("yyyy/MM/dd HH:mm:ss"));
+            }
+
+            foreach (DataGridViewColumn column in dataGridViewResults.Columns)
+            {
+                column.HeaderCell.SortGlyphDirection = SortOrder.None;
+            }
+
+            if (!string.IsNullOrEmpty(_currentSortColumn))
+            {
+                DataGridViewColumn targetColumn = dataGridViewResults.Columns[_currentSortColumn];
+                if (targetColumn != null)
+                {
+                    targetColumn.HeaderCell.SortGlyphDirection = _sortAscending ? SortOrder.Ascending : SortOrder.Descending;
+                }
+            }
+
+            dataGridViewResults.ResumeLayout();
+
+            int filteredCount = displayList.Count;
+            int totalCount = _allResults.Count;
+            if (filteredCount == totalCount)
+            {
+                labelResult.Text = $"Result: {filteredCount} hit";
+            }
+            else
+            {
+                labelResult.Text = $"Result: {filteredCount} hit (total {totalCount})";
+            }
+        }
+
+        private void ClearFilters()
+        {
+            _suppressFilterEvent = true;
+            try
+            {
+                txtFilePathFilter.Clear();
+                txtFileNameFilter.Clear();
+                txtExtFilter.Clear();
+            }
+            finally
+            {
+                _suppressFilterEvent = false;
             }
         }
 

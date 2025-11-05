@@ -294,26 +294,283 @@ namespace SimpleExcelDiff
         private List<DiffResult> CompareSheets(WorksheetPart wsPartSrc, WorksheetPart wsPartDst, WorkbookPart wbPartSrc, WorkbookPart wbPartDst, string sheetName)
         {
             var sheetResults = new List<DiffResult>();
-            var cellsSrc = wsPartSrc.Worksheet.Descendants<Cell>().ToDictionary(c => c.CellReference.Value, c => c);
-            var cellsDst = wsPartDst.Worksheet.Descendants<Cell>().ToDictionary(c => c.CellReference.Value, c => c);
-            var allCellReferences = cellsSrc.Keys.Union(cellsDst.Keys).Distinct();
+            var rowsSrc = BuildSheetRows(wsPartSrc, wbPartSrc);
+            var rowsDst = BuildSheetRows(wsPartDst, wbPartDst);
 
-            foreach (var cellRef in allCellReferences)
+            var rowOps = CalculateDiffOperations(rowsSrc, rowsDst, RowsAreEqual);
+
+            int opIndex = 0;
+            while (opIndex < rowOps.Count)
             {
-                var valSrc = cellsSrc.ContainsKey(cellRef) ? GetCellValue(cellsSrc[cellRef], wbPartSrc) : "";
-                var valDst = cellsDst.ContainsKey(cellRef) ? GetCellValue(cellsDst[cellRef], wbPartDst) : "";
-                if (valSrc != valDst)
+                var op = rowOps[opIndex];
+                switch (op.Type)
                 {
-                    sheetResults.Add(new DiffResult {
-                        DiffType = DiffType.CellValueMismatch,
-                        SheetName = sheetName,
-                        CellAddress = cellRef,
-                        CellValueSrc = valSrc,
-                        CellValueDst = valDst
-                    });
+                    case SequenceDiffOperationType.Match:
+                        CompareRowCells(rowsSrc[op.IndexSrc], rowsDst[op.IndexDst], sheetName, sheetResults);
+                        opIndex++;
+                        break;
+                    case SequenceDiffOperationType.Delete:
+                        if (opIndex + 1 < rowOps.Count && rowOps[opIndex + 1].Type == SequenceDiffOperationType.Insert)
+                        {
+                            var pairedInsert = rowOps[opIndex + 1];
+                            CompareRowCells(rowsSrc[op.IndexSrc], rowsDst[pairedInsert.IndexDst], sheetName, sheetResults);
+                            opIndex += 2;
+                        }
+                        else
+                        {
+                            AddRowCellsAsDiff(rowsSrc[op.IndexSrc], null, sheetName, sheetResults);
+                            opIndex++;
+                        }
+                        break;
+                    case SequenceDiffOperationType.Insert:
+                        if (opIndex + 1 < rowOps.Count && rowOps[opIndex + 1].Type == SequenceDiffOperationType.Delete)
+                        {
+                            var pairedDelete = rowOps[opIndex + 1];
+                            CompareRowCells(rowsSrc[pairedDelete.IndexSrc], rowsDst[op.IndexDst], sheetName, sheetResults);
+                            opIndex += 2;
+                        }
+                        else
+                        {
+                            AddRowCellsAsDiff(null, rowsDst[op.IndexDst], sheetName, sheetResults);
+                            opIndex++;
+                        }
+                        break;
                 }
             }
+
             return sheetResults;
+        }
+
+        private List<SheetRow> BuildSheetRows(WorksheetPart worksheetPart, WorkbookPart workbookPart)
+        {
+            var rows = new List<SheetRow>();
+            var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+            if (sheetData == null) return rows;
+
+            foreach (var row in sheetData.Elements<Row>())
+            {
+                var sheetRow = new SheetRow(row.RowIndex?.Value ?? 0);
+                foreach (var cell in row.Elements<Cell>())
+                {
+                    var cellRef = cell.CellReference?.Value;
+                    if (string.IsNullOrEmpty(cellRef)) continue;
+
+                    var columnIndex = GetColumnIndex(cellRef);
+                    sheetRow.Cells.Add(new SheetCell
+                    {
+                        ColumnIndex = columnIndex,
+                        CellReference = cellRef,
+                        Value = GetCellValue(cell, workbookPart)
+                    });
+                }
+
+                if (sheetRow.Cells.Count == 0) continue;
+                sheetRow.Cells.Sort((a, b) => a.ColumnIndex.CompareTo(b.ColumnIndex));
+                rows.Add(sheetRow);
+            }
+
+            return rows;
+        }
+
+        private bool RowsAreEqual(SheetRow left, SheetRow right)
+        {
+            if (left.Cells.Count != right.Cells.Count) return false;
+            for (int i = 0; i < left.Cells.Count; i++)
+            {
+                if (!string.Equals(left.Cells[i].Value, right.Cells[i].Value, StringComparison.Ordinal)) return false;
+            }
+            return true;
+        }
+
+        private void CompareRowCells(SheetRow rowSrc, SheetRow rowDst, string sheetName, List<DiffResult> results)
+        {
+            var cellsSrc = rowSrc?.Cells ?? new List<SheetCell>();
+            var cellsDst = rowDst?.Cells ?? new List<SheetCell>();
+
+            var cellOps = CalculateDiffOperations(cellsSrc, cellsDst, (a, b) => string.Equals(a.Value, b.Value, StringComparison.Ordinal));
+
+            int opIndex = 0;
+            while (opIndex < cellOps.Count)
+            {
+                var op = cellOps[opIndex];
+                switch (op.Type)
+                {
+                    case SequenceDiffOperationType.Match:
+                        opIndex++;
+                        break;
+                    case SequenceDiffOperationType.Delete:
+                        if (opIndex + 1 < cellOps.Count && cellOps[opIndex + 1].Type == SequenceDiffOperationType.Insert)
+                        {
+                            var pairedInsert = cellOps[opIndex + 1];
+                            AddCellDiff(rowSrc.Cells[op.IndexSrc], rowDst.Cells[pairedInsert.IndexDst], sheetName, results);
+                            opIndex += 2;
+                        }
+                        else
+                        {
+                            AddCellDiff(rowSrc.Cells[op.IndexSrc], null, sheetName, results);
+                            opIndex++;
+                        }
+                        break;
+                    case SequenceDiffOperationType.Insert:
+                        if (opIndex + 1 < cellOps.Count && cellOps[opIndex + 1].Type == SequenceDiffOperationType.Delete)
+                        {
+                            var pairedDelete = cellOps[opIndex + 1];
+                            AddCellDiff(rowSrc.Cells[pairedDelete.IndexSrc], rowDst.Cells[op.IndexDst], sheetName, results);
+                            opIndex += 2;
+                        }
+                        else
+                        {
+                            AddCellDiff(null, rowDst.Cells[op.IndexDst], sheetName, results);
+                            opIndex++;
+                        }
+                        break;
+                }
+            }
+        }
+
+        private void AddRowCellsAsDiff(SheetRow rowSrc, SheetRow rowDst, string sheetName, List<DiffResult> results)
+        {
+            if (rowSrc != null)
+            {
+                foreach (var cell in rowSrc.Cells)
+                {
+                    AddCellDiff(cell, null, sheetName, results);
+                }
+            }
+
+            if (rowDst != null)
+            {
+                foreach (var cell in rowDst.Cells)
+                {
+                    AddCellDiff(null, cell, sheetName, results);
+                }
+            }
+        }
+
+        private void AddCellDiff(SheetCell cellSrc, SheetCell cellDst, string sheetName, List<DiffResult> results)
+        {
+            if (cellSrc == null && cellDst == null) return;
+
+            var cellAddress = cellDst?.CellReference ?? cellSrc?.CellReference ?? "";
+
+            results.Add(new DiffResult
+            {
+                DiffType = DiffType.CellValueMismatch,
+                SheetName = sheetName,
+                CellAddress = cellAddress,
+                CellValueSrc = cellSrc?.Value ?? "",
+                CellValueDst = cellDst?.Value ?? ""
+            });
+        }
+
+        private List<SequenceDiffOperation> CalculateDiffOperations<T>(IList<T> source, IList<T> destination, Func<T, T, bool> comparer)
+        {
+            int m = source.Count;
+            int n = destination.Count;
+            var dp = new int[m + 1, n + 1];
+
+            for (int i = m - 1; i >= 0; i--)
+            {
+                for (int j = n - 1; j >= 0; j--)
+                {
+                    if (comparer(source[i], destination[j]))
+                    {
+                        dp[i, j] = dp[i + 1, j + 1] + 1;
+                    }
+                    else
+                    {
+                        dp[i, j] = Math.Max(dp[i + 1, j], dp[i, j + 1]);
+                    }
+                }
+            }
+
+            var operations = new List<SequenceDiffOperation>();
+            int srcIndex = 0;
+            int dstIndex = 0;
+
+            while (srcIndex < m && dstIndex < n)
+            {
+                if (comparer(source[srcIndex], destination[dstIndex]))
+                {
+                    operations.Add(new SequenceDiffOperation(SequenceDiffOperationType.Match, srcIndex, dstIndex));
+                    srcIndex++;
+                    dstIndex++;
+                }
+                else if (dp[srcIndex + 1, dstIndex] >= dp[srcIndex, dstIndex + 1])
+                {
+                    operations.Add(new SequenceDiffOperation(SequenceDiffOperationType.Delete, srcIndex, dstIndex));
+                    srcIndex++;
+                }
+                else
+                {
+                    operations.Add(new SequenceDiffOperation(SequenceDiffOperationType.Insert, srcIndex, dstIndex));
+                    dstIndex++;
+                }
+            }
+
+            while (srcIndex < m)
+            {
+                operations.Add(new SequenceDiffOperation(SequenceDiffOperationType.Delete, srcIndex, dstIndex));
+                srcIndex++;
+            }
+
+            while (dstIndex < n)
+            {
+                operations.Add(new SequenceDiffOperation(SequenceDiffOperationType.Insert, srcIndex, dstIndex));
+                dstIndex++;
+            }
+
+            return operations;
+        }
+
+        private int GetColumnIndex(string cellReference)
+        {
+            int index = 0;
+            foreach (var ch in cellReference.ToUpperInvariant())
+            {
+                if (ch < 'A' || ch > 'Z') break;
+                index = index * 26 + (ch - 'A' + 1);
+            }
+            return index;
+        }
+
+        private sealed class SheetRow
+        {
+            public SheetRow(uint rowIndex)
+            {
+                RowIndex = rowIndex;
+            }
+
+            public uint RowIndex { get; }
+            public List<SheetCell> Cells { get; } = new List<SheetCell>();
+        }
+
+        private sealed class SheetCell
+        {
+            public int ColumnIndex { get; set; }
+            public string CellReference { get; set; }
+            public string Value { get; set; }
+        }
+
+        private enum SequenceDiffOperationType
+        {
+            Match,
+            Delete,
+            Insert
+        }
+
+        private readonly struct SequenceDiffOperation
+        {
+            public SequenceDiffOperation(SequenceDiffOperationType type, int indexSrc, int indexDst)
+            {
+                Type = type;
+                IndexSrc = indexSrc;
+                IndexDst = indexDst;
+            }
+
+            public SequenceDiffOperationType Type { get; }
+            public int IndexSrc { get; }
+            public int IndexDst { get; }
         }
 
         private string GetCellValue(Cell cell, WorkbookPart wbPart)

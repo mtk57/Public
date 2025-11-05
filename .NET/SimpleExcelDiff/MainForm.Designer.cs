@@ -254,7 +254,6 @@
         private System.Windows.Forms.Button btnBrowseDst;
         private System.Windows.Forms.TextBox txtPathDst;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Label label4;
         private System.Windows.Forms.CheckBox chkDrawCell;
         private System.Windows.Forms.Button btnColorSelector;
         private System.Windows.Forms.PictureBox picCellColor;

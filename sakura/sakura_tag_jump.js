@@ -21,6 +21,19 @@ if (!fso.FileExists(EXE_PATH)) {
     // コマンドライン引数として渡す（ダブルクォートで囲む）
     var args = '"' + lineText + '"'
 
+    // ①現在のファイルパスと行番号をワークファイルに書き出す
+    var currentFilePath = ExpandParameter("$F"); // 現在のファイルパス
+    var currentLineNo = ExpandParameter("$y");   // 現在の行番号
+    
+    // ユーザーの一時フォルダを取得
+    var tempFolder = shell.ExpandEnvironmentStrings("%TEMP%");
+    var workFile = tempFolder + "\\SimpleMethodCallListCreator.tmp";
+    
+    // ファイルに書き出し（タブ区切り）
+    var file = fso.CreateTextFile(workFile, true);
+    file.WriteLine(currentFilePath + "\t" + currentLineNo);
+    file.Close();
+    
     // EXEを実行
     ExecCommand('"' + EXE_PATH + '" ' + args);
 }

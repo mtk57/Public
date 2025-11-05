@@ -23,6 +23,10 @@ namespace SimpleFileSearch
 
             InitializeComponent();
 
+            clmCount.ValueType = typeof(int);
+            clmCount.DefaultCellStyle.Format = "N0";
+            clmCount.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+
             _extensionGroups = results
                 .GroupBy( r => r.Extension ?? string.Empty, StringComparer.OrdinalIgnoreCase )
                 .ToDictionary( g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase );
@@ -76,7 +80,7 @@ namespace SimpleFileSearch
 
             foreach ( ExtensionGroup group in _filteredGroups )
             {
-                int rowIndex = dataGridViewResults.Rows.Add( group.DisplayName, group.Count.ToString( "N0" ) );
+                int rowIndex = dataGridViewResults.Rows.Add( group.DisplayName, group.Count );
                 dataGridViewResults.Rows[rowIndex].Tag = group.ExtensionKey;
             }
 
@@ -152,13 +156,9 @@ namespace SimpleFileSearch
                 {
                     try
                     {
-                        if ( File.Exists( file.FilePath ) )
-                        {
-                            File.Delete( file.FilePath );
-                        }
+                        DeleteSingleFile( file.FilePath );
 
-                        files.Remove( file );
-                        if ( _deletedFileSet.Add( file.FilePath ) )
+                        if ( files.Remove( file ) && _deletedFileSet.Add( file.FilePath ) )
                         {
                             _deletedFiles.Add( file.FilePath );
                         }
@@ -185,6 +185,27 @@ namespace SimpleFileSearch
             }
 
             ApplyFilter();
+        }
+
+        private static void DeleteSingleFile ( string filePath )
+        {
+            if ( string.IsNullOrWhiteSpace( filePath ) )
+            {
+                return;
+            }
+
+            if ( !File.Exists( filePath ) )
+            {
+                return;
+            }
+
+            FileAttributes attributes = File.GetAttributes( filePath );
+            if ( ( attributes & FileAttributes.ReadOnly ) == FileAttributes.ReadOnly )
+            {
+                File.SetAttributes( filePath, attributes & ~FileAttributes.ReadOnly );
+            }
+
+            File.Delete( filePath );
         }
 
         private class ExtensionGroup

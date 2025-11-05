@@ -13,13 +13,17 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Const VER = "1.2.0" ' バージョンを更新
+Const VER = "1.3.0" ' バージョンを更新
 
 ' --- 変数定義 ---
 Private lastSearchTerm As String
 Private foundItems As Collection
 Private currentShapeIndex As Long
 Private regex As Object
+
+Private Sub btnTateYokoSearch_Click()
+    ' TBD
+End Sub
 
 ' フォームが初期化されたときの処理
 Private Sub UserForm_Initialize()

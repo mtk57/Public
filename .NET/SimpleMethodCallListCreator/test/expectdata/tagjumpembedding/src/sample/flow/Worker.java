@@ -12,4 +12,8 @@ public class Worker {
     public static void performStatic() {
         Utility.touch();
     }
+
+    public String ToString(Object o) {
+        o.ToString();
+    }
 }

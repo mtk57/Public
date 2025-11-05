@@ -22,6 +22,12 @@ public class MainWorkflow {
         if(isCorrect("hoge") != false){
             logInfo();
         }
+
+        Worker w = new Worker();
+
+        if(getWorkerString(w).Equal("hoge")){
+            logInfo();
+        }
     }
 
     void initialize() {
@@ -35,6 +41,10 @@ public class MainWorkflow {
 
     private boolean isCorrect(String prm) {
         return true;
+    }
+
+    private String getWorkerString(Worker w) {
+        return w.ToString();
     }
 
     private void overloadFunc1(String a) {

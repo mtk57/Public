@@ -22,6 +22,12 @@ public class MainWorkflow {
         if(isCorrect("hoge") != false){ //@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\MainWorkflow.java	private boolean isCorrect(String)	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
             logInfo(); //@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\MainWorkflow.java	private void logInfo()	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
         }
+
+        Worker w = new Worker();
+
+        if(getWorkerString(w).Equal("hoge")){ //@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\MainWorkflow.java	private String getWorkerString(Worker)	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
+            logInfo(); //@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\MainWorkflow.java	private void logInfo()	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
+        }
     }
 
     void initialize() {
@@ -35,6 +41,10 @@ public class MainWorkflow {
 
     private boolean isCorrect(String prm) {
         return true;
+    }
+
+    private String getWorkerString(Worker w) {
+        return w.ToString();
     }
 
     private void overloadFunc1(String a) {

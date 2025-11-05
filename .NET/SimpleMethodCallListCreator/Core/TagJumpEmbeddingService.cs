@@ -112,7 +112,13 @@ namespace SimpleMethodCallListCreator
                         continue;
                     }
 
-                    var insertion = BuildInsertion(structure.OriginalText, call, calleeEntry, prefix, normalizedMethodListPath);
+                    var replacement = CreateTagReplacement(calleeEntry, prefix, normalizedMethodListPath);
+                    if (string.IsNullOrEmpty(replacement))
+                    {
+                        continue;
+                    }
+
+                    var insertion = BuildInsertion(structure.OriginalText, call, replacement, prefix);
                     if (insertion != null)
                     {
                         AddInsertion(modifications, structure.FilePath, insertion);
@@ -186,18 +192,11 @@ namespace SimpleMethodCallListCreator
             list.Add(insertion);
         }
 
-        private static TagInsertion BuildInsertion(string originalText, JavaMethodCallStructure call,
-            MethodListEntry calleeEntry, string prefix, string methodListPath)
+        private static string CreateTagReplacement(MethodListEntry calleeEntry, string prefix, string methodListPath)
         {
-            if (call == null || calleeEntry == null)
+            if (calleeEntry == null)
             {
-                return null;
-            }
-
-            var baseIndex = call.CallEndIndex + 1;
-            if (baseIndex < 0 || baseIndex > originalText.Length)
-            {
-                return null;
+                return string.Empty;
             }
 
             var methodListSegment = methodListPath ?? string.Empty;
@@ -210,101 +209,153 @@ namespace SimpleMethodCallListCreator
             {
                 tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature, "\t", methodListSegment);
             }
-            var replacement = (prefix ?? string.Empty) + tagContent;
 
-            var insertIndex = AdjustInsertIndexAfterCall(originalText, baseIndex);
-
-            var scanIndex = insertIndex;
-            while (scanIndex < originalText.Length)
-            {
-                var c = originalText[scanIndex];
-                if (c == ' ' || c == '\t')
-                {
-                    scanIndex++;
-                    continue;
-                }
-
-                break;
-            }
-
-            var prefixStart = scanIndex;
-            var existingPrefix = TagJumpSyntaxHelper.FindExistingPrefixSegment(originalText, prefixStart, prefix);
-            if (existingPrefix.HasValue)
-            {
-                var length = Math.Min(existingPrefix.Length, originalText.Length - existingPrefix.Start);
-                if (length > 0)
-                {
-                    var existingText = originalText.Substring(existingPrefix.Start, length);
-                    if (string.Equals(existingText, replacement, StringComparison.Ordinal))
-                    {
-                        return null;
-                    }
-                }
-
-                return new TagInsertion(existingPrefix.Start, existingPrefix.Length, replacement);
-            }
-
-            return new TagInsertion(insertIndex, 0, replacement);
+            return (prefix ?? string.Empty) + tagContent;
         }
 
-        private static int AdjustInsertIndexAfterCall(string text, int startIndex)
+        private static TagInsertion BuildInsertion(string originalText, JavaMethodCallStructure call,
+            string replacement, string prefix)
+        {
+            if (call == null || string.IsNullOrEmpty(originalText) || string.IsNullOrEmpty(replacement))
+            {
+                return null;
+            }
+
+            var tailStart = call.CallEndIndex + 1;
+            if (tailStart < 0)
+            {
+                tailStart = 0;
+            }
+            else if (tailStart > originalText.Length)
+            {
+                tailStart = originalText.Length;
+            }
+
+            var lineEnd = FindLineEndExclusive(originalText, call.CallEndIndex);
+            if (lineEnd < tailStart)
+            {
+                lineEnd = tailStart;
+            }
+
+            var tailLength = lineEnd - tailStart;
+            var tail = tailLength > 0 ? originalText.Substring(tailStart, tailLength) : string.Empty;
+            var cleanedTail = RemoveExistingTagFromTail(originalText, tailStart, lineEnd, prefix);
+            var newTail = AppendReplacementToTail(cleanedTail, replacement);
+
+            if (string.Equals(tail, newTail, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return new TagInsertion(tailStart, tailLength, newTail);
+        }
+
+        private static string RemoveExistingTagFromTail(string originalText, int tailStart, int tailEnd,
+            string prefix)
+        {
+            if (string.IsNullOrEmpty(originalText) || tailStart >= tailEnd)
+            {
+                return string.Empty;
+            }
+
+            var tailLength = tailEnd - tailStart;
+            var tail = originalText.Substring(tailStart, tailLength);
+            var segment = TagJumpSyntaxHelper.FindFirstPrefixSegmentInRange(originalText, tailStart, tailEnd, prefix);
+            if (!segment.HasValue)
+            {
+                return tail;
+            }
+
+            var relativeStart = segment.Start - tailStart;
+            if (relativeStart < 0 || relativeStart > tail.Length)
+            {
+                return tail;
+            }
+
+            var removalEnd = relativeStart + segment.Length;
+            if (removalEnd > tail.Length)
+            {
+                removalEnd = tail.Length;
+            }
+
+            var before = tail.Substring(0, relativeStart);
+            var after = tail.Substring(removalEnd);
+            if (before.Length > 0 && after.Length > 0 &&
+                char.IsWhiteSpace(before[before.Length - 1]) && char.IsWhiteSpace(after[0]))
+            {
+                before = before.Substring(0, before.Length - 1);
+            }
+            return before + after;
+        }
+
+        private static string AppendReplacementToTail(string tail, string replacement)
+        {
+            var baseTail = tail ?? string.Empty;
+            if (string.IsNullOrEmpty(replacement))
+            {
+                return baseTail;
+            }
+
+            var builder = new StringBuilder(baseTail.Length + replacement.Length + 1);
+            builder.Append(baseTail);
+            if (builder.Length > 0)
+            {
+                var last = builder[builder.Length - 1];
+                if (!char.IsWhiteSpace(last))
+                {
+                    builder.Append(' ');
+                }
+            }
+
+            builder.Append(replacement);
+            return builder.ToString();
+        }
+
+        private static int FindLineEndExclusive(string text, int index)
         {
             if (string.IsNullOrEmpty(text))
             {
-                return startIndex;
+                return 0;
             }
 
-            var index = startIndex;
-            var length = text.Length;
-
-            while (index < length)
+            var limit = text.Length;
+            var current = index;
+            if (current < 0)
             {
-                index = SkipInlineWhitespace(text, index);
-                if (index >= length)
-                {
-                    break;
-                }
-
-                var c = text[index];
-                if (c == ')')
-                {
-                    index++;
-                    continue;
-                }
-
-                if (c == ';')
-                {
-                    index++;
-                    continue;
-                }
-
-                if (c == '{')
-                {
-                    index++;
-                    break;
-                }
-
-                break;
+                current = 0;
+            }
+            else if (current > limit)
+            {
+                current = limit;
             }
 
-            return index;
+            while (current < limit)
+            {
+                var ch = text[current];
+                if (ch == '\r' || ch == '\n')
+                {
+                    break;
+                }
+
+                current++;
+            }
+
+            return current;
         }
 
-        private static int SkipInlineWhitespace(string text, int index)
+        private static bool StartsWith(string text, int index, string value)
         {
-            while (index < text.Length)
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(value))
             {
-                var c = text[index];
-                if (c == ' ' || c == '\t')
-                {
-                    index++;
-                    continue;
-                }
-
-                break;
+                return false;
             }
 
-            return index;
+            if (index < 0 || index + value.Length > text.Length)
+            {
+                return false;
+            }
+
+            return string.Compare(text, index, value, 0, value.Length, StringComparison.Ordinal) == 0;
         }
 
         private static string ApplyInsertions(string originalText, List<TagInsertion> insertions)

@@ -7,6 +7,6 @@ public class Helper {
     }
 
     public static void prepareStatic() {
-        Worker.performStatic();//@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\Worker.java	public static void performStatic()	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
+        Worker.performStatic(); //@ C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\src\sample\flow\Worker.java	public static void performStatic()	C:\_git\Public\.NET\SimpleMethodCallListCreator\test\testdata\tagjumpembedding\tagjump_method_list.tsv
     }
 }

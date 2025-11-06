@@ -1,7 +1,7 @@
 Attribute VB_Name = "ModuleMain"
 Option Explicit
 
-Private Const VER = "1.0.1"
+Private Const VER = "1.0.2"
 Private Const DEBUG_LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "xls2xlsx_debug.log"
 
@@ -114,9 +114,13 @@ Private Sub ProcessFolder(ByRef settings As ConversionSettings, ByVal currentFol
     Dim fileName As String
     fileName = Dir$(currentFolder & "\*.xls", vbNormal)
     Do While fileName <> vbNullString
-        On Error GoTo ConvertError
-        ConvertSingleFile currentFolder & "\" & fileName, settings.keepXls
-        On Error GoTo 0
+        If LCase$(GetFileExtension(fileName)) = ".xls" Then
+            On Error GoTo ConvertError
+            ConvertSingleFile currentFolder & "\" & fileName, settings.keepXls
+            On Error GoTo 0
+        Else
+            WriteDebugLog "Skip non-xls entry: " & currentFolder & "\" & fileName
+        End If
         fileName = Dir$
         GoTo ContinueLoop
 ConvertError:
@@ -156,6 +160,11 @@ End Sub
 
 Private Sub ConvertSingleFile(ByVal sourcePath As String, ByVal keepXls As Boolean)
     WriteDebugLog "•ÏŠ·ŠJŽn: " & sourcePath
+   
+    If LCase$(GetFileExtension(sourcePath)) <> ".xls" Then
+        WriteDebugLog "Skip non-xls file: " & sourcePath
+        Exit Sub
+    End If
    
     ' --- C³‰ÓŠŠJŽn ---
     Dim targetPath As String
@@ -208,6 +217,16 @@ DeleteError:
     WriteDebugLog "íœŽ¸”s: " & sourcePath & " - " & Err.Number & " - " & Err.Description
     Err.Clear
 End Sub
+
+Private Function GetFileExtension(ByVal fileName As String) As String
+    Dim dotPosition As Long
+    dotPosition = InStrRev(fileName, ".")
+    If dotPosition > 0 Then
+        GetFileExtension = Mid$(fileName, dotPosition)
+    Else
+        GetFileExtension = vbNullString
+    End If
+End Function
 
 Private Sub PrepareDebugLog()
     If Not DEBUG_LOG_ENABLED Then

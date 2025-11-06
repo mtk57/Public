@@ -60,7 +60,7 @@ Public Sub Run_Click()
     Dim logPath As String
     logPath = BuildLogPath()
     SimpleTranscriptionLogging.StartLog logPath
-    SimpleTranscriptionLogging.WriteLog PROC_NAME & " : å‡¦ç†é–‹å§‹"
+    SimpleTranscriptionLogging.WriteLog PROC_NAME & " : ˆ—ŠJn"
     
     Dim config As AppConfig
     config = LoadAppConfig(mainSheet)
@@ -94,8 +94,8 @@ Public Sub Run_Click()
     
     ProcessTransfers mainSheet, config, openedByMacro
     
-    SimpleTranscriptionLogging.WriteLog PROC_NAME & " : å‡¦ç†æ­£å¸¸çµ‚äº†"
-    MsgBox "è»¢è¨˜ãŒå®Œäº†ã—ã¾ã—ãŸã€‚", vbInformation + vbOKOnly, "ã‚·ãƒ³ãƒ—ãƒ«è»¢è¨˜"
+    SimpleTranscriptionLogging.WriteLog PROC_NAME & " : ˆ—³íI—¹"
+    MsgBox "“]‹L‚ªŠ®—¹‚µ‚Ü‚µ‚½B", vbInformation + vbOKOnly, "ƒVƒ“ƒvƒ‹“]‹L"
     
 Cleanup:
     On Error Resume Next
@@ -115,8 +115,8 @@ Cleanup:
     Exit Sub
     
 ErrHandler:
-    SimpleTranscriptionLogging.WriteLog PROC_NAME & " : ã‚¨ãƒ©ãƒ¼ç™ºç”Ÿ " & Err.Number & " - " & Err.Description
-    MsgBox "ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸã€‚" & vbCrLf & Err.Description, vbCritical + vbOKOnly, "ã‚·ãƒ³ãƒ—ãƒ«è»¢è¨˜"
+    SimpleTranscriptionLogging.WriteLog PROC_NAME & " : ƒGƒ‰[”­¶ " & Err.Number & " - " & Err.Description
+    MsgBox "ƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½B" & vbCrLf & Err.Description, vbCritical + vbOKOnly, "ƒVƒ“ƒvƒ‹“]‹L"
     Resume Cleanup
 End Sub
 
@@ -129,25 +129,25 @@ Private Sub ProcessTransfers(ByVal mainSheet As Worksheet, ByRef config As AppCo
         statusValue = Trim$(UCase$(CStr(mainSheet.Range(COL_STATUS & currentRow).Value)))
         
         If Len(statusValue) = 0 Then
-            SimpleTranscriptionLogging.WriteLog "è¡Œ" & currentRow & " : ç©ºã‚»ãƒ«æ¤œçŸ¥ã®ãŸã‚å‡¦ç†çµ‚äº†"
+            SimpleTranscriptionLogging.WriteLog "s" & currentRow & " : ‹óƒZƒ‹ŒŸ’m‚Ì‚½‚ßˆ—I—¹"
             Exit Do
         End If
         
         If statusValue = "STOPPER" Then
-            SimpleTranscriptionLogging.WriteLog "è¡Œ" & currentRow & " : STOPPERæ¤œçŸ¥ã®ãŸã‚å‡¦ç†çµ‚äº†"
+            SimpleTranscriptionLogging.WriteLog "s" & currentRow & " : STOPPERŒŸ’m‚Ì‚½‚ßˆ—I—¹"
             Exit Do
         End If
         
         If statusValue = "DISABLE" Then
-            SimpleTranscriptionLogging.WriteLog "è¡Œ" & currentRow & " : DISABLEã®ãŸã‚ã‚¹ã‚­ãƒƒãƒ—"
+            SimpleTranscriptionLogging.WriteLog "s" & currentRow & " : DISABLE‚Ì‚½‚ßƒXƒLƒbƒv"
         ElseIf statusValue = "ENABLE" Then
             Dim instruction As TransferInstruction
             instruction = LoadInstruction(mainSheet, currentRow)
-            SimpleTranscriptionLogging.WriteLog "è¡Œ" & currentRow & " : è»¢è¨˜å‡¦ç†é–‹å§‹"
+            SimpleTranscriptionLogging.WriteLog "s" & currentRow & " : “]‹Lˆ—ŠJn"
             ExecuteInstruction instruction, config, openedByMacro
-            SimpleTranscriptionLogging.WriteLog "è¡Œ" & currentRow & " : è»¢è¨˜å‡¦ç†çµ‚äº†"
+            SimpleTranscriptionLogging.WriteLog "s" & currentRow & " : “]‹Lˆ—I—¹"
         Else
-            Err.Raise vbObjectError + 100, , "main!" & COL_STATUS & currentRow & " ã®å€¤ãŒä¸æ­£ã§ã™: " & statusValue
+            Err.Raise vbObjectError + 100, , "main!" & COL_STATUS & currentRow & " ‚Ì’l‚ª•s³‚Å‚·: " & statusValue
         End If
         
         currentRow = currentRow + 1
@@ -178,12 +178,12 @@ Private Function ParseNotFoundBehavior(ByVal settingValue As Variant) As NotFoun
     End If
     
     Select Case UCase$(textValue)
-        Case "ç„¡è¦–", "IGNORE"
+        Case "–³‹", "IGNORE"
             ParseNotFoundBehavior = NotFoundIgnore
-        Case "ä¸­æ–­", "STOP"
+        Case "’†’f", "STOP"
             ParseNotFoundBehavior = NotFoundAbort
         Case Else
-            Err.Raise vbObjectError + 101, , "è¨­å®šè¡¨(H6)ã®å€¤ãŒä¸æ­£ã§ã™: " & textValue
+            Err.Raise vbObjectError + 101, , "İ’è•\(H6)‚Ì’l‚ª•s³‚Å‚·: " & textValue
     End Select
 End Function
 
@@ -204,7 +204,7 @@ Private Function ParseYesNo(ByVal settingValue As Variant, ByVal defaultValue As
         Case "NO"
             ParseYesNo = False
         Case Else
-            Err.Raise vbObjectError + 102, , "è¨­å®šè¡¨ã®YES/NOã«ä¸æ­£ãªå€¤ãŒã‚ã‚Šã¾ã™: " & textValue
+            Err.Raise vbObjectError + 102, , "İ’è•\‚ÌYES/NO‚É•s³‚È’l‚ª‚ ‚è‚Ü‚·: " & textValue
     End Select
 End Function
 
@@ -228,35 +228,35 @@ End Function
 
 Private Sub ValidateInstruction(ByRef info As TransferInstruction)
     If Len(info.SourcePath) = 0 Then
-        Err.Raise vbObjectError + 110, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ƒãƒ•ã‚¡ã‚¤ãƒ«åãŒæœªå…¥åŠ›ã§ã™ã€‚"
+        Err.Raise vbObjectError + 110, , "s" & info.RowIndex & " : “]‹LŒ³ƒtƒ@ƒCƒ‹–¼‚ª–¢“ü—Í‚Å‚·B"
     End If
     
     If Len(info.SourceSheetName) = 0 Then
-        Err.Raise vbObjectError + 111, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ƒã‚·ãƒ¼ãƒˆåãŒæœªå…¥åŠ›ã§ã™ã€‚"
+        Err.Raise vbObjectError + 111, , "s" & info.RowIndex & " : “]‹LŒ³ƒV[ƒg–¼‚ª–¢“ü—Í‚Å‚·B"
     End If
     
     If info.SourceSearchColumn = 0 Then
-        Err.Raise vbObjectError + 112, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ƒæ¤œç´¢åˆ—ãŒä¸æ­£ã§ã™ã€‚"
+        Err.Raise vbObjectError + 112, , "s" & info.RowIndex & " : “]‹LŒ³ŒŸõ—ñ‚ª•s³‚Å‚·B"
     End If
     
     If info.SourceTransferColumn = 0 Then
-        Err.Raise vbObjectError + 113, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ƒè»¢è¨˜åˆ—ãŒä¸æ­£ã§ã™ã€‚"
+        Err.Raise vbObjectError + 113, , "s" & info.RowIndex & " : “]‹LŒ³“]‹L—ñ‚ª•s³‚Å‚·B"
     End If
     
     If Len(info.DestPath) = 0 Then
-        Err.Raise vbObjectError + 114, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ˆãƒ•ã‚¡ã‚¤ãƒ«åãŒæœªå…¥åŠ›ã§ã™ã€‚"
+        Err.Raise vbObjectError + 114, , "s" & info.RowIndex & " : “]‹Læƒtƒ@ƒCƒ‹–¼‚ª–¢“ü—Í‚Å‚·B"
     End If
     
     If Len(info.DestSheetName) = 0 Then
-        Err.Raise vbObjectError + 115, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ˆã‚·ãƒ¼ãƒˆåãŒæœªå…¥åŠ›ã§ã™ã€‚"
+        Err.Raise vbObjectError + 115, , "s" & info.RowIndex & " : “]‹LæƒV[ƒg–¼‚ª–¢“ü—Í‚Å‚·B"
     End If
     
     If info.DestSearchColumn = 0 Then
-        Err.Raise vbObjectError + 116, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ˆæ¤œç´¢åˆ—ãŒä¸æ­£ã§ã™ã€‚"
+        Err.Raise vbObjectError + 116, , "s" & info.RowIndex & " : “]‹LæŒŸõ—ñ‚ª•s³‚Å‚·B"
     End If
     
     If info.DestTransferColumn = 0 Then
-        Err.Raise vbObjectError + 117, , "è¡Œ" & info.RowIndex & " : è»¢è¨˜å…ˆè»¢è¨˜åˆ—ãŒä¸æ­£ã§ã™ã€‚"
+        Err.Raise vbObjectError + 117, , "s" & info.RowIndex & " : “]‹Læ“]‹L—ñ‚ª•s³‚Å‚·B"
     End If
 End Sub
 
@@ -265,7 +265,7 @@ Private Sub ExecuteInstruction(ByRef instruction As TransferInstruction, ByRef c
     Set sourceBook = GetOrOpenWorkbook(instruction.SourcePath, openedByMacro)
     
     Dim sourceSheet As Worksheet
-    Set sourceSheet = GetWorksheetByName(sourceBook, instruction.SourceSheetName, "è»¢è¨˜å…ƒ", instruction.RowIndex)
+    Set sourceSheet = GetWorksheetByName(sourceBook, instruction.SourceSheetName, "“]‹LŒ³", instruction.RowIndex)
     
     Dim lastSourceRow As Long
     lastSourceRow = GetLastUsedRow(sourceSheet, instruction.SourceSearchColumn)
@@ -285,7 +285,7 @@ Private Sub ExecuteInstruction(ByRef instruction As TransferInstruction, ByRef c
             searchValue = searchCell.Value
             
             If IsBlankValue(searchValue) Then
-                SimpleTranscriptionLogging.WriteLog "è¡Œ" & instruction.RowIndex & " : è»¢è¨˜å…ƒè¡Œ" & rowPointer & " ã®æ¤œç´¢å€¤ãŒç©ºã®ãŸã‚ã‚¹ã‚­ãƒƒãƒ—"
+                SimpleTranscriptionLogging.WriteLog "s" & instruction.RowIndex & " : “]‹LŒ³s" & rowPointer & " ‚ÌŒŸõ’l‚ª‹ó‚Ì‚½‚ßƒXƒLƒbƒv"
                 GoTo ContinueLoop
             End If
             
@@ -293,7 +293,7 @@ Private Sub ExecuteInstruction(ByRef instruction As TransferInstruction, ByRef c
             transferValue = sourceSheet.Cells(rowPointer, instruction.SourceTransferColumn).Value
             
             If config.SkipEmptySource And IsBlankValue(transferValue) Then
-                SimpleTranscriptionLogging.WriteLog "è¡Œ" & instruction.RowIndex & " : è»¢è¨˜å…ƒè¡Œ" & rowPointer & " ã®è»¢è¨˜å€¤ãŒç©ºã®ãŸã‚ã‚¹ã‚­ãƒƒãƒ—"
+                SimpleTranscriptionLogging.WriteLog "s" & instruction.RowIndex & " : “]‹LŒ³s" & rowPointer & " ‚Ì“]‹L’l‚ª‹ó‚Ì‚½‚ßƒXƒLƒbƒv"
                 GoTo ContinueLoop
             End If
             
@@ -303,7 +303,7 @@ ContinueLoop:
     Next rowPointer
     
     If yellowFound = 0 Then
-        SimpleTranscriptionLogging.WriteLog "è¡Œ" & instruction.RowIndex & " : è»¢è¨˜å…ƒã‚·ãƒ¼ãƒˆã«é»„è‰²ã‚»ãƒ«ãŒã‚ã‚Šã¾ã›ã‚“"
+        SimpleTranscriptionLogging.WriteLog "s" & instruction.RowIndex & " : “]‹LŒ³ƒV[ƒg‚É‰©FƒZƒ‹‚ª‚ ‚è‚Ü‚¹‚ñ"
     End If
 End Sub
 
@@ -312,16 +312,16 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
     Set destBook = GetOrOpenWorkbook(instruction.DestPath, openedByMacro)
     
     Dim destSheet As Worksheet
-    Set destSheet = GetWorksheetByName(destBook, instruction.DestSheetName, "è»¢è¨˜å…ˆ", instruction.RowIndex)
+    Set destSheet = GetWorksheetByName(destBook, instruction.DestSheetName, "“]‹Læ", instruction.RowIndex)
     
     Dim targetRow As Long
     targetRow = FindDestinationRow(destSheet, instruction.DestSearchColumn, searchValue, config)
     
     If targetRow = 0 Then
         Dim message As String
-        message = "è¡Œ" & instruction.RowIndex & " : " & _
-                  "è»¢è¨˜å…ˆã‚·ãƒ¼ãƒˆ """ & destSheet.Name & """ ã®æ¤œç´¢åˆ—ã§ä¸€è‡´ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚" & _
-                  " æ¤œç´¢å€¤=" & CStr(searchValue)
+        message = "s" & instruction.RowIndex & " : " & _
+                  "“]‹LæƒV[ƒg """ & destSheet.Name & """ ‚ÌŒŸõ—ñ‚Åˆê’v‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB" & _
+                  " ŒŸõ’l=" & CStr(searchValue)
         SimpleTranscriptionLogging.WriteLog message
         If config.NotFoundMode = NotFoundAbort Then
             Err.Raise vbObjectError + 120, , message
@@ -338,7 +338,7 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
         destinationCell.Value = transferValue
     End If
     
-    SimpleTranscriptionLogging.WriteLog "è¡Œ" & instruction.RowIndex & " : è»¢è¨˜å…ˆè¡Œ" & targetRow & " ã¸æ›¸ãè¾¼ã¿ã¾ã—ãŸ"
+    SimpleTranscriptionLogging.WriteLog "s" & instruction.RowIndex & " : “]‹Læs" & targetRow & " ‚Ö‘‚«‚İ‚Ü‚µ‚½"
 End Sub
 
 Private Function GetWorksheetByName(ByVal targetBook As Workbook, ByVal sheetName As String, ByVal roleName As String, ByVal rowIndex As Long) As Worksheet
@@ -347,7 +347,7 @@ Private Function GetWorksheetByName(ByVal targetBook As Workbook, ByVal sheetNam
     On Error GoTo 0
     
     If GetWorksheetByName Is Nothing Then
-        Err.Raise vbObjectError + 130, , "è¡Œ" & rowIndex & " : " & roleName & "ãƒ•ã‚¡ã‚¤ãƒ« """ & targetBook.FullName & """ ã«ã‚·ãƒ¼ãƒˆ """ & sheetName & """ ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚"
+        Err.Raise vbObjectError + 130, , "s" & rowIndex & " : " & roleName & "ƒtƒ@ƒCƒ‹ """ & targetBook.FullName & """ ‚ÉƒV[ƒg """ & sheetName & """ ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB"
     End If
 End Function
 
@@ -400,7 +400,7 @@ Private Function GetOrOpenWorkbook(ByVal fileNameOrPath As String, ByVal openedB
     fullPath = ResolveWorkbookPath(fileNameOrPath)
     
     If Len(fullPath) = 0 Then
-        Err.Raise vbObjectError + 140, , "ãƒ•ã‚¡ã‚¤ãƒ«ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: " & fileNameOrPath
+        Err.Raise vbObjectError + 140, , "ƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: " & fileNameOrPath
     End If
     
     Dim key As String
@@ -418,10 +418,10 @@ Private Function GetOrOpenWorkbook(ByVal fileNameOrPath As String, ByVal openedB
     End If
     
     If FileExists(fullPath) = False Then
-        Err.Raise vbObjectError + 141, , "ãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ã¾ã›ã‚“: " & fullPath
+        Err.Raise vbObjectError + 141, , "ƒtƒ@ƒCƒ‹‚ª‘¶İ‚µ‚Ü‚¹‚ñ: " & fullPath
     End If
     
-    SimpleTranscriptionLogging.WriteLog "ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ãã¾ã™: " & fullPath
+    SimpleTranscriptionLogging.WriteLog "ƒtƒ@ƒCƒ‹‚ğŠJ‚«‚Ü‚·: " & fullPath
     
     Set GetOrOpenWorkbook = Application.Workbooks.Open(fullPath, UpdateLinks:=False, ReadOnly:=False)
     
@@ -462,7 +462,7 @@ Private Sub CloseWorkbooks(ByVal openedByMacro As Object)
             Dim wb As Workbook
             Set wb = FindOpenWorkbook(fullPath)
             If Not wb Is Nothing Then
-                SimpleTranscriptionLogging.WriteLog "ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‰ã˜ã¾ã™: " & fullPath
+                SimpleTranscriptionLogging.WriteLog "ƒtƒ@ƒCƒ‹‚ğ•Â‚¶‚Ü‚·: " & fullPath
                 On Error Resume Next
                 wb.Close SaveChanges:=True
                 On Error GoTo 0

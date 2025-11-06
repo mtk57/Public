@@ -25,7 +25,7 @@ Public Sub StartLog(ByVal filePath As String)
     m_logFileOpened = True
 
     Print #m_logFileNumber, String$(40, "-")
-    Print #m_logFileNumber, Format$(Now, "yyyy-mm-dd HH:nn:ss") & " : „É≠„Ç∞ÈñãÂßã"
+    Print #m_logFileNumber, Format$(Now, "yyyy-mm-dd HH:nn:ss") & " : ÉçÉOäJén"
     Exit Sub
 
 ErrHandler:
@@ -46,7 +46,7 @@ Public Sub StopLog()
 
     On Error Resume Next
     If m_logFileOpened Then
-        Print #m_logFileNumber, Format$(Now, "yyyy-mm-dd HH:nn:ss") & " : „É≠„Ç∞ÁµÇ‰∫Ü"
+        Print #m_logFileNumber, Format$(Now, "yyyy-mm-dd HH:nn:ss") & " : ÉçÉOèIóπ"
         Close #m_logFileNumber
     End If
 

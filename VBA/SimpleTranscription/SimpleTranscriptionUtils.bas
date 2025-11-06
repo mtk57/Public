@@ -22,6 +22,25 @@ Public Function ColumnLetterToNumber(ByVal columnLetters As String) As Long
     ColumnLetterToNumber = resultValue
 End Function
 
+Public Function ColumnNumberToLetter(ByVal columnNumber As Long) As String
+    If columnNumber <= 0 Then Exit Function
+    
+    Dim workNumber As Long
+    workNumber = columnNumber
+    
+    Dim resultText As String
+    resultText = ""
+    
+    Do While workNumber > 0
+        Dim remainder As Long
+        remainder = (workNumber - 1) Mod 26
+        resultText = Chr$(Asc("A") + remainder) & resultText
+        workNumber = (workNumber - 1) \ 26
+    Loop
+    
+    ColumnNumberToLetter = resultText
+End Function
+
 Public Function NormalizeTextForCompare(ByVal valueData As Variant, ByVal caseSensitive As Boolean, ByVal distinguishWidth As Boolean) As String
     If IsError(valueData) Then Exit Function
     If IsEmpty(valueData) Then Exit Function

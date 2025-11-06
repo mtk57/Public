@@ -1,14 +1,14 @@
 Attribute VB_Name = "ModuleMain"
 Option Explicit
 
-Private Const VER = "1.0.0"
+Private Const VER = "1.0.1"
 Private Const DEBUG_LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "xls2xlsx_debug.log"
 
 Private Type ConversionSettings
-    FolderPath As String
+    folderPath As String
     IncludeSubfolders As Boolean
-    KeepXls As Boolean
+    keepXls As Boolean
 End Type
 
 Public Sub RunConversion()
@@ -24,7 +24,7 @@ Public Sub RunConversion()
     
     PrepareDebugLog
     WriteDebugLog "処理開始: バージョン " & VER
-    WriteDebugLog "設定: フォルダ=" & settings.FolderPath & ", サブフォルダ=" & CStr(settings.IncludeSubfolders) & ", xls保持=" & CStr(settings.KeepXls)
+    WriteDebugLog "設定: フォルダ=" & settings.folderPath & ", サブフォルダ=" & CStr(settings.IncludeSubfolders) & ", xls保持=" & CStr(settings.keepXls)
     
     originalScreenUpdating = Application.ScreenUpdating
     originalDisplayAlerts = Application.DisplayAlerts
@@ -36,7 +36,7 @@ Public Sub RunConversion()
     Application.EnableEvents = False
     Application.Calculation = xlCalculationManual
     
-    ProcessFolder settings, settings.FolderPath
+    ProcessFolder settings, settings.folderPath
     
     WriteDebugLog "処理完了"
     MsgBox "変換が完了しました。", vbInformation
@@ -82,14 +82,14 @@ Private Function GetConversionSettings() As ConversionSettings
     Dim rawKeepXls As String
     rawKeepXls = UCase$(Trim$(CStr(ws.Range("B9").Value)))
     If rawKeepXls = vbNullString Or rawKeepXls = "YES" Then
-        result.KeepXls = True
+        result.keepXls = True
     ElseIf rawKeepXls = "NO" Then
-        result.KeepXls = False
+        result.keepXls = False
     Else
         Err.Raise vbObjectError + 4, , "xlsは残すにはYESまたはNOを入力してください。"
     End If
     
-    result.FolderPath = rawFolder
+    result.folderPath = rawFolder
     GetConversionSettings = result
     Exit Function
 NotFound:
@@ -108,14 +108,14 @@ Private Function NormalizeFolderPath(ByVal folderPath As String) As String
     NormalizeFolderPath = trimmedPath
 End Function
 
-Private Sub ProcessFolder(ByVal settings As ConversionSettings, ByVal currentFolder As String)
+Private Sub ProcessFolder(ByRef settings As ConversionSettings, ByVal currentFolder As String)
     WriteDebugLog "フォルダ処理開始: " & currentFolder
     
     Dim fileName As String
     fileName = Dir$(currentFolder & "\*.xls", vbNormal)
     Do While fileName <> vbNullString
         On Error GoTo ConvertError
-        ConvertSingleFile currentFolder & "\" & fileName, settings.KeepXls
+        ConvertSingleFile currentFolder & "\" & fileName, settings.keepXls
         On Error GoTo 0
         fileName = Dir$
         GoTo ContinueLoop
@@ -156,17 +156,34 @@ End Sub
 
 Private Sub ConvertSingleFile(ByVal sourcePath As String, ByVal keepXls As Boolean)
     WriteDebugLog "変換開始: " & sourcePath
-    
+   
+    ' --- 修正箇所開始 ---
     Dim targetPath As String
-    targetPath = Left$(sourcePath, Len(sourcePath) - 4) & ".xlsx"
+    Dim fileNameWithoutExt As String
     
+    ' 末尾が .xls で終わる場合にのみ拡張子を除去
+    If LCase$(Right$(sourcePath, 4)) = ".xls" Then
+        fileNameWithoutExt = Left$(sourcePath, Len(sourcePath) - 4)
+    Else
+        ' .xls で終わらない場合はそのまま（念のため）
+        fileNameWithoutExt = sourcePath
+    End If
+    
+    ' 末尾のドットをクリーンアップ（連続ドット対策）
+    Do While Right$(fileNameWithoutExt, 1) = "."
+        fileNameWithoutExt = Left$(fileNameWithoutExt, Len(fileNameWithoutExt) - 1)
+    Loop
+    
+    targetPath = fileNameWithoutExt & ".xlsx"
+    ' --- 修正箇所終了 ---
+   
     Dim wb As Workbook
-    Set wb = Application.Workbooks.Open(Filename:=sourcePath, UpdateLinks:=False, ReadOnly:=False)
+    Set wb = Application.Workbooks.Open(fileName:=sourcePath, UpdateLinks:=False, ReadOnly:=False)
     On Error GoTo CloseWorkbook
-    
-    wb.SaveAs Filename:=targetPath, FileFormat:=xlOpenXMLWorkbook, CreateBackup:=False
+   
+    wb.SaveAs fileName:=targetPath, FileFormat:=xlOpenXMLWorkbook, CreateBackup:=False
     WriteDebugLog "保存完了: " & targetPath
-    
+   
 CloseWorkbook:
     Dim closeErr As Long
     Dim closeDesc As String
@@ -177,14 +194,14 @@ CloseWorkbook:
     If closeErr <> 0 Then
         Err.Raise closeErr, , closeDesc
     End If
-    
+   
     If Not keepXls Then
         On Error GoTo DeleteError
         Kill sourcePath
         WriteDebugLog "削除完了: " & sourcePath
         On Error GoTo 0
     End If
-    
+   
     WriteDebugLog "変換完了: " & sourcePath
     Exit Sub
 DeleteError:
@@ -233,3 +250,4 @@ Private Function GetLogPath() As String
         GetLogPath = Application.DefaultFilePath & Application.PathSeparator & LOG_FILE_NAME
     End If
 End Function
+

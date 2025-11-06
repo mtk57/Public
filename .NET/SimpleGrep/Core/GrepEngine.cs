@@ -12,6 +12,8 @@ namespace SimpleGrep.Core
 {
     internal static class GrepEngine
     {
+        private const int Utf8ProbeLength = 64 * 1024;
+
         public static IEnumerable<SearchResult> SearchFiles(
             string[] filePaths,
             string grepPattern,
@@ -25,111 +27,126 @@ namespace SimpleGrep.Core
         {
             var results = new ConcurrentBag<SearchResult>();
             var regexOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+            var comparisonType = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             int processedFileCount = 0;
 
             try
             {
-                Parallel.ForEach(filePaths, new ParallelOptions { CancellationToken = cancellationToken }, filePath =>
+                Regex compiledRegex = null;
+                if (useRegex)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    compiledRegex = new Regex(grepPattern, regexOptions | RegexOptions.Compiled);
+                }
 
-                    try
+                Parallel.ForEach(
+                    filePaths,
+                    new ParallelOptions { CancellationToken = cancellationToken },
+                    () => new List<SearchResult>(),
+                    (filePath, state, localResults) =>
                     {
-                        string fileName = Path.GetFileName(filePath);
-                        Encoding encoding = DetectEncoding(filePath);
-                        string encodingName = GetEncodingName(encoding);
+                        cancellationToken.ThrowIfCancellationRequested();
 
-                        string[] lines;
-                        using (var reader = new StreamReader(filePath, encoding))
+                        try
                         {
-                            var content = reader.ReadToEnd();
-                            cancellationToken.ThrowIfCancellationRequested();
-                            lines = content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
-                        }
+                            string fileName = Path.GetFileName(filePath);
+                            Encoding encoding = DetectEncoding(filePath);
+                            string encodingName = GetEncodingName(encoding);
+                            ICommentFilter commentFilter = ignoreComment ? CommentFilterFactory.Create(filePath) : null;
+                            var matches = new List<SearchResult>();
+                            List<string> linesForResolver = deriveMethod ? new List<string>() : null;
 
-                        IMethodSignatureResolver methodResolver = null;
-                        if (deriveMethod)
-                        {
-                            string extension = Path.GetExtension(filePath);
-                            if (string.Equals(extension, ".java", StringComparison.OrdinalIgnoreCase))
+                            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan))
+                            using (var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: false))
                             {
-                                methodResolver = new JavaMethodSignatureResolver(lines);
-                            }
-                            else if (string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase))
-                            {
-                                methodResolver = new CSharpMethodSignatureResolver(lines);
-                            }
-                        }
-
-                        ICommentFilter commentFilter = null;
-                        if (ignoreComment)
-                        {
-                            commentFilter = CommentFilterFactory.Create(filePath);
-                        }
-
-                        for (int index = 0; index < lines.Length; index++)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            string line = lines[index] ?? string.Empty;
-                            int lineNumber = index + 1;
-                            bool isMatch = false;
-                            string lineToEvaluate = line;
-
-                            if (commentFilter != null)
-                            {
-                                lineToEvaluate = commentFilter.RemoveComments(lineToEvaluate) ?? string.Empty;
-                                bool commentOnlyLine = !string.IsNullOrWhiteSpace(line) && string.IsNullOrWhiteSpace(lineToEvaluate);
-                                if (commentOnlyLine)
+                                string line;
+                                int lineNumber = 0;
+                                while ((line = reader.ReadLine()) != null)
                                 {
-                                    continue;
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    lineNumber++;
+
+                                    string originalLine = line ?? string.Empty;
+                                    linesForResolver?.Add(originalLine);
+
+                                    string evaluatedLine = originalLine;
+                                    if (commentFilter != null)
+                                    {
+                                        evaluatedLine = commentFilter.RemoveComments(originalLine) ?? string.Empty;
+                                        bool commentOnlyLine = !string.IsNullOrWhiteSpace(originalLine) && string.IsNullOrWhiteSpace(evaluatedLine);
+                                        if (commentOnlyLine)
+                                        {
+                                            continue;
+                                        }
+                                    }
+
+                                    bool isMatch = false;
+                                    if (useRegex && compiledRegex != null)
+                                    {
+                                        isMatch = compiledRegex.IsMatch(evaluatedLine);
+                                    }
+                                    else if (!useRegex)
+                                    {
+                                        isMatch = evaluatedLine.IndexOf(grepPattern, comparisonType) >= 0;
+                                    }
+
+                                    if (isMatch)
+                                    {
+                                        matches.Add(new SearchResult
+                                        {
+                                            FilePath = filePath,
+                                            FileName = fileName,
+                                            LineNumber = lineNumber,
+                                            LineText = originalLine,
+                                            EncodingName = encodingName
+                                        });
+                                    }
                                 }
                             }
 
-                            if (useRegex)
+                            if (deriveMethod && matches.Count > 0 && linesForResolver != null)
                             {
-                                try
+                                var methodResolver = CreateMethodResolver(filePath, linesForResolver);
+                                if (methodResolver != null)
                                 {
-                                    isMatch = Regex.IsMatch(lineToEvaluate, grepPattern, regexOptions);
+                                    foreach (var match in matches)
+                                    {
+                                        match.MethodSignature = methodResolver.GetMethodSignature(match.LineNumber) ?? string.Empty;
+                                    }
                                 }
-                                catch (ArgumentException)
-                                {
-                                    // 無効な正規表現パターンはスキップ
-                                }
-                            }
-                            else
-                            {
-                                var comparisonType = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                                isMatch = lineToEvaluate.IndexOf(grepPattern, comparisonType) >= 0;
                             }
 
-                            if (isMatch)
+                            if (matches.Count > 0)
                             {
-                                string methodSignature = methodResolver?.GetMethodSignature(lineNumber) ?? string.Empty;
-                                results.Add(new SearchResult
-                                {
-                                    FilePath = filePath,
-                                    FileName = fileName,
-                                    LineNumber = lineNumber,
-                                    LineText = line,
-                                    MethodSignature = methodSignature,
-                                    EncodingName = encodingName
-                                });
+                                localResults.AddRange(matches);
                             }
                         }
-                    }
-                    catch (Exception)
-                    {
-                        // Skip file read errors
-                    }
-                    finally
-                    {
-                        int currentCount = Interlocked.Increment(ref processedFileCount);
-                        if (currentCount % 100 == 0 || currentCount == filePaths.Length)
+                        catch (Exception)
                         {
-                            progress?.Report(Math.Min(currentCount, filePaths.Length));
+                            // Skip file read errors
                         }
-                    }
-                });
+                        finally
+                        {
+                            int currentCount = Interlocked.Increment(ref processedFileCount);
+                            if (currentCount % 100 == 0 || currentCount == filePaths.Length)
+                            {
+                                progress?.Report(Math.Min(currentCount, filePaths.Length));
+                            }
+                        }
+
+                        return localResults;
+                    },
+                    localResults =>
+                    {
+                        if (localResults == null)
+                        {
+                            return;
+                        }
+
+                        foreach (var result in localResults)
+                        {
+                            results.Add(result);
+                        }
+                    });
             }
             catch (OperationCanceledException)
             {
@@ -164,12 +181,50 @@ namespace SimpleGrep.Core
 
         private static Encoding DetectEncoding(string filePath)
         {
-            byte[] bom = new byte[4];
             try
             {
-                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan))
                 {
-                    fs.Read(bom, 0, 4);
+                    var bom = new byte[4];
+                    int read = fs.Read(bom, 0, bom.Length);
+
+                    if (read >= 3 && bom[0] == 0xef && bom[1] == 0xbb && bom[2] == 0xbf)
+                    {
+                        return new UTF8Encoding(true);
+                    }
+                    if (read >= 2)
+                    {
+                        if (bom[0] == 0xff && bom[1] == 0xfe)
+                        {
+                            return Encoding.Unicode;
+                        }
+                        if (bom[0] == 0xfe && bom[1] == 0xff)
+                        {
+                            return Encoding.BigEndianUnicode;
+                        }
+                    }
+
+                    fs.Position = 0;
+                    int probeLength = (int)Math.Min(fs.Length, Utf8ProbeLength);
+                    if (probeLength > 0)
+                    {
+                        var buffer = new byte[probeLength];
+                        int totalRead = 0;
+                        while (totalRead < probeLength)
+                        {
+                            int chunk = fs.Read(buffer, totalRead, probeLength - totalRead);
+                            if (chunk == 0)
+                            {
+                                break;
+                            }
+                            totalRead += chunk;
+                        }
+
+                        if (totalRead > 0 && IsUtf8(buffer, totalRead))
+                        {
+                            return new UTF8Encoding(false);
+                        }
+                    }
                 }
             }
             catch
@@ -177,41 +232,33 @@ namespace SimpleGrep.Core
                 return Encoding.Default;
             }
 
-            if (bom[0] == 0xef && bom[1] == 0xbb && bom[2] == 0xbf)
-            {
-                return new UTF8Encoding(true);
-            }
-            if (bom[0] == 0xff && bom[1] == 0xfe)
-            {
-                return Encoding.Unicode;
-            }
-            if (bom[0] == 0xfe && bom[1] == 0xff)
-            {
-                return Encoding.BigEndianUnicode;
-            }
-
-            byte[] fileBytes;
-            try
-            {
-                fileBytes = File.ReadAllBytes(filePath);
-            }
-            catch
-            {
-                return Encoding.Default;
-            }
-
-            if (IsUtf8(fileBytes))
-            {
-                return new UTF8Encoding(false);
-            }
-
             return Encoding.GetEncoding("Shift_JIS");
         }
 
-        private static bool IsUtf8(byte[] bytes)
+        private static IMethodSignatureResolver CreateMethodResolver(string filePath, List<string> lines)
+        {
+            if (lines == null || lines.Count == 0)
+            {
+                return null;
+            }
+
+            string extension = Path.GetExtension(filePath);
+            if (string.Equals(extension, ".java", StringComparison.OrdinalIgnoreCase))
+            {
+                return new JavaMethodSignatureResolver(lines.ToArray());
+            }
+            if (string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase))
+            {
+                return new CSharpMethodSignatureResolver(lines.ToArray());
+            }
+
+            return null;
+        }
+
+        private static bool IsUtf8(byte[] bytes, int length)
         {
             int i = 0;
-            while (i < bytes.Length)
+            while (i < length)
             {
                 if (bytes[i] < 0x80)
                 {
@@ -230,7 +277,7 @@ namespace SimpleGrep.Core
                 else if (bytes[i] < 0xF5) extraBytes = 3;
                 else return false;
 
-                if (i + extraBytes >= bytes.Length)
+                if (i + extraBytes >= length)
                 {
                     return false;
                 }

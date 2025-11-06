@@ -1,6 +1,8 @@
 Attribute VB_Name = "SimpleTranscriptionMain"
 Option Explicit
 
+Private Const VER = "1.0.0"
+
 Private Enum NotFoundBehavior
     NotFoundIgnore = 0
     NotFoundAbort = 1
@@ -8,7 +10,7 @@ End Enum
 
 Private Type AppConfig
     NotFoundMode As NotFoundBehavior
-    KeepWorkbooksOpen As Boolean
+    keepWorkbooksOpen As Boolean
     SkipEmptySource As Boolean
     CaseSensitive As Boolean
     AllowPartialMatch As Boolean
@@ -17,7 +19,7 @@ Private Type AppConfig
 End Type
 
 Private Type TransferInstruction
-    RowIndex As Long
+    rowIndex As Long
     SourcePath As String
     SourceSheetName As String
     SourceSearchColumn As Long
@@ -68,7 +70,7 @@ Public Sub Run_Click()
     configLoaded = True
     
     Dim keepWorkbooksOpen As Boolean
-    keepWorkbooksOpen = config.KeepWorkbooksOpen
+    keepWorkbooksOpen = config.keepWorkbooksOpen
     
     Dim openedByMacro As Object
     Set openedByMacro = CreateObject("Scripting.Dictionary")
@@ -158,7 +160,7 @@ Private Function LoadAppConfig(ByVal mainSheet As Worksheet) As AppConfig
     Dim config As AppConfig
     
     config.NotFoundMode = ParseNotFoundBehavior(mainSheet.Range(SETTING_NOT_FOUND).Value)
-    config.KeepWorkbooksOpen = ParseYesNo(mainSheet.Range(SETTING_KEEP_OPEN).Value, True)
+    config.keepWorkbooksOpen = ParseYesNo(mainSheet.Range(SETTING_KEEP_OPEN).Value, True)
     config.SkipEmptySource = ParseYesNo(mainSheet.Range(SETTING_SKIP_EMPTY).Value, True)
     config.CaseSensitive = ParseYesNo(mainSheet.Range(SETTING_CASE_SENSITIVE).Value, False)
     config.AllowPartialMatch = ParseYesNo(mainSheet.Range(SETTING_ALLOW_PARTIAL).Value, False)
@@ -211,7 +213,7 @@ End Function
 Private Function LoadInstruction(ByVal mainSheet As Worksheet, ByVal rowIndex As Long) As TransferInstruction
     Dim info As TransferInstruction
     
-    info.RowIndex = rowIndex
+    info.rowIndex = rowIndex
     info.SourcePath = Trim$(CStr(mainSheet.Range(COL_SOURCE_FILE & rowIndex).Value))
     info.SourceSheetName = Trim$(CStr(mainSheet.Range(COL_SOURCE_SHEET & rowIndex).Value))
     info.SourceSearchColumn = ColumnLetterToNumber(mainSheet.Range(COL_SOURCE_SEARCH & rowIndex).Value)
@@ -228,35 +230,35 @@ End Function
 
 Private Sub ValidateInstruction(ByRef info As TransferInstruction)
     If Len(info.SourcePath) = 0 Then
-        Err.Raise vbObjectError + 110, , "行" & info.RowIndex & " : 転記元ファイル名が未入力です。"
+        Err.Raise vbObjectError + 110, , "行" & info.rowIndex & " : 転記元ファイル名が未入力です。"
     End If
     
     If Len(info.SourceSheetName) = 0 Then
-        Err.Raise vbObjectError + 111, , "行" & info.RowIndex & " : 転記元シート名が未入力です。"
+        Err.Raise vbObjectError + 111, , "行" & info.rowIndex & " : 転記元シート名が未入力です。"
     End If
     
     If info.SourceSearchColumn = 0 Then
-        Err.Raise vbObjectError + 112, , "行" & info.RowIndex & " : 転記元検索列が不正です。"
+        Err.Raise vbObjectError + 112, , "行" & info.rowIndex & " : 転記元検索列が不正です。"
     End If
     
     If info.SourceTransferColumn = 0 Then
-        Err.Raise vbObjectError + 113, , "行" & info.RowIndex & " : 転記元転記列が不正です。"
+        Err.Raise vbObjectError + 113, , "行" & info.rowIndex & " : 転記元転記列が不正です。"
     End If
     
     If Len(info.DestPath) = 0 Then
-        Err.Raise vbObjectError + 114, , "行" & info.RowIndex & " : 転記先ファイル名が未入力です。"
+        Err.Raise vbObjectError + 114, , "行" & info.rowIndex & " : 転記先ファイル名が未入力です。"
     End If
     
     If Len(info.DestSheetName) = 0 Then
-        Err.Raise vbObjectError + 115, , "行" & info.RowIndex & " : 転記先シート名が未入力です。"
+        Err.Raise vbObjectError + 115, , "行" & info.rowIndex & " : 転記先シート名が未入力です。"
     End If
     
     If info.DestSearchColumn = 0 Then
-        Err.Raise vbObjectError + 116, , "行" & info.RowIndex & " : 転記先検索列が不正です。"
+        Err.Raise vbObjectError + 116, , "行" & info.rowIndex & " : 転記先検索列が不正です。"
     End If
     
     If info.DestTransferColumn = 0 Then
-        Err.Raise vbObjectError + 117, , "行" & info.RowIndex & " : 転記先転記列が不正です。"
+        Err.Raise vbObjectError + 117, , "行" & info.rowIndex & " : 転記先転記列が不正です。"
     End If
 End Sub
 
@@ -265,7 +267,7 @@ Private Sub ExecuteInstruction(ByRef instruction As TransferInstruction, ByRef c
     Set sourceBook = GetOrOpenWorkbook(instruction.SourcePath, openedByMacro)
     
     Dim sourceSheet As Worksheet
-    Set sourceSheet = GetWorksheetByName(sourceBook, instruction.SourceSheetName, "転記元", instruction.RowIndex)
+    Set sourceSheet = GetWorksheetByName(sourceBook, instruction.SourceSheetName, "転記元", instruction.rowIndex)
     
     Dim lastSourceRow As Long
     lastSourceRow = GetLastUsedRow(sourceSheet, instruction.SourceSearchColumn)
@@ -285,7 +287,7 @@ Private Sub ExecuteInstruction(ByRef instruction As TransferInstruction, ByRef c
             searchValue = searchCell.Value
             
             If IsBlankValue(searchValue) Then
-                SimpleTranscriptionLogging.WriteLog "行" & instruction.RowIndex & " : 転記元行" & rowPointer & " の検索値が空のためスキップ"
+                SimpleTranscriptionLogging.WriteLog "行" & instruction.rowIndex & " : 転記元行" & rowPointer & " の検索値が空のためスキップ"
                 GoTo ContinueLoop
             End If
             
@@ -293,7 +295,7 @@ Private Sub ExecuteInstruction(ByRef instruction As TransferInstruction, ByRef c
             transferValue = sourceSheet.Cells(rowPointer, instruction.SourceTransferColumn).Value
             
             If config.SkipEmptySource And IsBlankValue(transferValue) Then
-                SimpleTranscriptionLogging.WriteLog "行" & instruction.RowIndex & " : 転記元行" & rowPointer & " の転記値が空のためスキップ"
+                SimpleTranscriptionLogging.WriteLog "行" & instruction.rowIndex & " : 転記元行" & rowPointer & " の転記値が空のためスキップ"
                 GoTo ContinueLoop
             End If
             
@@ -303,7 +305,7 @@ ContinueLoop:
     Next rowPointer
     
     If yellowFound = 0 Then
-        SimpleTranscriptionLogging.WriteLog "行" & instruction.RowIndex & " : 転記元シートに黄色セルがありません"
+        SimpleTranscriptionLogging.WriteLog "行" & instruction.rowIndex & " : 転記元シートに黄色セルがありません"
     End If
 End Sub
 
@@ -312,14 +314,14 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
     Set destBook = GetOrOpenWorkbook(instruction.DestPath, openedByMacro)
     
     Dim destSheet As Worksheet
-    Set destSheet = GetWorksheetByName(destBook, instruction.DestSheetName, "転記先", instruction.RowIndex)
+    Set destSheet = GetWorksheetByName(destBook, instruction.DestSheetName, "転記先", instruction.rowIndex)
     
     Dim targetRow As Long
     targetRow = FindDestinationRow(destSheet, instruction.DestSearchColumn, searchValue, config)
     
     If targetRow = 0 Then
         Dim message As String
-        message = "行" & instruction.RowIndex & " : " & _
+        message = "行" & instruction.rowIndex & " : " & _
                   "転記先シート """ & destSheet.Name & """ の検索列で一致が見つかりません。" & _
                   " 検索値=" & CStr(searchValue)
         SimpleTranscriptionLogging.WriteLog message
@@ -338,7 +340,7 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
         destinationCell.Value = transferValue
     End If
     
-    SimpleTranscriptionLogging.WriteLog "行" & instruction.RowIndex & " : 転記先行" & targetRow & " へ書き込みました"
+    SimpleTranscriptionLogging.WriteLog "行" & instruction.rowIndex & " : 転記先行" & targetRow & " へ書き込みました"
 End Sub
 
 Private Function GetWorksheetByName(ByVal targetBook As Workbook, ByVal sheetName As String, ByVal roleName As String, ByVal rowIndex As Long) As Worksheet
@@ -478,3 +480,5 @@ Private Function BuildLogPath() As String
     If Len(basePath) = 0 Then Exit Function
     BuildLogPath = basePath & Application.PathSeparator & "SimpleTranscription_debug.log"
 End Function
+
+

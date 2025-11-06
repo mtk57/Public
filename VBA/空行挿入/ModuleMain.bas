@@ -1,7 +1,8 @@
 Attribute VB_Name = "ModuleMain"
 Option Explicit
 
-Private Const DEBUG_LOG_ENABLED As Boolean = True
+Private Const VER = "1.0.0"
+Private Const DEBUG_LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "空行挿入_debug.log"
 
 Private Type InstructionItem
@@ -118,7 +119,7 @@ Private Function IsMissingValue(ByVal value As Variant) As Boolean
         (VarType(value) = vbString And Trim$(CStr(value)) = vbNullString)
 End Function
 
-Private Sub ProcessInstruction(ByVal instruction As InstructionItem)
+Private Sub ProcessInstruction(ByRef instruction As InstructionItem)
     On Error GoTo ErrHandler
 
     Dim targetWorkbook As Workbook
@@ -169,7 +170,7 @@ ErrHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Private Sub ApplyInsertion(ByVal targetSheet As Worksheet, ByVal instruction As InstructionItem)
+Private Sub ApplyInsertion(ByVal targetSheet As Worksheet, ByRef instruction As InstructionItem)
     WriteLog "シート処理: " & targetSheet.Name & ", 行=" & instruction.TargetRow & ", 行数=" & instruction.InsertCount & ", 方向=" & instruction.Direction
 
     Dim targetRow As Long

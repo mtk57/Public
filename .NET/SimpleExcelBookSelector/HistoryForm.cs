@@ -36,7 +36,36 @@ namespace SimpleExcelBookSelector
         private void HistoryForm_Load(object sender, EventArgs e)
         {
             //SetupDataGridView();
+            RefreshHistoryLastUpdatedFromFilesystem();
             ApplyFilterAndSort();
+        }
+
+        private void RefreshHistoryLastUpdatedFromFilesystem()
+        {
+            foreach (var item in FileHistory)
+            {
+                if (string.IsNullOrWhiteSpace(item.FilePath))
+                {
+                    item.LastUpdated = null;
+                    continue;
+                }
+
+                try
+                {
+                    if (File.Exists(item.FilePath))
+                    {
+                        item.LastUpdated = File.GetLastWriteTime(item.FilePath);
+                    }
+                    else
+                    {
+                        item.LastUpdated = null;
+                    }
+                }
+                catch (Exception)
+                {
+                    item.LastUpdated = null;
+                }
+            }
         }
 
         private void SetupDataGridView()

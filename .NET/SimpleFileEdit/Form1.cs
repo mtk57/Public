@@ -150,9 +150,10 @@ namespace SimpleFileEdit
                 foreach (var file in files)
                 {
                     string original;
+                    Encoding encoding;
                     try
                     {
-                        original = File.ReadAllText(file, Encoding.UTF8);
+                        original = ReadFilePreserveEncoding(file, out encoding);
                     }
                     catch (Exception ex)
                     {
@@ -165,7 +166,7 @@ namespace SimpleFileEdit
                     {
                         try
                         {
-                            File.WriteAllText(file, transformed, Encoding.UTF8);
+                            WriteFilePreserveEncoding(file, transformed, encoding);
                             updatedCount++;
                         }
                         catch (Exception ex)
@@ -541,6 +542,26 @@ namespace SimpleFileEdit
             public List<string> FolderHistory { get; set; } = new List<string>();
             public string SelectedTarget { get; set; } = TargetJava;
             public bool SearchSubDirectories { get; set; } = true;
+        }
+
+        private static string ReadFilePreserveEncoding(string path, out Encoding encoding)
+        {
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var reader = new StreamReader(stream, Encoding.Default, true))
+            {
+                var content = reader.ReadToEnd();
+                encoding = reader.CurrentEncoding;
+                return content;
+            }
+        }
+
+        private static void WriteFilePreserveEncoding(string path, string content, Encoding encoding)
+        {
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(stream, encoding))
+            {
+                writer.Write(content);
+            }
         }
     }
 }

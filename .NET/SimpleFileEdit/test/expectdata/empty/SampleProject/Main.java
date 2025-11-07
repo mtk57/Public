@@ -1,18 +1,18 @@
 package sample;
-// ãƒ•ã‚¡ã‚¤ãƒ«å†’é ­ã®ã‚³ãƒ¡ãƒ³ãƒˆ
+// ƒtƒ@ƒCƒ‹–`“ª‚ÌƒRƒƒ“ƒg
 public class Main {
     public static void main(String[] args) {
-        String url = "http://example.com"; // URLã‚³ãƒ¡ãƒ³ãƒˆ
+        String url = "http://example.com"; // URLƒRƒƒ“ƒg
         String tricky = "/* not comment */ // still string";
         char slash = '/';
         System.out.println(url + tricky + slash); /* inline block */
-        // å˜ç´”ãªã‚³ãƒ¡ãƒ³ãƒˆ
+        // ’Pƒ‚ÈƒRƒƒ“ƒg
         /*
-            è¤‡æ•°è¡Œ
-            ã‚³ãƒ¡ãƒ³ãƒˆ
+            •¡”s
+            ƒRƒƒ“ƒg
         */
         System.out.println("finish");
-        String keep = "// ã‚³ãƒ¡ãƒ³ãƒˆã§ã¯ãªã„";
-        String block = "æ–‡ä¸­ã® /* ã‚³ãƒ¡ãƒ³ãƒˆ */ ã‚‚ä¿æŒ";
+        String keep = "// ƒRƒƒ“ƒg‚Å‚Í‚È‚¢";
+        String block = "•¶’†‚Ì /* ƒRƒƒ“ƒg */ ‚à•Û";
     }
 }

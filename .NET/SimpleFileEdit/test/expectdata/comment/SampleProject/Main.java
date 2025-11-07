@@ -13,7 +13,7 @@ public class Main {
         
         System.out.println("finish");
         
-        String keep = "// ã‚³ãƒ¡ãƒ³ãƒˆã§ã¯ãªã„";
-        String block = "æ–‡ä¸­ã® /* ã‚³ãƒ¡ãƒ³ãƒˆ */ ã‚‚ä¿æŒ";
+        String keep = "// ƒRƒƒ“ƒg‚Å‚Í‚È‚¢";
+        String block = "•¶’†‚Ì /* ƒRƒƒ“ƒg */ ‚à•Û";
     }
 }

@@ -1,7 +1,7 @@
 Attribute VB_Name = "SimpleTranscriptionMain"
 Option Explicit
 
-Private Const VER = "1.1.0"
+Private Const VER = "1.1.1"
 
 Private Enum NotFoundBehavior
     NotFoundIgnore = 0

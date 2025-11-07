@@ -139,6 +139,40 @@ Public Function ResolveWorkbookPath(ByVal fileNameOrPath As String) As String
     candidate = Trim$(fileNameOrPath)
     If Len(candidate) = 0 Then Exit Function
     
+    Dim fileNameOnly As String
+    fileNameOnly = candidate
+    
+    Dim sepPos As Long
+    sepPos = InStrRev(fileNameOnly, "\")
+    Dim altSepPos As Long
+    altSepPos = InStrRev(fileNameOnly, "/")
+    
+    If altSepPos > sepPos Then
+        sepPos = altSepPos
+    End If
+    
+    If sepPos > 0 Then
+        fileNameOnly = Mid$(fileNameOnly, sepPos + 1)
+    End If
+    
+    Dim wb As Workbook
+    
+    ' First, try to find an already opened workbook whose FullName matches the given text.
+    For Each wb In Application.Workbooks
+        If StrComp(wb.FullName, candidate, vbTextCompare) = 0 Then
+            ResolveWorkbookPath = wb.FullName
+            Exit Function
+        End If
+    Next wb
+    
+    ' Next, try to find an opened workbook that has the same file name.
+    For Each wb In Application.Workbooks
+        If StrComp(wb.Name, fileNameOnly, vbTextCompare) = 0 Then
+            ResolveWorkbookPath = wb.FullName
+            Exit Function
+        End If
+    Next wb
+    
     Dim fso As Object
     On Error Resume Next
     Set fso = CreateObject("Scripting.FileSystemObject")

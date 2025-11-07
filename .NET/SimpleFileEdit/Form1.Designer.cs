@@ -71,6 +71,8 @@
             // chkSearchSubDir
             // 
             this.chkSearchSubDir.AutoSize = true;
+            this.chkSearchSubDir.Checked = true;
+            this.chkSearchSubDir.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkSearchSubDir.Location = new System.Drawing.Point(22, 93);
             this.chkSearchSubDir.Name = "chkSearchSubDir";
             this.chkSearchSubDir.Size = new System.Drawing.Size(111, 16);

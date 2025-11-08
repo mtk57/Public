@@ -1,0 +1,2 @@
+SimpleDiff test file.
+Both sides match.

@@ -1,0 +1,6 @@
+# SimpleDiff 想定差分一覧
+- different-size.txt : サイズが異なる
+- different-content.txt : サイズは同じだが中身が異なる
+- src-only.txt : 比較先にファイルが存在しない
+- nested/different-sub.txt : サブフォルダ内で内容が異なる
+- nested/src-only-sub.txt : サブフォルダ内で比較先にファイルなし

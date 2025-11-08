@@ -199,11 +199,6 @@ namespace SimpleDiff
                                     diff = CreateDiffResult(sourceFile, destinationFile);
                                 }
                             }
-                            else
-                            {
-                                diff = CreateMissingDestinationResult(sourceFile, destinationRoot);
-                            }
-
                             if (diff != null)
                             {
                                 diffBag.Add(diff);
@@ -510,22 +505,6 @@ namespace SimpleDiff
                 DestinationFileName = destination.FileName,
                 SourceFullPath = source.FullPath,
                 DestinationFullPath = destination.FullPath
-            };
-        }
-
-        private static DiffResult CreateMissingDestinationResult(FileItem source, string destinationRoot)
-        {
-            var expectedDestinationPath = Path.Combine(destinationRoot, source.RelativePath);
-            var destinationDirectory = Path.GetDirectoryName(expectedDestinationPath) ?? destinationRoot;
-
-            return new DiffResult
-            {
-                SourceDirectory = source.DirectoryPath,
-                SourceFileName = source.FileName,
-                DestinationDirectory = destinationDirectory,
-                DestinationFileName = Path.GetFileName(expectedDestinationPath),
-                SourceFullPath = source.FullPath,
-                DestinationFullPath = expectedDestinationPath
             };
         }
 

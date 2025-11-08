@@ -75,11 +75,23 @@ namespace SimpleFileEdit
                 return;
             }
 
+            var confirm = MessageBox.Show(this, "コメント削除を実行します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
             ProcessFiles(RemoveJavaComments, "コメント削除");
         }
 
         private void BtnDeleteEmptyRow_Click(object sender, EventArgs e)
         {
+            var confirm = MessageBox.Show(this, "空行削除を実行します。よろしいですか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
             ProcessFiles(RemoveEmptyLines, "空行削除");
         }
 

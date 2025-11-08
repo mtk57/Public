@@ -24,6 +24,7 @@ namespace SimpleDiff
         private readonly object _logLock = new object();
         private CancellationTokenSource _cancellationTokenSource;
         private int _lastLoggedProgressPercent = -1;
+        private int _lastUiProgressPercent = -1;
         private volatile bool _isLogEnabled = true;
         private bool _isRunning;
 
@@ -185,6 +186,7 @@ namespace SimpleDiff
             progressBar.Value = 0;
             UpdateProgressLabel(0, total);
             _lastLoggedProgressPercent = -1;
+            _lastUiProgressPercent = -1;
             LogProgressIfNeeded(0, total);
             LogInfo($"比較準備完了 TotalFiles={total}");
 
@@ -422,6 +424,14 @@ namespace SimpleDiff
             {
                 return;
             }
+
+            var percent = CalculatePercent(processed, total);
+            var lastPercent = Volatile.Read(ref _lastUiProgressPercent);
+            if (percent == lastPercent && processed != total)
+            {
+                return;
+            }
+            Volatile.Write(ref _lastUiProgressPercent, percent);
 
             if (InvokeRequired)
             {
@@ -823,7 +833,7 @@ namespace SimpleDiff
                 return;
             }
 
-            var percent = (int)Math.Floor((double)processed / total * 100);
+            var percent = CalculatePercent(processed, total);
             if (percent < 0 || percent > 100)
             {
                 return;
@@ -839,6 +849,27 @@ namespace SimpleDiff
                 _lastLoggedProgressPercent = percent;
                 LogInfo($"進捗 {processed}/{total} ({percent}%)");
             }
+        }
+
+        private static int CalculatePercent(int processed, int total)
+        {
+            if (total <= 0)
+            {
+                return 0;
+            }
+
+            var percent = (int)Math.Floor((double)processed / total * 100);
+            if (percent < 0)
+            {
+                return 0;
+            }
+
+            if (percent > 100)
+            {
+                return 100;
+            }
+
+            return percent;
         }
     }
 }

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
@@ -141,48 +143,169 @@ namespace SimpleFileEdit
                 return;
             }
 
-            var previousCursor = Cursor.Current;
-            Cursor.Current = Cursors.WaitCursor;
-            int updatedCount = 0;
+            ProcessingResult result = null;
+            Exception processingError = null;
 
-            try
+            using (var cts = new CancellationTokenSource())
+            using (var progressForm = new ProgressForm())
             {
-                foreach (var file in files)
+                progressForm.Initialize(operationName, files.Count, () => cts.Cancel());
+
+                var progress = new Progress<ProgressInfo>(info =>
                 {
-                    string original;
-                    Encoding encoding;
+                    progressForm.UpdateProgress(info.ProcessedFiles, info.TotalFiles);
+                });
+
+                progressForm.Shown += async (sender, args) =>
+                {
                     try
                     {
-                        original = ReadFilePreserveEncoding(file, out encoding);
+                        result = await Task.Run(() => ExecuteProcessing(files, transformer, cts.Token, progress));
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(this, $"ファイルの読み込みに失敗しました: {file}\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
+                        processingError = ex;
                     }
-
-                    var transformed = transformer(original) ?? string.Empty;
-                    if (!string.Equals(original, transformed, StringComparison.Ordinal))
+                    finally
                     {
-                        try
-                        {
-                            WriteFilePreserveEncoding(file, transformed, encoding);
-                            updatedCount++;
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(this, $"ファイルの書き込みに失敗しました: {file}\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
+                        progressForm.Close();
                     }
-                }
-            }
-            finally
-            {
-                Cursor.Current = previousCursor;
+                };
+
+                progressForm.ShowDialog(this);
             }
 
-            MessageBox.Show(this, $"{operationName}が完了しました。\n処理対象: {files.Count} ファイル\n更新: {updatedCount} ファイル", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (processingError != null)
+            {
+                MessageBox.Show(this, $"処理中にエラーが発生しました: {processingError.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (result == null)
+            {
+                MessageBox.Show(this, "処理結果を取得できませんでした。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (result.IsCanceled)
+            {
+                MessageBox.Show(this, "処理が中止されました。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            MessageBox.Show(this, $"{operationName}が完了しました。\n処理対象: {result.TotalFiles} ファイル\n更新: {result.UpdatedFiles} ファイル", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private ProcessingResult ExecuteProcessing(IReadOnlyList<string> files, Func<string, string> transformer, CancellationToken cancellationToken, IProgress<ProgressInfo> progress)
+        {
+            int processedCount = 0;
+            int updatedCount = 0;
+            var options = new ParallelOptions
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount)
+            };
+
+            try
+            {
+                Parallel.ForEach(files, options, file =>
+                {
+                    var (content, encoding) = ReadFileSafe(file);
+
+                    string transformed;
+                    try
+                    {
+                        transformed = transformer(content) ?? string.Empty;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"変換処理に失敗しました: {file}\n{ex.Message}", ex);
+                    }
+
+                    if (!string.Equals(content, transformed, StringComparison.Ordinal))
+                    {
+                        WriteFileSafe(file, transformed, encoding);
+                        Interlocked.Increment(ref updatedCount);
+                    }
+
+                    var processed = Interlocked.Increment(ref processedCount);
+                    progress?.Report(new ProgressInfo(processed, files.Count));
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                return new ProcessingResult(files.Count, processedCount, updatedCount, true);
+            }
+            catch (AggregateException ex)
+            {
+                var flattened = ex.Flatten();
+                if (flattened.InnerExceptions.Count == 1)
+                {
+                    if (flattened.InnerExceptions[0] is OperationCanceledException)
+                    {
+                        return new ProcessingResult(files.Count, processedCount, updatedCount, true);
+                    }
+
+                    throw flattened.InnerExceptions[0];
+                }
+
+                throw flattened;
+            }
+
+            return new ProcessingResult(files.Count, processedCount, updatedCount, false);
+        }
+
+        private (string content, Encoding encoding) ReadFileSafe(string path)
+        {
+            try
+            {
+                var content = ReadFilePreserveEncoding(path, out var encoding);
+                return (content: content, encoding: encoding);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"ファイルの読み込みに失敗しました: {path}\n{ex.Message}", ex);
+            }
+        }
+
+        private void WriteFileSafe(string path, string content, Encoding encoding)
+        {
+            try
+            {
+                WriteFilePreserveEncoding(path, content, encoding);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"ファイルの書き込みに失敗しました: {path}\n{ex.Message}", ex);
+            }
+        }
+
+        private sealed class ProgressInfo
+        {
+            public ProgressInfo(int processedFiles, int totalFiles)
+            {
+                ProcessedFiles = processedFiles;
+                TotalFiles = totalFiles;
+            }
+
+            public int ProcessedFiles { get; }
+            public int TotalFiles { get; }
+        }
+
+        private sealed class ProcessingResult
+        {
+            public ProcessingResult(int totalFiles, int processedFiles, int updatedFiles, bool isCanceled)
+            {
+                TotalFiles = totalFiles;
+                ProcessedFiles = processedFiles;
+                UpdatedFiles = updatedFiles;
+                IsCanceled = isCanceled;
+            }
+
+            public int TotalFiles { get; }
+            public int ProcessedFiles { get; }
+            public int UpdatedFiles { get; }
+            public bool IsCanceled { get; }
         }
 
         private bool TryGetValidFolder(out string folderPath)

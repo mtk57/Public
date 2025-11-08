@@ -1,4 +1,4 @@
-﻿namespace SimpleFileSearch
+﻿namespace SimpleFileEdit
 {
     partial class ProgressForm
     {
@@ -45,8 +45,9 @@
             this.lblStatus.AutoSize = true;
             this.lblStatus.Location = new System.Drawing.Point(20, 72);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(0, 12);
+            this.lblStatus.Size = new System.Drawing.Size(76, 12);
             this.lblStatus.TabIndex = 1;
+            this.lblStatus.Text = "0/0 ファイル";
             // 
             // btnStop
             // 
@@ -56,19 +57,24 @@
             this.btnStop.TabIndex = 2;
             this.btnStop.Text = "中止";
             this.btnStop.UseVisualStyleBackColor = true;
+            this.btnStop.Click += new System.EventHandler(this.BtnStop_Click);
             // 
             // ProgressForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(312, 148);
+            this.ControlBox = false;
             this.Controls.Add(this.btnStop);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.progressBar);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "ProgressForm";
-            this.Text = "ProgressForm";
+            this.ShowInTaskbar = false;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.Text = "処理中";
             this.ResumeLayout(false);
             this.PerformLayout();
 

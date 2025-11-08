@@ -26,6 +26,7 @@ namespace SimpleDiff
         private int _lastLoggedProgressPercent = -1;
         private int _lastUiProgressPercent = -1;
         private volatile bool _isLogEnabled = true;
+        private bool _isWinMergeComparisonRunning;
         private bool _isRunning;
 
         public MainForm()
@@ -39,6 +40,7 @@ namespace SimpleDiff
             btnRefDirSrc.Click += btnRefDirSrc_Click;
             btnRefDirDst.Click += btnRefDirDst_Click;
             btnRefWinMerge.Click += btnRefWinMerge_Click;
+            btnRunWinMerge.Click += btnRunWinMerge_Click;
             dataGridView.CellDoubleClick += dataGridView_CellDoubleClick;
             dataGridView.CellToolTipTextNeeded += dataGridView_CellToolTipTextNeeded;
             dataGridView.KeyDown += dataGridView_KeyDown;
@@ -294,6 +296,87 @@ namespace SimpleDiff
             _cancellationTokenSource?.Cancel();
         }
 
+        private async void btnRunWinMerge_Click(object sender, EventArgs e)
+        {
+            if (_isRunning || _isWinMergeComparisonRunning)
+            {
+                MessageBox.Show("比較処理中はWinMergeによる再確認は実行できません。", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var winMergePath = txtWinMergePath.Text.Trim();
+            if (string.IsNullOrWhiteSpace(winMergePath) || !File.Exists(winMergePath))
+            {
+                MessageBox.Show("WinMergeのパスが正しく設定されていません。", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (_diffResults.Count == 0)
+            {
+                MessageBox.Show("DataGridViewに再確認する行がありません。", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _isWinMergeComparisonRunning = true;
+            UpdateWinMergeButtonState();
+            var originalCursor = Cursor;
+            Cursor = Cursors.WaitCursor;
+            LogInfo($"WinMerge再比較開始 件数={_diffResults.Count}");
+
+            try
+            {
+                var snapshot = _diffResults.ToList();
+                var removed = 0;
+                var failures = 0;
+                var skipped = 0;
+                foreach (var diff in snapshot)
+                {
+                    if (!diff.CanOpenWinMerge)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    int exitCode;
+                    try
+                    {
+                        exitCode = await CompareWithWinMergeAsync(winMergePath, diff);
+                    }
+                    catch (Exception ex)
+                    {
+                        failures++;
+                        LogError($"WinMerge比較中にエラーが発生しました。Source='{diff.SourceFullPath}' Destination='{diff.DestinationFullPath}'", ex);
+                        continue;
+                    }
+
+                    if (exitCode == 0)
+                    {
+                        _diffResults.Remove(diff);
+                        removed++;
+                    }
+                    else if (exitCode == 1)
+                    {
+                        // 差分ありのままなので何もしない
+                    }
+                    else
+                    {
+                        failures++;
+                        LogInfo($"WinMergeが想定外の終了コード {exitCode} を返しました。Source='{diff.SourceFullPath}' Destination='{diff.DestinationFullPath}'");
+                    }
+                }
+
+                LogInfo($"WinMerge再比較完了 Removed={removed} Failures={failures} Skipped={skipped} Remaining={_diffResults.Count}");
+                var message = $"WinMergeでの再比較が完了しました。\n削除: {removed}件\n失敗: {failures}件\nスキップ: {skipped}件\n残件: {_diffResults.Count}件";
+                MessageBox.Show(message, "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            finally
+            {
+                _isWinMergeComparisonRunning = false;
+                UpdateWinMergeButtonState();
+                Cursor = originalCursor;
+            }
+        }
+
         private void dataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.RowIndex >= _diffResults.Count)
@@ -403,6 +486,38 @@ namespace SimpleDiff
             }
         }
 
+        private Task<int> CompareWithWinMergeAsync(string winMergePath, DiffResult diff)
+        {
+            return Task.Run(() =>
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = winMergePath,
+                    Arguments = BuildWinMergeArguments(diff),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (var process = Process.Start(psi))
+                {
+                    if (process == null)
+                    {
+                        throw new InvalidOperationException("WinMergeの起動に失敗しました。");
+                    }
+
+                    process.WaitForExit();
+                    return process.ExitCode;
+                }
+            });
+        }
+
+        private static string BuildWinMergeArguments(DiffResult diff)
+        {
+            return $"-minimize /noninteractive /quickcompare \"{diff.SourceFullPath}\" \"{diff.DestinationFullPath}\"";
+        }
+
+
         private void SetRunningState(bool isRunning)
         {
             _isRunning = isRunning;
@@ -415,7 +530,18 @@ namespace SimpleDiff
             txtDirPathDst.Enabled = !isRunning;
             txtWinMergePath.Enabled = !isRunning;
             chkEnableSubDir.Enabled = !isRunning;
+            UpdateWinMergeButtonState();
             Cursor = isRunning ? Cursors.WaitCursor : Cursors.Default;
+        }
+
+        private void UpdateWinMergeButtonState()
+        {
+            if (btnRunWinMerge == null)
+            {
+                return;
+            }
+
+            btnRunWinMerge.Enabled = !_isRunning && !_isWinMergeComparisonRunning;
         }
 
         private void ReportProgress(int processed, int total)

@@ -48,6 +48,7 @@
             this.btnRefWinMerge = new System.Windows.Forms.Button();
             this.txtWinMergePath = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.chkUseDebugLog = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView)).BeginInit();
             this.SuspendLayout();
             // 
@@ -236,11 +237,24 @@
             this.label4.TabIndex = 13;
             this.label4.Text = "WinMergeパス";
             // 
+            // chkUseDebugLog
+            // 
+            this.chkUseDebugLog.AutoSize = true;
+            this.chkUseDebugLog.Checked = true;
+            this.chkUseDebugLog.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkUseDebugLog.Location = new System.Drawing.Point(28, 221);
+            this.chkUseDebugLog.Name = "chkUseDebugLog";
+            this.chkUseDebugLog.Size = new System.Drawing.Size(102, 16);
+            this.chkUseDebugLog.TabIndex = 16;
+            this.chkUseDebugLog.Text = "デバッグログ出力";
+            this.chkUseDebugLog.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(914, 539);
+            this.Controls.Add(this.chkUseDebugLog);
             this.Controls.Add(this.btnRefWinMerge);
             this.Controls.Add(this.txtWinMergePath);
             this.Controls.Add(this.label4);
@@ -286,5 +300,6 @@
         private System.Windows.Forms.Button btnRefWinMerge;
         private System.Windows.Forms.TextBox txtWinMergePath;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.CheckBox chkUseDebugLog;
     }
 }

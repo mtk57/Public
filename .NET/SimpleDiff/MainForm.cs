@@ -20,7 +20,11 @@ namespace SimpleDiff
     {
         private readonly string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SimpleDiff.json");
         private readonly BindingList<DiffResult> _diffResults = new BindingList<DiffResult>();
+        private readonly string _logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SimpleDiff.log");
+        private readonly object _logLock = new object();
         private CancellationTokenSource _cancellationTokenSource;
+        private int _lastLoggedProgressPercent = -1;
+        private volatile bool _isLogEnabled = true;
         private bool _isRunning;
 
         public MainForm()
@@ -55,6 +59,7 @@ namespace SimpleDiff
             clmFileNameDst.DataPropertyName = nameof(DiffResult.DestinationFileName);
             dataGridView.DataSource = _diffResults;
             chkEnableSubDir.Checked = true;
+            chkUseDebugLog.Checked = true;
             progressBar.Minimum = 0;
             progressBar.Value = 0;
             lblInfo.Text = "0/0ファイル";
@@ -62,6 +67,8 @@ namespace SimpleDiff
             EnablePathDragDrop(txtWinMergePath, File.Exists);
             EnablePathDragDrop(txtDirPathSrc, Directory.Exists);
             EnablePathDragDrop(txtDirPathDst, Directory.Exists);
+            chkUseDebugLog.CheckedChanged += chkUseDebugLog_CheckedChanged;
+            UpdateLogEnabledState();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -119,14 +126,17 @@ namespace SimpleDiff
 
             var sourceRoot = txtDirPathSrc.Text.Trim();
             var destinationRoot = txtDirPathDst.Text.Trim();
+            LogInfo($"開始ボタン押下 Source='{sourceRoot}' Destination='{destinationRoot}' IncludeSubDir={chkEnableSubDir.Checked}");
 
             if (!ValidateDirectory(sourceRoot, "比較元フォルダパス"))
             {
+                LogInfo("比較元フォルダパスの検証に失敗し、処理を中断します。");
                 return;
             }
 
             if (!ValidateDirectory(destinationRoot, "比較先フォルダパス"))
             {
+                LogInfo("比較先フォルダパスの検証に失敗し、処理を中断します。");
                 return;
             }
 
@@ -134,9 +144,11 @@ namespace SimpleDiff
             {
                 sourceRoot = Path.GetFullPath(sourceRoot);
                 destinationRoot = Path.GetFullPath(destinationRoot);
+                LogInfo($"フルパス解決 Source='{sourceRoot}' Destination='{destinationRoot}'");
             }
             catch (Exception ex)
             {
+                LogError("フォルダパスの解決に失敗しました。", ex);
                 MessageBox.Show($"フォルダパスの解決に失敗しました。\n{ex.Message}", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
@@ -147,17 +159,22 @@ namespace SimpleDiff
 
             try
             {
+                LogInfo($"フォルダ走査開始 Source SearchOption={searchOption}");
                 sourceFiles = EnumerateFileItems(sourceRoot, searchOption);
+                LogInfo($"フォルダ走査開始 Destination SearchOption={searchOption}");
                 destinationFiles = EnumerateFileItems(destinationRoot, searchOption);
+                LogInfo($"フォルダ走査完了 SourceCount={sourceFiles.Count} DestinationCount={destinationFiles.Count}");
             }
             catch (Exception ex)
             {
+                LogError("フォルダの走査に失敗しました。", ex);
                 MessageBox.Show($"フォルダの走査に失敗しました。\n{ex.Message}", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             if (sourceFiles.Count == 0)
             {
+                LogInfo("比較元フォルダにファイルが存在しません。");
                 MessageBox.Show("比較元フォルダにファイルが存在しません。", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -167,6 +184,9 @@ namespace SimpleDiff
             progressBar.Maximum = total;
             progressBar.Value = 0;
             UpdateProgressLabel(0, total);
+            _lastLoggedProgressPercent = -1;
+            LogProgressIfNeeded(0, total);
+            LogInfo($"比較準備完了 TotalFiles={total}");
 
             var destinationMap = BuildFileMap(destinationFiles);
             _cancellationTokenSource = new CancellationTokenSource();
@@ -174,7 +194,13 @@ namespace SimpleDiff
 
             var diffBag = new ConcurrentBag<DiffResult>();
             var processed = 0;
+            long matchedFiles = 0;
+            long missingFiles = 0;
+            long diffCount = 0;
+            long compareErrorCount = 0;
             var token = _cancellationTokenSource.Token;
+            var wasCancelled = false;
+            LogInfo($"並列比較開始 MaxDegreeOfParallelism={Environment.ProcessorCount}");
 
             try
             {
@@ -191,13 +217,27 @@ namespace SimpleDiff
                         {
                             token.ThrowIfCancellationRequested();
                             DiffResult diff = null;
-
-                            if (destinationMap.TryGetValue(sourceFile.RelativePath, out var destinationFile))
+                            FileItem destinationFile = null;
+                            try
                             {
-                                if (FilesAreDifferent(sourceFile, destinationFile))
+                                if (destinationMap.TryGetValue(sourceFile.RelativePath, out destinationFile))
                                 {
-                                    diff = CreateDiffResult(sourceFile, destinationFile);
+                                    Interlocked.Increment(ref matchedFiles);
+                                    if (FilesAreDifferent(sourceFile, destinationFile))
+                                    {
+                                        diff = CreateDiffResult(sourceFile, destinationFile);
+                                        Interlocked.Increment(ref diffCount);
+                                    }
                                 }
+                                else
+                                {
+                                    Interlocked.Increment(ref missingFiles);
+                                }
+                            }
+                            catch (Exception compareEx)
+                            {
+                                Interlocked.Increment(ref compareErrorCount);
+                                LogError($"ファイル比較中にエラーが発生しました。Source='{sourceFile.FullPath}' Destination='{destinationFile?.FullPath ?? "N/A"}'", compareEx);
                             }
                             if (diff != null)
                             {
@@ -212,9 +252,12 @@ namespace SimpleDiff
             catch (OperationCanceledException)
             {
                 // 中止要求なので握りつぶす
+                wasCancelled = true;
+                LogInfo("比較処理がキャンセルされました。");
             }
             catch (Exception ex)
             {
+                LogError("比較処理でエラーが発生しました。", ex);
                 MessageBox.Show($"比較処理でエラーが発生しました。\n{ex.Message}", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -223,6 +266,7 @@ namespace SimpleDiff
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
             }
+            LogInfo($"比較処理終了 Processed={processed}/{total} DiffCount={diffCount} Matched={matchedFiles} Missing={missingFiles} CompareErrors={compareErrorCount} Cancelled={wasCancelled}");
 
             var orderedResults = diffBag
                 .OrderBy(r => r.SourceDirectory, StringComparer.OrdinalIgnoreCase)
@@ -233,6 +277,7 @@ namespace SimpleDiff
             {
                 _diffResults.Add(result);
             }
+            LogInfo($"結果表示完了 件数={orderedResults.Count}");
 
             UpdateProgressLabel(processed, total);
         }
@@ -243,7 +288,7 @@ namespace SimpleDiff
             {
                 return;
             }
-
+            LogInfo("中止ボタン押下: キャンセル要求を発行します。");
             _cancellationTokenSource?.Cancel();
         }
 
@@ -403,6 +448,7 @@ namespace SimpleDiff
             progressBar.Maximum = total;
             progressBar.Value = Math.Min(processed, total);
             lblInfo.Text = $"{processed}/{total}ファイル";
+            LogProgressIfNeeded(processed, total);
         }
 
         private void SelectFolder(TextBox target)
@@ -591,12 +637,14 @@ namespace SimpleDiff
         {
             if (string.IsNullOrWhiteSpace(path))
             {
+                LogInfo($"{caption}が未指定です。");
                 MessageBox.Show($"{caption}を指定してください。", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
             if (!Directory.Exists(path))
             {
+                LogInfo($"{caption} '{path}' が存在しません。");
                 MessageBox.Show($"{caption}が存在しません。", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
@@ -622,6 +670,7 @@ namespace SimpleDiff
                         txtDirPathSrc.Text = settings.SourceDirectory ?? string.Empty;
                         txtDirPathDst.Text = settings.DestinationDirectory ?? string.Empty;
                         chkEnableSubDir.Checked = settings.IncludeSubDirectories;
+                        chkUseDebugLog.Checked = settings.EnableDebugLog;
 
                         if (settings.Width > 0 && settings.Height > 0)
                         {
@@ -644,6 +693,7 @@ namespace SimpleDiff
             }
             catch (Exception ex)
             {
+                LogError("設定ファイルの読み込みに失敗しました。", ex);
                 MessageBox.Show($"設定ファイルの読み込みに失敗しました。\n{ex.Message}", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -659,6 +709,7 @@ namespace SimpleDiff
                     SourceDirectory = txtDirPathSrc.Text,
                     DestinationDirectory = txtDirPathDst.Text,
                     IncludeSubDirectories = chkEnableSubDir.Checked,
+                    EnableDebugLog = chkUseDebugLog.Checked,
                     Width = bounds.Width,
                     Height = bounds.Height,
                     Left = bounds.Left,
@@ -674,6 +725,7 @@ namespace SimpleDiff
             }
             catch (Exception ex)
             {
+                LogError("設定ファイルの保存に失敗しました。", ex);
                 MessageBox.Show($"設定ファイルの保存に失敗しました。\n{ex.Message}", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -685,6 +737,7 @@ namespace SimpleDiff
             [DataMember] public string SourceDirectory { get; set; } = string.Empty;
             [DataMember] public string DestinationDirectory { get; set; } = string.Empty;
             [DataMember] public bool IncludeSubDirectories { get; set; } = true;
+            [DataMember] public bool EnableDebugLog { get; set; } = true;
             [DataMember] public int Width { get; set; }
             [DataMember] public int Height { get; set; }
             [DataMember] public int Left { get; set; } = -1;
@@ -713,6 +766,79 @@ namespace SimpleDiff
             public string FileName { get; set; } = string.Empty;
             public string RelativePath { get; set; } = string.Empty;
             public long Length { get; set; }
+        }
+
+        private void chkUseDebugLog_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateLogEnabledState();
+        }
+
+        private void UpdateLogEnabledState()
+        {
+            _isLogEnabled = chkUseDebugLog.Checked;
+        }
+
+        private void LogInfo(string message)
+        {
+            WriteLog("INFO", message);
+        }
+
+        private void LogError(string message, Exception exception)
+        {
+            var builder = new StringBuilder();
+            builder.Append(message);
+            if (exception != null)
+            {
+                builder.Append(" Exception=");
+                builder.Append(exception);
+            }
+            WriteLog("ERROR", builder.ToString());
+        }
+
+        private void WriteLog(string level, string message)
+        {
+            if (!_isLogEnabled)
+            {
+                return;
+            }
+
+            try
+            {
+                var line = $"{DateTime.Now:yyyy/MM/dd HH:mm:ss.fff} [{level}] [T{Thread.CurrentThread.ManagedThreadId}] {message}";
+                lock (_logLock)
+                {
+                    File.AppendAllText(_logPath, line + Environment.NewLine, Encoding.UTF8);
+                }
+            }
+            catch
+            {
+                // ログ出力に失敗してもアプリの処理は継続させる
+            }
+        }
+
+        private void LogProgressIfNeeded(int processed, int total)
+        {
+            if (total <= 0)
+            {
+                return;
+            }
+
+            var percent = (int)Math.Floor((double)processed / total * 100);
+            if (percent < 0 || percent > 100)
+            {
+                return;
+            }
+
+            if (percent == _lastLoggedProgressPercent)
+            {
+                return;
+            }
+
+            if (percent % 10 == 0 || processed == total)
+            {
+                _lastLoggedProgressPercent = percent;
+                LogInfo($"進捗 {processed}/{total} ({percent}%)");
+            }
         }
     }
 }

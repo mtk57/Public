@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -35,6 +36,7 @@ namespace SimpleDiff
             btnRefWinMerge.Click += btnRefWinMerge_Click;
             dataGridView.CellDoubleClick += dataGridView_CellDoubleClick;
             dataGridView.CellToolTipTextNeeded += dataGridView_CellToolTipTextNeeded;
+            dataGridView.KeyDown += dataGridView_KeyDown;
         }
 
         private void InitializeCustomComponents()
@@ -42,7 +44,7 @@ namespace SimpleDiff
             dataGridView.AutoGenerateColumns = false;
             dataGridView.AllowUserToAddRows = false;
             dataGridView.AllowUserToDeleteRows = false;
-            dataGridView.MultiSelect = false;
+            dataGridView.MultiSelect = true;
             dataGridView.ReadOnly = true;
             dataGridView.RowHeadersVisible = false;
             dataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -270,6 +272,61 @@ namespace SimpleDiff
 
             var value = dataGridView.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
             e.ToolTipText = value?.ToString() ?? string.Empty;
+        }
+
+        private void dataGridView_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.A)
+            {
+                dataGridView.SelectAll();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Control && e.KeyCode == Keys.C)
+            {
+                CopySelectedRowsToClipboard();
+                e.Handled = true;
+            }
+        }
+
+        private void CopySelectedRowsToClipboard()
+        {
+            var rows = dataGridView.Rows
+                .Cast<DataGridViewRow>()
+                .Where(r => r.Selected && !r.IsNewRow)
+                .OrderBy(r => r.Index)
+                .ToList();
+
+            if (rows.Count == 0)
+            {
+                return;
+            }
+
+            var columnHeaders = dataGridView.Columns
+                .Cast<DataGridViewColumn>()
+                .Where(c => c.Visible)
+                .OrderBy(c => c.DisplayIndex)
+                .ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine(string.Join("\t", columnHeaders.Select(c => c.HeaderText)));
+
+            foreach (var row in rows)
+            {
+                var values = columnHeaders
+                    .Select(c => row.Cells[c.Index].Value?.ToString() ?? string.Empty);
+                sb.AppendLine(string.Join("\t", values));
+            }
+
+            try
+            {
+                Clipboard.SetText(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"クリップボードへのコピーに失敗しました。\n{ex.Message}", "SimpleDiff", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void LaunchWinMerge(DiffResult diff)

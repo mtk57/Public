@@ -55,6 +55,9 @@ namespace SimpleDiff
             progressBar.Value = 0;
             lblInfo.Text = "0/0ファイル";
             btnStop.Enabled = false;
+            EnablePathDragDrop(txtWinMergePath, File.Exists);
+            EnablePathDragDrop(txtDirPathSrc, Directory.Exists);
+            EnablePathDragDrop(txtDirPathDst, Directory.Exists);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -480,6 +483,58 @@ namespace SimpleDiff
             }
 
             return path;
+        }
+
+        private void EnablePathDragDrop(TextBox textBox, Func<string, bool> validator)
+        {
+            if (textBox == null || validator == null)
+            {
+                return;
+            }
+
+            textBox.AllowDrop = true;
+            textBox.DragEnter += (sender, e) =>
+            {
+                e.Effect = TryGetDroppedPath(e.Data, validator, out _)
+                    ? DragDropEffects.Copy
+                    : DragDropEffects.None;
+            };
+            textBox.DragDrop += (sender, e) =>
+            {
+                if (TryGetDroppedPath(e.Data, validator, out var path))
+                {
+                    textBox.Text = path;
+                }
+            };
+        }
+
+        private static bool TryGetDroppedPath(IDataObject data, Func<string, bool> validator, out string path)
+        {
+            path = string.Empty;
+            if (data == null || validator == null)
+            {
+                return false;
+            }
+
+            if (!data.GetDataPresent(DataFormats.FileDrop))
+            {
+                return false;
+            }
+
+            if (data.GetData(DataFormats.FileDrop) is string[] paths)
+            {
+                foreach (var candidate in paths)
+                {
+                    var trimmed = candidate?.Trim();
+                    if (!string.IsNullOrEmpty(trimmed) && validator(trimmed))
+                    {
+                        path = trimmed;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private bool ValidateDirectory(string path, string caption)

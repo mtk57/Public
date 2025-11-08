@@ -34,6 +34,7 @@ namespace SimpleDiff
             btnRefDirDst.Click += btnRefDirDst_Click;
             btnRefWinMerge.Click += btnRefWinMerge_Click;
             dataGridView.CellDoubleClick += dataGridView_CellDoubleClick;
+            dataGridView.CellToolTipTextNeeded += dataGridView_CellToolTipTextNeeded;
         }
 
         private void InitializeCustomComponents()
@@ -45,6 +46,7 @@ namespace SimpleDiff
             dataGridView.ReadOnly = true;
             dataGridView.RowHeadersVisible = false;
             dataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dataGridView.ShowCellToolTips = true;
             clmDirPathSrc.DataPropertyName = nameof(DiffResult.SourceDirectory);
             clmFileNameSrc.DataPropertyName = nameof(DiffResult.SourceFileName);
             clmDirPathDst.DataPropertyName = nameof(DiffResult.DestinationDirectory);
@@ -256,6 +258,18 @@ namespace SimpleDiff
             }
 
             LaunchWinMerge(_diffResults[e.RowIndex]);
+        }
+
+        private void dataGridView_CellToolTipTextNeeded(object sender, DataGridViewCellToolTipTextNeededEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+            {
+                e.ToolTipText = string.Empty;
+                return;
+            }
+
+            var value = dataGridView.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
+            e.ToolTipText = value?.ToString() ?? string.Empty;
         }
 
         private void LaunchWinMerge(DiffResult diff)

@@ -37,6 +37,11 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.chkUseRegex = new System.Windows.Forms.CheckBox();
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
+            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.labelTime = new System.Windows.Forms.Label();
             this.chkSearchSubDir = new System.Windows.Forms.CheckBox();
             this.chkCase = new System.Windows.Forms.CheckBox();
@@ -51,11 +56,6 @@
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.chkIgnoreComment = new System.Windows.Forms.CheckBox();
             this.btnFileCopy = new System.Windows.Forms.Button();
-            this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.txtFilePathFilter = new System.Windows.Forms.TextBox();
             this.txtFileNameFilter = new System.Windows.Forms.TextBox();
             this.txtRowNumFilter = new System.Windows.Forms.TextBox();
@@ -66,13 +66,14 @@
             this.label6 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
+            this.btnMultiKeywords = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
             // btnBrowse
             // 
             this.btnBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowse.Location = new System.Drawing.Point(686, 28);
+            this.btnBrowse.Location = new System.Drawing.Point(685, 28);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
             this.btnBrowse.TabIndex = 2;
@@ -104,7 +105,7 @@
             this.cmbKeyword.FormattingEnabled = true;
             this.cmbKeyword.Location = new System.Drawing.Point(48, 156);
             this.cmbKeyword.Name = "cmbKeyword";
-            this.cmbKeyword.Size = new System.Drawing.Size(632, 20);
+            this.cmbKeyword.Size = new System.Drawing.Size(631, 20);
             this.cmbKeyword.TabIndex = 5;
             // 
             // cmbFolderPath
@@ -115,7 +116,7 @@
             this.cmbFolderPath.FormattingEnabled = true;
             this.cmbFolderPath.Location = new System.Drawing.Point(48, 28);
             this.cmbFolderPath.Name = "cmbFolderPath";
-            this.cmbFolderPath.Size = new System.Drawing.Size(632, 20);
+            this.cmbFolderPath.Size = new System.Drawing.Size(631, 20);
             this.cmbFolderPath.TabIndex = 1;
             // 
             // btnCancel
@@ -154,8 +155,43 @@
             this.dataGridViewResults.Location = new System.Drawing.Point(48, 323);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(660, 272);
+            this.dataGridViewResults.Size = new System.Drawing.Size(659, 168);
             this.dataGridViewResults.TabIndex = 21;
+            // 
+            // clmFilePath
+            // 
+            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFilePath.HeaderText = "ファイルパス";
+            this.clmFilePath.Name = "clmFilePath";
+            this.clmFilePath.ReadOnly = true;
+            // 
+            // clmFileName
+            // 
+            this.clmFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmFileName.HeaderText = "ファイル名";
+            this.clmFileName.Name = "clmFileName";
+            this.clmFileName.ReadOnly = true;
+            // 
+            // clmLine
+            // 
+            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmLine.HeaderText = "行";
+            this.clmLine.Name = "clmLine";
+            this.clmLine.ReadOnly = true;
+            // 
+            // clmGrepResult
+            // 
+            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmGrepResult.HeaderText = "Grep結果";
+            this.clmGrepResult.Name = "clmGrepResult";
+            this.clmGrepResult.ReadOnly = true;
+            // 
+            // clmMethodSignature
+            // 
+            this.clmMethodSignature.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmMethodSignature.HeaderText = "メソッド";
+            this.clmMethodSignature.Name = "clmMethodSignature";
+            this.clmMethodSignature.ReadOnly = true;
             // 
             // labelTime
             // 
@@ -220,13 +256,13 @@
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Location = new System.Drawing.Point(48, 98);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(632, 20);
+            this.comboBox1.Size = new System.Drawing.Size(631, 20);
             this.comboBox1.TabIndex = 4;
             // 
             // chkTagJump
             // 
             this.chkTagJump.AutoSize = true;
-            this.chkTagJump.Location = new System.Drawing.Point(233, 182);
+            this.chkTagJump.Location = new System.Drawing.Point(631, 300);
             this.chkTagJump.Name = "chkTagJump";
             this.chkTagJump.Size = new System.Drawing.Size(77, 16);
             this.chkTagJump.TabIndex = 8;
@@ -252,7 +288,7 @@
             // chkMethod
             // 
             this.chkMethod.AutoSize = true;
-            this.chkMethod.Location = new System.Drawing.Point(331, 182);
+            this.chkMethod.Location = new System.Drawing.Point(231, 182);
             this.chkMethod.Name = "chkMethod";
             this.chkMethod.Size = new System.Drawing.Size(102, 16);
             this.chkMethod.TabIndex = 9;
@@ -263,7 +299,7 @@
             // chkIgnoreComment
             // 
             this.chkIgnoreComment.AutoSize = true;
-            this.chkIgnoreComment.Location = new System.Drawing.Point(451, 182);
+            this.chkIgnoreComment.Location = new System.Drawing.Point(351, 182);
             this.chkIgnoreComment.Name = "chkIgnoreComment";
             this.chkIgnoreComment.Size = new System.Drawing.Size(81, 16);
             this.chkIgnoreComment.TabIndex = 10;
@@ -279,41 +315,6 @@
             this.btnFileCopy.TabIndex = 14;
             this.btnFileCopy.Text = "ファイルコピー";
             this.btnFileCopy.UseVisualStyleBackColor = true;
-            // 
-            // clmFilePath
-            // 
-            this.clmFilePath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFilePath.HeaderText = "ファイルパス";
-            this.clmFilePath.Name = "clmFilePath";
-            this.clmFilePath.ReadOnly = true;
-            // 
-            // clmFileName
-            // 
-            this.clmFileName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmFileName.HeaderText = "ファイル名";
-            this.clmFileName.Name = "clmFileName";
-            this.clmFileName.ReadOnly = true;
-            // 
-            // clmLine
-            // 
-            this.clmLine.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmLine.HeaderText = "行";
-            this.clmLine.Name = "clmLine";
-            this.clmLine.ReadOnly = true;
-            // 
-            // clmGrepResult
-            // 
-            this.clmGrepResult.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmGrepResult.HeaderText = "Grep結果";
-            this.clmGrepResult.Name = "clmGrepResult";
-            this.clmGrepResult.ReadOnly = true;
-            // 
-            // clmMethodSignature
-            // 
-            this.clmMethodSignature.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.clmMethodSignature.HeaderText = "メソッド";
-            this.clmMethodSignature.Name = "clmMethodSignature";
-            this.clmMethodSignature.ReadOnly = true;
             // 
             // txtFilePathFilter
             // 
@@ -395,11 +396,22 @@
             this.label8.TabIndex = 0;
             this.label8.Text = "メソッド";
             // 
+            // btnMultiKeywords
+            // 
+            this.btnMultiKeywords.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnMultiKeywords.Location = new System.Drawing.Point(688, 156);
+            this.btnMultiKeywords.Name = "btnMultiKeywords";
+            this.btnMultiKeywords.Size = new System.Drawing.Size(45, 20);
+            this.btnMultiKeywords.TabIndex = 22;
+            this.btnMultiKeywords.Text = "複数";
+            this.btnMultiKeywords.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(767, 607);
+            this.ClientSize = new System.Drawing.Size(766, 503);
+            this.Controls.Add(this.btnMultiKeywords);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.label6);
@@ -479,6 +491,7 @@
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Button btnMultiKeywords;
     }
 }
 

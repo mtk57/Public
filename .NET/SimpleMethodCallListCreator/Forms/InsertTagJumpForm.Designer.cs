@@ -45,11 +45,13 @@
             this.label7 = new System.Windows.Forms.Label();
             this.lblFailed = new System.Windows.Forms.Label();
             this.chkAllMethodMode = new System.Windows.Forms.CheckBox();
+            this.pbProgress = new System.Windows.Forms.ProgressBar();
+            this.btnCancel = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(366, 321);
+            this.btnRun.Location = new System.Drawing.Point(308, 294);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 33);
             this.btnRun.TabIndex = 10;
@@ -182,7 +184,7 @@
             // 
             this.lblFailed.AutoSize = true;
             this.lblFailed.ForeColor = System.Drawing.Color.Red;
-            this.lblFailed.Location = new System.Drawing.Point(459, 331);
+            this.lblFailed.Location = new System.Drawing.Point(479, 304);
             this.lblFailed.Name = "lblFailed";
             this.lblFailed.Size = new System.Drawing.Size(88, 12);
             this.lblFailed.TabIndex = 25;
@@ -198,11 +200,32 @@
             this.chkAllMethodMode.Text = "全メソッドモード";
             this.chkAllMethodMode.UseVisualStyleBackColor = true;
             // 
+            // pbProgress
+            // 
+            this.pbProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.pbProgress.Location = new System.Drawing.Point(277, 338);
+            this.pbProgress.Name = "pbProgress";
+            this.pbProgress.Size = new System.Drawing.Size(262, 10);
+            this.pbProgress.TabIndex = 27;
+            this.pbProgress.Visible = false;
+            // 
+            // btnCancel
+            // 
+            this.btnCancel.Location = new System.Drawing.Point(389, 294);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(75, 33);
+            this.btnCancel.TabIndex = 28;
+            this.btnCancel.Text = "中止";
+            this.btnCancel.UseVisualStyleBackColor = true;
+            // 
             // InsertTagJumpForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 383);
+            this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.pbProgress);
             this.Controls.Add(this.chkAllMethodMode);
             this.Controls.Add(this.lblFailed);
             this.Controls.Add(this.label7);
@@ -245,5 +268,7 @@
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label lblFailed;
         private System.Windows.Forms.CheckBox chkAllMethodMode;
+        private System.Windows.Forms.ProgressBar pbProgress;
+        private System.Windows.Forms.Button btnCancel;
     }
 }

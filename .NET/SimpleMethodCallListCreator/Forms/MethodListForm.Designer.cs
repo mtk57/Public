@@ -161,7 +161,7 @@
             this.MaximumSize = new System.Drawing.Size(752, 267);
             this.MinimumSize = new System.Drawing.Size(752, 267);
             this.Name = "MethodListForm";
-            this.Text = "Method List";
+            this.Text = "メソッドリスト 作成";
             this.ResumeLayout(false);
             this.PerformLayout();
 

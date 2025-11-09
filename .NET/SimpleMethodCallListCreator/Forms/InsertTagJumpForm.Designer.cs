@@ -221,7 +221,7 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.btnRefStartSrcFilePath);
             this.Name = "InsertTagJumpForm";
-            this.Text = "Insert Tag Jump";
+            this.Text = "タグジャンプ情報 埋め込み";
             this.ResumeLayout(false);
             this.PerformLayout();
 

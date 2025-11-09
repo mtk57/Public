@@ -7,6 +7,8 @@ namespace SimpleMethodCallListCreator
     public static class ErrorLogger
     {
         private const string LogFileName = "error.log";
+        private static readonly Encoding LogEncoding = Encoding.GetEncoding("shift_jis");
+        private const string WindowsNewLine = "\r\n";
 
         public static void LogError(string message)
         {
@@ -49,12 +51,26 @@ namespace SimpleMethodCallListCreator
                     Directory.CreateDirectory(directory);
                 }
 
-                File.AppendAllText(path, content);
+                var normalized = NormalizeNewLines(content);
+                File.AppendAllText(path, normalized, LogEncoding);
             }
             catch
             {
                 // ログ出力に失敗してもアプリケーションの挙動には影響させない
             }
+        }
+
+        private static string NormalizeNewLines(string content)
+        {
+            if (string.IsNullOrEmpty(content))
+            {
+                return content;
+            }
+
+            var unified = content
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n");
+            return unified.Replace("\n", WindowsNewLine);
         }
 
         private static string GetLogFilePath()

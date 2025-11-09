@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -16,6 +18,8 @@ namespace SimpleMethodCallListCreator.Forms
         private CancellationTokenSource _cancellationTokenSource;
         private bool _isRunning;
         private bool _isDeterminateProgress;
+        private int _lastProcessedFileCount;
+        private int _lastTotalFileCount;
 
         public InsertTagJumpForm(AppSettings settings, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
         {
@@ -441,6 +445,11 @@ namespace SimpleMethodCallListCreator.Forms
 
                 var hasFailures = result.FailureCount > 0;
                 var hasUpdates = result.UpdatedCallCount > 0;
+                var failureFileCount = CountFailureFiles(result);
+                if (hasFailures && failureFileCount == 0)
+                {
+                    failureFileCount = result.FailureCount;
+                }
 
                 if (hasUpdates || hasFailures)
                 {
@@ -451,14 +460,20 @@ namespace SimpleMethodCallListCreator.Forms
                     if (hasFailures)
                     {
                         message.AppendLine($"メソッド特定失敗: {result.FailureCount}");
+                        if (failureFileCount > 0)
+                        {
+                            message.AppendLine($"失敗ファイル数: {failureFileCount}");
+                        }
                         message.AppendLine("詳細は error.log を参照してください。");
                         LogFailureDetails(methodListPath, sourceContextPath, startMethodContext, result,
                             isAllMethodMode);
+                        OpenErrorLogFolder();
                     }
 
                     MessageBox.Show(this, message.ToString(), "処理完了",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     UpdateFailedLabel(result.FailureCount);
+                    AppendFailureStatus(failureFileCount);
                 }
                 else
                 {
@@ -507,6 +522,7 @@ namespace SimpleMethodCallListCreator.Forms
                 logBuilder.AppendLine("例外詳細:");
                 logBuilder.AppendLine(ex.ToString());
                 ErrorLogger.LogError(logBuilder.ToString());
+                OpenErrorLogFolder();
                 UpdateFailedLabel(0);
             }
             catch (Exception ex)
@@ -531,6 +547,7 @@ namespace SimpleMethodCallListCreator.Forms
                 logBuilder.AppendLine("例外詳細:");
                 logBuilder.AppendLine(ex.ToString());
                 ErrorLogger.LogError(logBuilder.ToString());
+                OpenErrorLogFolder();
                 UpdateFailedLabel(0);
             }
             finally
@@ -544,6 +561,9 @@ namespace SimpleMethodCallListCreator.Forms
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new CancellationTokenSource();
             _isDeterminateProgress = isDeterminate;
+            _lastProcessedFileCount = 0;
+            _lastTotalFileCount = 0;
+            lblStatus.Text = string.Empty;
             SetRunningState(true, isDeterminate);
         }
 
@@ -600,6 +620,8 @@ namespace SimpleMethodCallListCreator.Forms
                 return;
             }
 
+            UpdateStatusLabel(info);
+
             if (!_isDeterminateProgress || !info.IsDeterminate)
             {
                 pbProgress.Style = ProgressBarStyle.Marquee;
@@ -620,6 +642,24 @@ namespace SimpleMethodCallListCreator.Forms
             }
 
             pbProgress.Value = Math.Min(value, pbProgress.Maximum);
+        }
+
+        private void UpdateStatusLabel(TagJumpProgressInfo info)
+        {
+            if (info == null || !info.HasFileProgress)
+            {
+                return;
+            }
+
+            _lastTotalFileCount = Math.Max(_lastTotalFileCount, info.TotalFileCount);
+            _lastProcessedFileCount = Math.Max(_lastProcessedFileCount, info.ProcessedFileCount);
+
+            if (_lastTotalFileCount <= 0)
+            {
+                return;
+            }
+
+            lblStatus.Text = $"{_lastProcessedFileCount:D4}/{_lastTotalFileCount:D4}ファイル";
         }
 
         private static void LogFailureDetails(string methodListPath, string sourcePath,
@@ -690,6 +730,79 @@ namespace SimpleMethodCallListCreator.Forms
             }
 
             ErrorLogger.LogError(builder.ToString());
+        }
+
+        private void AppendFailureStatus(int failureFileCount)
+        {
+            if (failureFileCount <= 0)
+            {
+                return;
+            }
+
+            var prefix = lblStatus.Text ?? string.Empty;
+            if (prefix.Length > 0)
+            {
+                prefix += "  ";
+            }
+
+            lblStatus.Text = $"{prefix}失敗: {failureFileCount}ファイル";
+        }
+
+        private static int CountFailureFiles(TagJumpEmbeddingResult result)
+        {
+            if (result?.FailureDetails == null || result.FailureDetails.Count == 0)
+            {
+                return 0;
+            }
+
+            var failureFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var detail in result.FailureDetails)
+            {
+                if (detail == null)
+                {
+                    continue;
+                }
+
+                var path = (detail.FilePath ?? string.Empty).Trim();
+                if (path.Length == 0)
+                {
+                    continue;
+                }
+
+                failureFiles.Add(path);
+            }
+
+            return failureFiles.Count;
+        }
+
+        private void OpenErrorLogFolder()
+        {
+            try
+            {
+                var logPath = ErrorLogger.GetLogFilePath();
+                if (string.IsNullOrEmpty(logPath) || !File.Exists(logPath))
+                {
+                    return;
+                }
+
+                var directory = Path.GetDirectoryName(logPath);
+                if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+                {
+                    return;
+                }
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{directory}\"",
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch
+            {
+                // エクスプローラー起動に失敗しても処理は継続する
+            }
         }
 
         private void UpdateFailedLabel(int failureCount)

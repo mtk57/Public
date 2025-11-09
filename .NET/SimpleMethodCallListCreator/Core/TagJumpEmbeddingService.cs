@@ -188,41 +188,57 @@ namespace SimpleMethodCallListCreator
             }
 
             var processedCount = 0;
+            var processedFileCount = 0;
+            var totalFileCount = targets.Count;
             var parallelOptions = new ParallelOptions
             {
                 CancellationToken = cancellationToken
             };
 
+            progress?.Report(new TagJumpProgressInfo("Processing", 0, totalMethodTargetCount, 0, totalFileCount));
+
             Parallel.ForEach(targets, parallelOptions, target =>
             {
-                var structure = GetOrAnalyzeStructure(target.FilePath, analysisCache);
-                foreach (var methodEntry in target.MethodEntries)
+                try
                 {
-                    parallelOptions.CancellationToken.ThrowIfCancellationRequested();
-
-                    var methodKey = CreateMethodKey(methodEntry);
-                    if (!processedMethods.TryAdd(methodKey, 0))
-                    {
-                        continue;
-                    }
-
-                    var methodStructure = structure.FindMethodBySignature(methodEntry.Detail.MethodSignature);
-                    if (methodStructure == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"ソース内にメソッドシグネチャが見つかりませんでした。ファイル: {methodEntry.Detail.FilePath}, シグネチャ: {methodEntry.Detail.MethodSignature}");
-                    }
-
-                    foreach (var call in methodStructure.Calls)
+                    var structure = GetOrAnalyzeStructure(target.FilePath, analysisCache);
+                    foreach (var methodEntry in target.MethodEntries)
                     {
                         parallelOptions.CancellationToken.ThrowIfCancellationRequested();
-                        ProcessMethodCall(methodEntry, structure, call, index, modifications,
-                            detail => failureDetails.Add(detail), prefix, normalizedMethodListPath, mode,
-                            () => Interlocked.Increment(ref updatedCallCount), parallelOptions.CancellationToken);
-                    }
 
-                    var current = Interlocked.Increment(ref processedCount);
-                    progress?.Report(new TagJumpProgressInfo("Processing", current, totalMethodTargetCount));
+                        var methodKey = CreateMethodKey(methodEntry);
+                        if (!processedMethods.TryAdd(methodKey, 0))
+                        {
+                            continue;
+                        }
+
+                        var methodStructure = structure.FindMethodBySignature(methodEntry.Detail.MethodSignature);
+                        if (methodStructure == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"ソース内にメソッドシグネチャが見つかりませんでした。ファイル: {methodEntry.Detail.FilePath}, シグネチャ: {methodEntry.Detail.MethodSignature}");
+                        }
+
+                        foreach (var call in methodStructure.Calls)
+                        {
+                            parallelOptions.CancellationToken.ThrowIfCancellationRequested();
+                            ProcessMethodCall(methodEntry, structure, call, index, modifications,
+                                detail => failureDetails.Add(detail), prefix, normalizedMethodListPath, mode,
+                                () => Interlocked.Increment(ref updatedCallCount), parallelOptions.CancellationToken);
+                        }
+
+                        var current = Interlocked.Increment(ref processedCount);
+                        var currentFile = Volatile.Read(ref processedFileCount);
+                        progress?.Report(new TagJumpProgressInfo("Processing", current, totalMethodTargetCount,
+                            currentFile, totalFileCount));
+                    }
+                }
+                finally
+                {
+                    var fileCount = Interlocked.Increment(ref processedFileCount);
+                    var current = Volatile.Read(ref processedCount);
+                    progress?.Report(new TagJumpProgressInfo("Processing", current, totalMethodTargetCount,
+                        fileCount, totalFileCount));
                 }
             });
 

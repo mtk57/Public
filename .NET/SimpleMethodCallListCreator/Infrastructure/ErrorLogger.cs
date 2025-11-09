@@ -45,6 +45,7 @@ namespace SimpleMethodCallListCreator
             try
             {
                 var path = GetLogFilePath();
+                EnsureShiftJisEncoding(path);
                 var directory = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
@@ -73,7 +74,51 @@ namespace SimpleMethodCallListCreator
             return unified.Replace("\n", WindowsNewLine);
         }
 
-        private static string GetLogFilePath()
+        private static void EnsureShiftJisEncoding(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                return;
+            }
+
+            try
+            {
+                if (!HasUtf8Bom(path))
+                {
+                    return;
+                }
+
+                var content = File.ReadAllText(path, Encoding.UTF8);
+                var normalized = NormalizeNewLines(content);
+                File.WriteAllText(path, normalized, LogEncoding);
+            }
+            catch
+            {
+                // 変換に失敗しても既存の内容を優先する
+            }
+        }
+
+        private static bool HasUtf8Bom(string path)
+        {
+            using (var stream = File.OpenRead(path))
+            {
+                if (!stream.CanRead || stream.Length < 3)
+                {
+                    return false;
+                }
+
+                var buffer = new byte[3];
+                var read = stream.Read(buffer, 0, buffer.Length);
+                if (read < 3)
+                {
+                    return false;
+                }
+
+                return buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF;
+            }
+        }
+
+        public static string GetLogFilePath()
         {
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             if (string.IsNullOrEmpty(baseDirectory))

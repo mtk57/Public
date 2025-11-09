@@ -6,9 +6,10 @@ namespace SimpleMethodCallListCreator
 {
     public static class ErrorLogger
     {
-        private const string LogFileName = "error.log";
         private static readonly Encoding LogEncoding = Encoding.GetEncoding("shift_jis");
         private const string WindowsNewLine = "\r\n";
+        private static readonly object SyncRoot = new object();
+        private static string _logFilePath;
 
         public static void LogError(string message)
         {
@@ -120,13 +121,29 @@ namespace SimpleMethodCallListCreator
 
         public static string GetLogFilePath()
         {
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            if (string.IsNullOrEmpty(baseDirectory))
+            if (!string.IsNullOrEmpty(_logFilePath))
             {
-                baseDirectory = Environment.CurrentDirectory;
+                return _logFilePath;
             }
 
-            return Path.Combine(baseDirectory, LogFileName);
+            lock (SyncRoot)
+            {
+                if (!string.IsNullOrEmpty(_logFilePath))
+                {
+                    return _logFilePath;
+                }
+
+                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                if (string.IsNullOrEmpty(baseDirectory))
+                {
+                    baseDirectory = Environment.CurrentDirectory;
+                }
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var fileName = $"Error_{timestamp}.log";
+                _logFilePath = Path.Combine(baseDirectory, fileName);
+                return _logFilePath;
+            }
         }
     }
 }

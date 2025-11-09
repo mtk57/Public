@@ -16,7 +16,7 @@ namespace SimpleGrep.Core
 
         public static IEnumerable<SearchResult> SearchFiles(
             string[] filePaths,
-            string grepPattern,
+            IReadOnlyList<string> grepPatterns,
             bool caseSensitive,
             bool useRegex,
             bool deriveMethod,
@@ -26,16 +26,26 @@ namespace SimpleGrep.Core
             Action<Exception> errorHandler)
         {
             var results = new ConcurrentBag<SearchResult>();
+            var patterns = (grepPatterns ?? Array.Empty<string>())
+                .Where(pattern => !string.IsNullOrWhiteSpace(pattern))
+                .ToArray();
+            if (patterns.Length == 0)
+            {
+                return results;
+            }
+
             var regexOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
             var comparisonType = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             int processedFileCount = 0;
 
             try
             {
-                Regex compiledRegex = null;
+                List<Regex> compiledRegexes = null;
                 if (useRegex)
                 {
-                    compiledRegex = new Regex(grepPattern, regexOptions | RegexOptions.Compiled);
+                    compiledRegexes = patterns
+                        .Select(pattern => new Regex(pattern, regexOptions | RegexOptions.Compiled))
+                        .ToList();
                 }
 
                 Parallel.ForEach(
@@ -80,13 +90,27 @@ namespace SimpleGrep.Core
                                     }
 
                                     bool isMatch = false;
-                                    if (useRegex && compiledRegex != null)
+                                    if (useRegex && compiledRegexes != null && compiledRegexes.Count > 0)
                                     {
-                                        isMatch = compiledRegex.IsMatch(evaluatedLine);
+                                        foreach (var regex in compiledRegexes)
+                                        {
+                                            if (regex.IsMatch(evaluatedLine))
+                                            {
+                                                isMatch = true;
+                                                break;
+                                            }
+                                        }
                                     }
-                                    else if (!useRegex)
+                                    else
                                     {
-                                        isMatch = evaluatedLine.IndexOf(grepPattern, comparisonType) >= 0;
+                                        foreach (var pattern in patterns)
+                                        {
+                                            if (evaluatedLine.IndexOf(pattern, comparisonType) >= 0)
+                                            {
+                                                isMatch = true;
+                                                break;
+                                            }
+                                        }
                                     }
 
                                     if (isMatch)

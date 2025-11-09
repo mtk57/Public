@@ -22,6 +22,7 @@ namespace SimpleGrep
         private const int MaxHistoryCount = 10;
         private CancellationTokenSource searchCancellationTokenSource;
         private List<SearchResult> currentSearchResults = new List<SearchResult>();
+        private string multiKeywordsText = string.Empty;
 
         public MainForm()
         {
@@ -33,6 +34,7 @@ namespace SimpleGrep
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
+            this.btnMultiKeywords.Click += new System.EventHandler(this.btnMultiKeywords_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
             this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
@@ -167,6 +169,7 @@ namespace SimpleGrep
                     chkTagJump.Checked = settings.TagJump;
                     chkMethod.Checked = settings.DeriveMethod;
                     chkIgnoreComment.Checked = settings.IgnoreComment;
+                    multiKeywordsText = settings.MultiKeywordsText ?? string.Empty;
                 }
             }
             catch (Exception ex)
@@ -187,7 +190,8 @@ namespace SimpleGrep
                 UseRegex = chkUseRegex.Checked,
                 TagJump = chkTagJump.Checked,
                 DeriveMethod = chkMethod.Checked,
-                IgnoreComment = chkIgnoreComment.Checked
+                IgnoreComment = chkIgnoreComment.Checked,
+                MultiKeywordsText = multiKeywordsText
             };
 
             try
@@ -238,11 +242,19 @@ namespace SimpleGrep
 
         private async void btnGrep_Click(object sender, EventArgs e)
         {
+            await RunSearchAsync(new[] { cmbKeyword.Text }, updateKeywordHistory: true);
+        }
+
+        private async Task RunSearchAsync(IReadOnlyList<string> grepPatterns, bool updateKeywordHistory)
+        {
             string folderPath = cmbFolderPath.Text;
             string filePattern = comboBox1.Text;
-            string grepPattern = cmbKeyword.Text;
+            var normalizedPatterns = (grepPatterns ?? Array.Empty<string>())
+                .Where(pattern => !string.IsNullOrWhiteSpace(pattern))
+                .ToList();
 
-            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath) || string.IsNullOrWhiteSpace(filePattern) || string.IsNullOrWhiteSpace(grepPattern))
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath) ||
+                string.IsNullOrWhiteSpace(filePattern) || normalizedPatterns.Count == 0)
             {
                 MessageBox.Show("検索フォルダー、ファイルパターン、検索パターンを正しく入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
@@ -250,16 +262,20 @@ namespace SimpleGrep
 
             UpdateHistory(cmbFolderPath, folderPath);
             UpdateHistory(comboBox1, filePattern);
-            UpdateHistory(cmbKeyword, grepPattern);
+            if (updateKeywordHistory && normalizedPatterns.Count > 0)
+            {
+                UpdateHistory(cmbKeyword, normalizedPatterns[0]);
+            }
 
             dataGridViewResults.Rows.Clear();
             currentSearchResults.Clear();
             ClearAllFilters();
             button1.Enabled = false;
+            btnMultiKeywords.Enabled = false;
             btnCancel.Enabled = true;
             this.Cursor = Cursors.WaitCursor;
 
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
             labelTime.Text = "";
 
             bool wasCancelled = false;
@@ -337,7 +353,7 @@ namespace SimpleGrep
                 searchResults = await Task.Run(() =>
                     GrepEngine.SearchFiles(
                         filesToSearch,
-                        grepPattern,
+                        normalizedPatterns,
                         caseSensitive,
                         useRegex,
                         deriveMethod,
@@ -386,11 +402,26 @@ namespace SimpleGrep
                 }
 
                 button1.Enabled = true;
+                btnMultiKeywords.Enabled = true;
                 btnCancel.Enabled = false;
                 this.Cursor = Cursors.Default;
 
                 localCancellationTokenSource?.Dispose();
                 searchCancellationTokenSource = null;
+            }
+        }
+
+        private async void btnMultiKeywords_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new MultiKeywordsForm(multiKeywordsText))
+            {
+                var dialogResult = dialog.ShowDialog(this);
+                multiKeywordsText = dialog.MultiKeywordsText;
+                if (dialogResult == DialogResult.OK)
+                {
+                    var keywords = dialog.Keywords?.ToList() ?? new List<string>();
+                    await RunSearchAsync(keywords, updateKeywordHistory: false);
+                }
             }
         }
         
@@ -713,6 +744,9 @@ namespace SimpleGrep
 
             [DataMember]
             public bool IgnoreComment { get; set; }
+
+            [DataMember]
+            public string MultiKeywordsText { get; set; } = string.Empty;
         }
     }
 }

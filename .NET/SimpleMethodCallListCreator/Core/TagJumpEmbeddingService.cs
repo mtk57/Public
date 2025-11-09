@@ -90,8 +90,13 @@ namespace SimpleMethodCallListCreator
                 var methodStructure = structure.FindMethodBySignature(current.Detail.MethodSignature);
                 if (methodStructure == null)
                 {
-                    throw new InvalidOperationException(
-                        $"ソース内にメソッドシグネチャが見つかりませんでした。ファイル: {current.Detail.FilePath}, シグネチャ: {current.Detail.MethodSignature}");
+                    var failureDetail = CreateMissingMethodFailureDetail(current);
+                    if (failureDetail != null)
+                    {
+                        failureDetails.Add(failureDetail);
+                    }
+
+                    continue;
                 }
 
                 foreach (var call in methodStructure.Calls)
@@ -212,12 +217,17 @@ namespace SimpleMethodCallListCreator
                             continue;
                         }
 
-                        var methodStructure = structure.FindMethodBySignature(methodEntry.Detail.MethodSignature);
-                        if (methodStructure == null)
+                    var methodStructure = structure.FindMethodBySignature(methodEntry.Detail.MethodSignature);
+                    if (methodStructure == null)
+                    {
+                        var missingDetail = CreateMissingMethodFailureDetail(methodEntry);
+                        if (missingDetail != null)
                         {
-                            throw new InvalidOperationException(
-                                $"ソース内にメソッドシグネチャが見つかりませんでした。ファイル: {methodEntry.Detail.FilePath}, シグネチャ: {methodEntry.Detail.MethodSignature}");
+                            failureDetails.Add(missingDetail);
                         }
+
+                        continue;
+                    }
 
                         foreach (var call in methodStructure.Calls)
                         {
@@ -718,6 +728,25 @@ namespace SimpleMethodCallListCreator
             var lineNumber = call?.LineNumber ?? 0;
             var reasonText = BuildReasonText(reason, candidates, methodListPath);
             return new TagJumpFailureDetail(filePath, lineNumber, callerSignature, callExpression, reasonText);
+        }
+
+        private static TagJumpFailureDetail CreateMissingMethodFailureDetail(MethodListEntry entry)
+        {
+            if (entry?.Detail == null)
+            {
+                return null;
+            }
+
+            var filePath = entry.Detail.FilePath ?? entry.NormalizedFilePath ?? string.Empty;
+            var signature = entry.Detail.MethodSignature ?? entry.MethodName ?? string.Empty;
+            var reasonBuilder = new StringBuilder("ソース内にメソッドシグネチャが見つかりませんでした。");
+            if (!string.IsNullOrEmpty(signature))
+            {
+                reasonBuilder.Append(" 対象: ");
+                reasonBuilder.Append(signature);
+            }
+
+            return new TagJumpFailureDetail(filePath, 0, signature, string.Empty, reasonBuilder.ToString());
         }
 
         private static string BuildCallExpression(JavaMethodCallStructure call)

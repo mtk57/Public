@@ -41,6 +41,10 @@ namespace SimpleMethodCallListCreator.Forms
             txtStartSrcFilePath.AllowDrop = true;
             txtStartSrcFilePath.DragEnter += FilePathTextBox_DragEnter;
             txtStartSrcFilePath.DragDrop += TxtStartSrcFilePath_DragDrop;
+
+            txtSrcRootDirPath.AllowDrop = true;
+            txtSrcRootDirPath.DragEnter += FilePathTextBox_DragEnter;
+            txtSrcRootDirPath.DragDrop += TxtSrcRootDirPath_DragDrop;
         }
 
         private void LoadSettings()
@@ -251,6 +255,17 @@ namespace SimpleMethodCallListCreator.Forms
             txtStartSrcFilePath.Text = filePath;
         }
 
+        private void TxtSrcRootDirPath_DragDrop(object sender, DragEventArgs e)
+        {
+            var directoryPath = ResolveDropDirectoryPath(e);
+            if (string.IsNullOrEmpty(directoryPath))
+            {
+                return;
+            }
+
+            txtSrcRootDirPath.Text = directoryPath;
+        }
+
         private static string ResolveDropFilePath(DragEventArgs e)
         {
             if (e.Data == null || !e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -270,6 +285,38 @@ namespace SimpleMethodCallListCreator.Forms
             }
 
             return candidate;
+        }
+
+        private static string ResolveDropDirectoryPath(DragEventArgs e)
+        {
+            if (e.Data == null || !e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                return string.Empty;
+            }
+
+            if (!(e.Data.GetData(DataFormats.FileDrop) is string[] paths) || paths.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var candidate = paths[0];
+            if (string.IsNullOrEmpty(candidate))
+            {
+                return string.Empty;
+            }
+
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            var directory = Path.GetDirectoryName(candidate);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            {
+                return directory;
+            }
+
+            return string.Empty;
         }
 
         private void InsertTagJumpForm_FormClosing(object sender, FormClosingEventArgs e)

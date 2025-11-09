@@ -44,6 +44,7 @@
             this.txtTagJumpPrefix = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
             this.lblFailed = new System.Windows.Forms.Label();
+            this.chkAllMethodMode = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // btnRun
@@ -187,11 +188,22 @@
             this.lblFailed.TabIndex = 25;
             this.lblFailed.Text = "メソッド特定失敗:";
             // 
+            // chkAllMethodMode
+            // 
+            this.chkAllMethodMode.AutoSize = true;
+            this.chkAllMethodMode.Location = new System.Drawing.Point(46, 338);
+            this.chkAllMethodMode.Name = "chkAllMethodMode";
+            this.chkAllMethodMode.Size = new System.Drawing.Size(97, 16);
+            this.chkAllMethodMode.TabIndex = 26;
+            this.chkAllMethodMode.Text = "全メソッドモード";
+            this.chkAllMethodMode.UseVisualStyleBackColor = true;
+            // 
             // InsertTagJumpForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 383);
+            this.Controls.Add(this.chkAllMethodMode);
             this.Controls.Add(this.lblFailed);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.txtTagJumpPrefix);
@@ -232,5 +244,6 @@
         private System.Windows.Forms.TextBox txtTagJumpPrefix;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label lblFailed;
+        private System.Windows.Forms.CheckBox chkAllMethodMode;
     }
 }

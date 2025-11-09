@@ -47,6 +47,7 @@
             this.chkAllMethodMode = new System.Windows.Forms.CheckBox();
             this.pbProgress = new System.Windows.Forms.ProgressBar();
             this.btnCancel = new System.Windows.Forms.Button();
+            this.lblStatus = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btnRun
@@ -219,11 +220,20 @@
             this.btnCancel.Text = "中止";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
+            // lblStatus
+            // 
+            this.lblStatus.AutoSize = true;
+            this.lblStatus.Location = new System.Drawing.Point(545, 336);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(0, 12);
+            this.lblStatus.TabIndex = 29;
+            // 
             // InsertTagJumpForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 383);
+            this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.pbProgress);
             this.Controls.Add(this.chkAllMethodMode);
@@ -270,5 +280,6 @@
         private System.Windows.Forms.CheckBox chkAllMethodMode;
         private System.Windows.Forms.ProgressBar pbProgress;
         private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.Label lblStatus;
     }
 }

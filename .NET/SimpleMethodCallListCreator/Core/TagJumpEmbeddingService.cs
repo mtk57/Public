@@ -84,47 +84,11 @@ namespace SimpleMethodCallListCreator
 
                 foreach (var call in methodStructure.Calls)
                 {
-                    MethodListEntry calleeEntry;
-                    try
-                    {
-                        calleeEntry = ResolveCallee(index, current, call);
-                    }
-                    catch (MethodAmbiguityException ex)
-                    {
-                        failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call,
-                            "メソッドリストに同名メソッドが複数存在するため特定できませんでした。",
-                            ex.Candidates, normalizedMethodListPath));
-                        var failureInsertion = BuildFailureInsertion(structure.OriginalText, call, prefix);
-                        if (failureInsertion != null)
-                        {
-                            AddInsertion(modifications, structure.FilePath, failureInsertion);
-                            updatedCallCount++;
-                        }
-
-                        continue;
-                    }
-                    catch (InvalidOperationException ex)
-                    {
-                        failureDetails.Add(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
-                        continue;
-                    }
-
+                    var calleeEntry = ProcessMethodCall(current, structure, call, index, modifications,
+                        failureDetails, prefix, normalizedMethodListPath, mode, ref updatedCallCount);
                     if (calleeEntry == null)
                     {
                         continue;
-                    }
-
-                    var replacement = CreateTagReplacement(calleeEntry, prefix, normalizedMethodListPath, mode);
-                    if (string.IsNullOrEmpty(replacement))
-                    {
-                        continue;
-                    }
-
-                    var insertion = BuildInsertion(structure.OriginalText, call, replacement, prefix);
-                    if (insertion != null)
-                    {
-                        AddInsertion(modifications, structure.FilePath, insertion);
-                        updatedCallCount++;
                     }
 
                     var calleeKey = CreateMethodKey(calleeEntry);
@@ -135,29 +99,215 @@ namespace SimpleMethodCallListCreator
                 }
             }
 
-            var updatedFiles = new List<string>();
-            foreach (var pair in modifications)
+            return BuildResultFromModifications(modifications, analysisCache, updatedCallCount, failureDetails);
+        }
+
+        public TagJumpEmbeddingResult ExecuteAll(string methodListPath, string sourceRootDirectory,
+            string tagPrefix, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
+        {
+            if (string.IsNullOrWhiteSpace(methodListPath))
             {
-                var filePath = pair.Key;
-                var operations = pair.Value;
-                if (operations == null || operations.Count == 0)
+                throw new ArgumentException("メソッドリストのパスを入力してください。", nameof(methodListPath));
+            }
+
+            if (string.IsNullOrWhiteSpace(sourceRootDirectory))
+            {
+                throw new ArgumentException("ソースルートフォルダのパスを入力してください。", nameof(sourceRootDirectory));
+            }
+
+            var normalizedMethodListPath = NormalizePath(methodListPath);
+            if (!File.Exists(normalizedMethodListPath))
+            {
+                throw new FileNotFoundException("メソッドリストファイルが見つかりません。", normalizedMethodListPath);
+            }
+
+            var normalizedSourceRoot = NormalizePath(sourceRootDirectory);
+            if (!Directory.Exists(normalizedSourceRoot))
+            {
+                throw new DirectoryNotFoundException($"ソースルートフォルダが見つかりません: {normalizedSourceRoot}");
+            }
+
+            var entries = LoadMethodList(normalizedMethodListPath);
+            if (entries.Count == 0)
+            {
+                throw new InvalidOperationException("メソッドリストにメソッドが登録されていません。");
+            }
+            ValidateRowNumberRequirement(entries, mode);
+
+            var index = new MethodListIndex(entries);
+            var prefix = tagPrefix ?? string.Empty;
+
+            var analysisCache = new Dictionary<string, JavaFileStructure>(StringComparer.OrdinalIgnoreCase);
+            var modifications = new Dictionary<string, List<TagInsertion>>(StringComparer.OrdinalIgnoreCase);
+            var failureDetails = new List<TagJumpFailureDetail>();
+            var processedMethods = new HashSet<string>(StringComparer.Ordinal);
+            var updatedCallCount = 0;
+
+            foreach (var filePath in EnumerateJavaFiles(normalizedSourceRoot))
+            {
+                var normalizedFilePath = NormalizePath(filePath);
+                var methodEntries = index.FindByFile(normalizedFilePath);
+                if (methodEntries.Count == 0)
                 {
                     continue;
                 }
 
-                if (!analysisCache.TryGetValue(filePath, out var structure))
+                var structure = GetOrAnalyzeStructure(normalizedFilePath, analysisCache);
+                foreach (var methodEntry in methodEntries)
                 {
-                    structure = GetOrAnalyzeStructure(filePath, analysisCache);
-                }
+                    var methodKey = CreateMethodKey(methodEntry);
+                    if (!processedMethods.Add(methodKey))
+                    {
+                        continue;
+                    }
 
-                var newText = ApplyInsertions(structure.OriginalText, operations);
-                var encoding = structure.Encoding ?? new UTF8Encoding(false);
-                File.WriteAllText(filePath, newText, encoding);
-                updatedFiles.Add(filePath);
+                    var methodStructure = structure.FindMethodBySignature(methodEntry.Detail.MethodSignature);
+                    if (methodStructure == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"ソース内にメソッドシグネチャが見つかりませんでした。ファイル: {methodEntry.Detail.FilePath}, シグネチャ: {methodEntry.Detail.MethodSignature}");
+                    }
+
+                    foreach (var call in methodStructure.Calls)
+                    {
+                        ProcessMethodCall(methodEntry, structure, call, index, modifications, failureDetails,
+                            prefix, normalizedMethodListPath, mode, ref updatedCallCount);
+                    }
+                }
             }
 
+            return BuildResultFromModifications(modifications, analysisCache, updatedCallCount, failureDetails);
+        }
+
+        private static MethodListEntry ProcessMethodCall(MethodListEntry current, JavaFileStructure structure,
+            JavaMethodCallStructure call, MethodListIndex index,
+            IDictionary<string, List<TagInsertion>> modifications,
+            List<TagJumpFailureDetail> failureDetails, string prefix, string methodListPath,
+            TagJumpEmbeddingMode mode, ref int updatedCallCount)
+        {
+            MethodListEntry calleeEntry;
+            try
+            {
+                calleeEntry = ResolveCallee(index, current, call);
+            }
+            catch (MethodAmbiguityException ex)
+            {
+                failureDetails?.Add(CreateFailureDetail(current, structure.FilePath, call,
+                    "メソッドリストに同名メソッドが複数存在するため特定できませんでした。",
+                    ex.Candidates, methodListPath));
+                var failureInsertion = BuildFailureInsertion(structure.OriginalText, call, prefix);
+                if (failureInsertion != null)
+                {
+                    AddInsertion(modifications, structure.FilePath, failureInsertion);
+                    updatedCallCount++;
+                }
+
+                return null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                failureDetails?.Add(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
+                return null;
+            }
+
+            if (calleeEntry == null)
+            {
+                return null;
+            }
+
+            var replacement = CreateTagReplacement(calleeEntry, prefix, methodListPath, mode);
+            if (string.IsNullOrEmpty(replacement))
+            {
+                return null;
+            }
+
+            var insertion = BuildInsertion(structure.OriginalText, call, replacement, prefix);
+            if (insertion != null)
+            {
+                AddInsertion(modifications, structure.FilePath, insertion);
+                updatedCallCount++;
+            }
+
+            return calleeEntry;
+        }
+
+        private static TagJumpEmbeddingResult BuildResultFromModifications(
+            IDictionary<string, List<TagInsertion>> modifications,
+            IDictionary<string, JavaFileStructure> analysisCache, int updatedCallCount,
+            List<TagJumpFailureDetail> failureDetails)
+        {
+            var updatedFiles = new List<string>();
+            if (modifications != null)
+            {
+                foreach (var pair in modifications)
+                {
+                    var filePath = pair.Key;
+                    var operations = pair.Value;
+                    if (operations == null || operations.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    if (!analysisCache.TryGetValue(filePath, out var structure))
+                    {
+                        structure = GetOrAnalyzeStructure(filePath, analysisCache);
+                    }
+
+                    var newText = ApplyInsertions(structure.OriginalText, operations);
+                    var encoding = structure.Encoding ?? new UTF8Encoding(false);
+                    File.WriteAllText(filePath, newText, encoding);
+                    updatedFiles.Add(filePath);
+                }
+            }
+
+            var failures = failureDetails ?? new List<TagJumpFailureDetail>();
             return new TagJumpEmbeddingResult(updatedFiles.Count, updatedCallCount, updatedFiles,
-                failureDetails.Count, failureDetails);
+                failures.Count, failures);
+        }
+
+        private static IEnumerable<string> EnumerateJavaFiles(string rootDirectory)
+        {
+            if (string.IsNullOrEmpty(rootDirectory))
+            {
+                yield break;
+            }
+
+            var stack = new Stack<string>();
+            stack.Push(rootDirectory);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+                string[] files;
+                try
+                {
+                    files = Directory.GetFiles(current, "*.java");
+                }
+                catch
+                {
+                    files = Array.Empty<string>();
+                }
+
+                foreach (var file in files)
+                {
+                    yield return file;
+                }
+
+                string[] subDirectories;
+                try
+                {
+                    subDirectories = Directory.GetDirectories(current);
+                }
+                catch
+                {
+                    subDirectories = Array.Empty<string>();
+                }
+
+                foreach (var directory in subDirectories)
+                {
+                    stack.Push(directory);
+                }
+            }
         }
 
         private static JavaFileStructure GetOrAnalyzeStructure(string filePath,

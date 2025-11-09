@@ -10,6 +10,7 @@ namespace SimpleMethodCallListCreator.Forms
         private readonly AppSettings _settings;
         private readonly TagJumpEmbeddingMode _mode;
         private readonly TagJumpEmbeddingService _service = new TagJumpEmbeddingService();
+        private string _manualSourceRootPath = string.Empty;
 
         public InsertTagJumpForm(AppSettings settings, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
         {
@@ -27,7 +28,10 @@ namespace SimpleMethodCallListCreator.Forms
             btnRun.Click += BtnRun_Click;
             btnRefMethodListPath.Click += BtnRefMethodListPath_Click;
             btnRefStartSrcFilePath.Click += BtnRefStartSrcFilePath_Click;
+            btnRefSrcRootDirPath.Click += BtnRefSrcRootDirPath_Click;
             txtStartSrcFilePath.TextChanged += TxtStartSrcFilePath_TextChanged;
+            txtSrcRootDirPath.TextChanged += TxtSrcRootDirPath_TextChanged;
+            chkAllMethodMode.CheckedChanged += ChkAllMethodMode_CheckedChanged;
             FormClosing += InsertTagJumpForm_FormClosing;
 
             txtMethodListPath.AllowDrop = true;
@@ -49,7 +53,10 @@ namespace SimpleMethodCallListCreator.Forms
                 txtTagJumpPrefix.Text = _settings.LastTagJumpPrefix;
             }
 
-            UpdateSourceRootDisplay(txtStartSrcFilePath.Text);
+            _manualSourceRootPath = _settings.LastTagJumpSourceRootDirectory ?? string.Empty;
+            txtSrcRootDirPath.Text = _manualSourceRootPath;
+            chkAllMethodMode.Checked = _settings.LastTagJumpAllMethodMode;
+            UpdateControlAvailability();
         }
 
         private void SaveSettings()
@@ -58,6 +65,8 @@ namespace SimpleMethodCallListCreator.Forms
             _settings.LastTagJumpSourceFilePath = (txtStartSrcFilePath.Text ?? string.Empty).Trim();
             _settings.LastTagJumpMethod = (txtStartMethod.Text ?? string.Empty).Trim();
             _settings.LastTagJumpPrefix = txtTagJumpPrefix.Text ?? string.Empty;
+            _settings.LastTagJumpSourceRootDirectory = (_manualSourceRootPath ?? string.Empty).Trim();
+            _settings.LastTagJumpAllMethodMode = chkAllMethodMode.Checked;
 
             SettingsManager.Save(_settings);
         }
@@ -113,13 +122,70 @@ namespace SimpleMethodCallListCreator.Forms
             }
         }
 
+        private void BtnRefSrcRootDirPath_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new FolderBrowserDialog())
+            {
+                dialog.Description = "ソースルートフォルダを選択してください。";
+                var currentPath = (_manualSourceRootPath ?? string.Empty).Trim();
+                if (currentPath.Length > 0 && Directory.Exists(currentPath))
+                {
+                    dialog.SelectedPath = currentPath;
+                }
+
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    txtSrcRootDirPath.Text = dialog.SelectedPath;
+                }
+            }
+        }
+
         private void TxtStartSrcFilePath_TextChanged(object sender, EventArgs e)
         {
             UpdateSourceRootDisplay(txtStartSrcFilePath.Text);
         }
 
+        private void TxtSrcRootDirPath_TextChanged(object sender, EventArgs e)
+        {
+            if (chkAllMethodMode.Checked)
+            {
+                _manualSourceRootPath = txtSrcRootDirPath.Text ?? string.Empty;
+            }
+        }
+
+        private void ChkAllMethodMode_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateControlAvailability();
+        }
+
+        private void UpdateControlAvailability()
+        {
+            var allMode = chkAllMethodMode.Checked;
+
+            txtSrcRootDirPath.Enabled = allMode;
+            btnRefSrcRootDirPath.Enabled = allMode;
+
+            txtStartSrcFilePath.Enabled = !allMode;
+            btnRefStartSrcFilePath.Enabled = !allMode;
+            txtStartMethod.Enabled = !allMode;
+
+            if (allMode)
+            {
+                txtSrcRootDirPath.Text = _manualSourceRootPath;
+            }
+            else
+            {
+                UpdateSourceRootDisplay(txtStartSrcFilePath.Text);
+            }
+        }
+
         private void UpdateSourceRootDisplay(string path)
         {
+            if (chkAllMethodMode.Checked)
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(path))
             {
                 txtSrcRootDirPath.Text = string.Empty;
@@ -217,6 +283,8 @@ namespace SimpleMethodCallListCreator.Forms
             var sourceFilePath = (txtStartSrcFilePath.Text ?? string.Empty).Trim();
             var startMethod = (txtStartMethod.Text ?? string.Empty).Trim();
             var prefix = txtTagJumpPrefix.Text ?? string.Empty;
+            var isAllMethodMode = chkAllMethodMode.Checked;
+            var sourceRootDirectory = (txtSrcRootDirPath.Text ?? string.Empty).Trim();
 
             if (methodListPath.Length == 0)
             {
@@ -225,24 +293,55 @@ namespace SimpleMethodCallListCreator.Forms
                 return;
             }
 
-            if (sourceFilePath.Length == 0)
+            if (isAllMethodMode)
             {
-                MessageBox.Show(this, "開始ソースファイルのパスを入力してください。", "入力エラー",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                if (sourceRootDirectory.Length == 0)
+                {
+                    MessageBox.Show(this, "ソースルートフォルダのパスを入力してください。", "入力エラー",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (!Directory.Exists(sourceRootDirectory))
+                {
+                    MessageBox.Show(this, "ソースルートフォルダのパスが存在しません。", "入力エラー",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            else
+            {
+                if (sourceFilePath.Length == 0)
+                {
+                    MessageBox.Show(this, "開始ソースファイルのパスを入力してください。", "入力エラー",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (startMethod.Length == 0)
+                {
+                    MessageBox.Show(this, "開始メソッドを入力してください。", "入力エラー",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
             }
 
-            if (startMethod.Length == 0)
-            {
-                MessageBox.Show(this, "開始メソッドを入力してください。", "入力エラー",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            var sourceContextPath = isAllMethodMode ? sourceRootDirectory : sourceFilePath;
+            var startMethodContext = isAllMethodMode ? "全メソッドモード" : startMethod;
 
             Cursor = Cursors.WaitCursor;
             try
             {
-                var result = _service.Execute(methodListPath, sourceFilePath, startMethod, prefix, _mode);
+                TagJumpEmbeddingResult result;
+                if (isAllMethodMode)
+                {
+                    result = _service.ExecuteAll(methodListPath, sourceRootDirectory, prefix, _mode);
+                }
+                else
+                {
+                    result = _service.Execute(methodListPath, sourceFilePath, startMethod, prefix, _mode);
+                }
+
                 SaveSettings();
 
                 var hasFailures = result.FailureCount > 0;
@@ -258,7 +357,8 @@ namespace SimpleMethodCallListCreator.Forms
                     {
                         message.AppendLine($"メソッド特定失敗: {result.FailureCount}");
                         message.AppendLine("詳細は error.log を参照してください。");
-                        LogFailureDetails(methodListPath, sourceFilePath, startMethod, result);
+                        LogFailureDetails(methodListPath, sourceContextPath, startMethodContext, result,
+                            isAllMethodMode);
                     }
 
                     MessageBox.Show(this, message.ToString(), "処理完了",
@@ -286,8 +386,17 @@ namespace SimpleMethodCallListCreator.Forms
                 var logBuilder = new StringBuilder();
                 logBuilder.AppendLine("Javaファイルの解析に失敗しました。");
                 logBuilder.AppendLine($"メソッドリスト: {methodListPath}");
-                logBuilder.AppendLine($"ソースファイル: {sourceFilePath}");
-                logBuilder.AppendLine($"開始メソッド: {startMethod}");
+                if (isAllMethodMode)
+                {
+                    logBuilder.AppendLine($"ソースルートフォルダ: {sourceContextPath}");
+                    logBuilder.AppendLine("開始モード: 全メソッドモード");
+                }
+                else
+                {
+                    logBuilder.AppendLine($"ソースファイル: {sourceContextPath}");
+                    logBuilder.AppendLine($"開始メソッド: {startMethodContext}");
+                }
+
                 logBuilder.AppendLine($"行番号: {ex.LineNumber}");
                 if (!string.IsNullOrEmpty(ex.InvalidContent))
                 {
@@ -306,8 +415,17 @@ namespace SimpleMethodCallListCreator.Forms
                 var logBuilder = new StringBuilder();
                 logBuilder.AppendLine("タグジャンプ情報の挿入に失敗しました。");
                 logBuilder.AppendLine($"メソッドリスト: {methodListPath}");
-                logBuilder.AppendLine($"ソースファイル: {sourceFilePath}");
-                logBuilder.AppendLine($"開始メソッド: {startMethod}");
+                if (isAllMethodMode)
+                {
+                    logBuilder.AppendLine($"ソースルートフォルダ: {sourceContextPath}");
+                    logBuilder.AppendLine("開始モード: 全メソッドモード");
+                }
+                else
+                {
+                    logBuilder.AppendLine($"ソースファイル: {sourceContextPath}");
+                    logBuilder.AppendLine($"開始メソッド: {startMethodContext}");
+                }
+
                 logBuilder.AppendLine("行番号: 不明");
                 logBuilder.AppendLine("例外詳細:");
                 logBuilder.AppendLine(ex.ToString());
@@ -320,8 +438,8 @@ namespace SimpleMethodCallListCreator.Forms
             }
         }
 
-        private static void LogFailureDetails(string methodListPath, string sourceFilePath,
-            string startMethod, TagJumpEmbeddingResult result)
+        private static void LogFailureDetails(string methodListPath, string sourcePath,
+            string startMethod, TagJumpEmbeddingResult result, bool isAllMethodMode)
         {
             if (result == null || result.FailureCount <= 0)
             {
@@ -331,8 +449,17 @@ namespace SimpleMethodCallListCreator.Forms
             var builder = new StringBuilder();
             builder.AppendLine("メソッド特定に失敗した呼び出しがあります。");
             builder.AppendLine($"メソッドリスト: {methodListPath}");
-            builder.AppendLine($"ソースファイル: {sourceFilePath}");
-            builder.AppendLine($"開始メソッド: {startMethod}");
+            if (isAllMethodMode)
+            {
+                builder.AppendLine($"ソースルートフォルダ: {sourcePath}");
+                builder.AppendLine("モード: 全メソッドモード");
+            }
+            else
+            {
+                builder.AppendLine($"ソースファイル: {sourcePath}");
+                builder.AppendLine($"開始メソッド: {startMethod}");
+            }
+
             builder.AppendLine($"失敗件数: {result.FailureCount}");
             builder.AppendLine("詳細:");
 

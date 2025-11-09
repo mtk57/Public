@@ -64,6 +64,12 @@ namespace SimpleMethodCallListCreator
         public string LastTagJumpPrefix { get; set; } = "//@ ";
 
         [DataMember]
+        public string LastTagJumpSourceRootDirectory { get; set; } = string.Empty;
+
+        [DataMember]
+        public bool LastTagJumpAllMethodMode { get; set; }
+
+        [DataMember]
         public bool EnableMethodListLogging { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -10,7 +11,7 @@ namespace SimpleMethodCallListCreator
         private const string FailureComment = "//★ メソッド特定失敗";
 
         public TagJumpEmbeddingResult Execute(string methodListPath, string startSourceFilePath,
-            string startMethodText, string tagPrefix)
+            string startMethodText, string tagPrefix, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
         {
             if (string.IsNullOrWhiteSpace(methodListPath))
             {
@@ -44,6 +45,7 @@ namespace SimpleMethodCallListCreator
             {
                 throw new InvalidOperationException("メソッドリストにメソッドが登録されていません。");
             }
+            ValidateRowNumberRequirement(entries, mode);
 
             var index = new MethodListIndex(entries);
             var startMethod = ResolveStartMethod(index, normalizedStartSourcePath, startMethodText);
@@ -112,7 +114,7 @@ namespace SimpleMethodCallListCreator
                         continue;
                     }
 
-                    var replacement = CreateTagReplacement(calleeEntry, prefix, normalizedMethodListPath);
+                    var replacement = CreateTagReplacement(calleeEntry, prefix, normalizedMethodListPath, mode);
                     if (string.IsNullOrEmpty(replacement))
                     {
                         continue;
@@ -192,22 +194,38 @@ namespace SimpleMethodCallListCreator
             list.Add(insertion);
         }
 
-        private static string CreateTagReplacement(MethodListEntry calleeEntry, string prefix, string methodListPath)
+        private static string CreateTagReplacement(MethodListEntry calleeEntry, string prefix, string methodListPath, TagJumpEmbeddingMode mode)
         {
             if (calleeEntry == null)
             {
                 return string.Empty;
             }
 
-            var methodListSegment = methodListPath ?? string.Empty;
             string tagContent;
-            if (string.IsNullOrEmpty(methodListSegment))
+            if (mode == TagJumpEmbeddingMode.RowNumber)
             {
-                tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature);
+                var lineNumber = calleeEntry.Detail?.LineNumber ?? -1;
+                if (lineNumber <= 0)
+                {
+                    return string.Empty;
+                }
+
+                tagContent = string.Concat(
+                    calleeEntry.Detail.FilePath,
+                    "\t",
+                    lineNumber.ToString(CultureInfo.InvariantCulture));
             }
             else
             {
-                tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature, "\t", methodListSegment);
+                var methodListSegment = methodListPath ?? string.Empty;
+                if (string.IsNullOrEmpty(methodListSegment))
+                {
+                    tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature);
+                }
+                else
+                {
+                    tagContent = string.Concat(calleeEntry.Detail.FilePath, "\t", calleeEntry.Detail.MethodSignature, "\t", methodListSegment);
+                }
             }
 
             return (prefix ?? string.Empty) + tagContent;
@@ -721,13 +739,42 @@ namespace SimpleMethodCallListCreator
                     continue;
                 }
 
-                var detail = new MethodDefinitionDetail(filePath, packageName, className, methodSignature);
+                var lineNumber = -1;
+                if (parts.Length >= 6)
+                {
+                    var rowText = parts[5].Trim();
+                    if (rowText.Length > 0 && int.TryParse(rowText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0)
+                    {
+                        lineNumber = parsed;
+                    }
+                }
+
+                var detail = new MethodDefinitionDetail(filePath, packageName, className, methodSignature, lineNumber);
                 var methodName = GetMethodNameFromSignature(methodSignature);
                 var parameterCount = CountParametersFromSignature(methodSignature);
                 results.Add(new MethodListEntry(detail, filePath, methodName, parameterCount));
             }
 
             return results;
+        }
+
+        private static void ValidateRowNumberRequirement(List<MethodListEntry> entries, TagJumpEmbeddingMode mode)
+        {
+            if (mode != TagJumpEmbeddingMode.RowNumber)
+            {
+                return;
+            }
+
+            if (entries == null || entries.Count == 0)
+            {
+                throw new InvalidOperationException("メソッドリストにメソッドが登録されていません。");
+            }
+
+            var missingRow = entries.Exists(entry => entry?.Detail == null || entry.Detail.LineNumber <= 0);
+            if (missingRow)
+            {
+                throw new InvalidOperationException("行番号版メソッドリストを指定してください。（RowNum 列が不足しています）");
+            }
         }
 
         private static string NormalizePath(string path)

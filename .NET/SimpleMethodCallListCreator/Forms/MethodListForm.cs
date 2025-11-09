@@ -11,20 +11,29 @@ using System.Windows.Forms;
 
 namespace SimpleMethodCallListCreator
 {
+    public enum MethodListExportMode
+    {
+        Standard,
+        RowNumber
+    }
+
     public partial class MethodListForm : Form
     {
         private const int MaxHistoryCount = 10;
         private readonly AppSettings _settings;
+        private readonly MethodListExportMode _exportMode;
         private CancellationTokenSource _cancellationTokenSource;
         private bool _isProcessing;
 
-        public MethodListForm(AppSettings settings)
+        public MethodListForm(AppSettings settings, MethodListExportMode exportMode = MethodListExportMode.Standard)
         {
             _settings = settings ?? new AppSettings();
+            _exportMode = exportMode;
             InitializeComponent();
             InitializeControls();
             HookEvents();
             LoadSettings();
+            UpdateTitleForMode();
         }
 
         private void InitializeControls()
@@ -294,7 +303,8 @@ namespace SimpleMethodCallListCreator
         private string BuildExportPath()
         {
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory ?? Environment.CurrentDirectory;
-            var fileName = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture) + ".tsv";
+            var suffix = _exportMode == MethodListExportMode.RowNumber ? "_row" : string.Empty;
+            var fileName = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture) + suffix + ".tsv";
             return Path.Combine(baseDirectory, fileName);
         }
 
@@ -305,7 +315,7 @@ namespace SimpleMethodCallListCreator
                 throw new ArgumentException("出力先パスが不正です。", nameof(exportPath));
             }
 
-            var headers = new[]
+            var headers = new List<string>
             {
                 "FilePath",
                 "FileName",
@@ -313,13 +323,17 @@ namespace SimpleMethodCallListCreator
                 "ClassName",
                 "MethodSignature"
             };
+            if (_exportMode == MethodListExportMode.RowNumber)
+            {
+                headers.Add("RowNum");
+            }
 
             using (var writer = new StreamWriter(exportPath, false, Encoding.UTF8))
             {
                 writer.WriteLine(string.Join("\t", headers));
                 foreach (var detail in results ?? Enumerable.Empty<MethodDefinitionDetail>())
                 {
-                    var fields = new[]
+                    var fields = new List<string>
                     {
                         EscapeForTsv(detail?.FilePath),
                         EscapeForTsv(detail?.FileName),
@@ -327,6 +341,13 @@ namespace SimpleMethodCallListCreator
                         EscapeForTsv(detail?.ClassName),
                         EscapeForTsv(detail?.MethodSignature)
                     };
+                    if (_exportMode == MethodListExportMode.RowNumber)
+                    {
+                        var lineNumber = detail?.LineNumber > 0
+                            ? detail.LineNumber.ToString(CultureInfo.InvariantCulture)
+                            : string.Empty;
+                        fields.Add(lineNumber);
+                    }
                     writer.WriteLine(string.Join("\t", fields));
                 }
             }
@@ -686,6 +707,14 @@ namespace SimpleMethodCallListCreator
         private bool IsLoggingEnabled
         {
             get { return chkEnableLogging != null && chkEnableLogging.Checked; }
+        }
+
+        private void UpdateTitleForMode()
+        {
+            if (_exportMode == MethodListExportMode.RowNumber)
+            {
+                Text = "Method List (RowNumber)";
+            }
         }
     }
 }

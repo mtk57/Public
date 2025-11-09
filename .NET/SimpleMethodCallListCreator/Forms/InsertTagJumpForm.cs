@@ -8,15 +8,18 @@ namespace SimpleMethodCallListCreator.Forms
     public partial class InsertTagJumpForm : Form
     {
         private readonly AppSettings _settings;
+        private readonly TagJumpEmbeddingMode _mode;
         private readonly TagJumpEmbeddingService _service = new TagJumpEmbeddingService();
 
-        public InsertTagJumpForm(AppSettings settings)
+        public InsertTagJumpForm(AppSettings settings, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
         {
             _settings = settings ?? new AppSettings();
+            _mode = mode;
             InitializeComponent();
             HookEvents();
             LoadSettings();
             UpdateFailedLabel(0);
+            UpdateTitleForMode();
         }
 
         private void HookEvents()
@@ -239,7 +242,7 @@ namespace SimpleMethodCallListCreator.Forms
             Cursor = Cursors.WaitCursor;
             try
             {
-                var result = _service.Execute(methodListPath, sourceFilePath, startMethod, prefix);
+                var result = _service.Execute(methodListPath, sourceFilePath, startMethod, prefix, _mode);
                 SaveSettings();
 
                 var hasFailures = result.FailureCount > 0;
@@ -388,6 +391,14 @@ namespace SimpleMethodCallListCreator.Forms
             else
             {
                 lblFailed.Visible = false;
+            }
+        }
+
+        private void UpdateTitleForMode()
+        {
+            if (_mode == TagJumpEmbeddingMode.RowNumber)
+            {
+                Text = "タグジャンプ埋め込み（行番号）";
             }
         }
     }

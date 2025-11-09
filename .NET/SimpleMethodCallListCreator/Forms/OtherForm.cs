@@ -48,12 +48,22 @@ namespace SimpleMethodCallListCreator
 
         private void btnMethodListWithRowNum_Click ( object sender, EventArgs e )
         {
-
+            using ( var dialog = new MethodListForm( _settings, MethodListExportMode.RowNumber ) )
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.ShowDialog( this );
+            }
         }
 
         private void btnInsertTagJumpWithRowNum_Click ( object sender, EventArgs e )
         {
+            using ( var dialog = new Forms.InsertTagJumpForm( _settings, TagJumpEmbeddingMode.RowNumber ) )
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.ShowDialog( this );
+            }
 
+            SettingsManager.Save( _settings );
         }
     }
 }

@@ -45,5 +45,15 @@ namespace SimpleMethodCallListCreator
 
             SettingsManager.Save( _settings );
         }
+
+        private void btnMethodListWithRowNum_Click ( object sender, EventArgs e )
+        {
+
+        }
+
+        private void btnInsertTagJumpWithRowNum_Click ( object sender, EventArgs e )
+        {
+
+        }
     }
 }

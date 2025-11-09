@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SimpleMethodCallListCreator.Forms
@@ -11,6 +13,9 @@ namespace SimpleMethodCallListCreator.Forms
         private readonly TagJumpEmbeddingMode _mode;
         private readonly TagJumpEmbeddingService _service = new TagJumpEmbeddingService();
         private string _manualSourceRootPath = string.Empty;
+        private CancellationTokenSource _cancellationTokenSource;
+        private bool _isRunning;
+        private bool _isDeterminateProgress;
 
         public InsertTagJumpForm(AppSettings settings, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
         {
@@ -29,6 +34,7 @@ namespace SimpleMethodCallListCreator.Forms
             btnRefMethodListPath.Click += BtnRefMethodListPath_Click;
             btnRefStartSrcFilePath.Click += BtnRefStartSrcFilePath_Click;
             btnRefSrcRootDirPath.Click += BtnRefSrcRootDirPath_Click;
+            btnCancel.Click += BtnCancel_Click;
             txtStartSrcFilePath.TextChanged += TxtStartSrcFilePath_TextChanged;
             txtSrcRootDirPath.TextChanged += TxtSrcRootDirPath_TextChanged;
             chkAllMethodMode.CheckedChanged += ChkAllMethodMode_CheckedChanged;
@@ -61,6 +67,12 @@ namespace SimpleMethodCallListCreator.Forms
             txtSrcRootDirPath.Text = _manualSourceRootPath;
             chkAllMethodMode.Checked = _settings.LastTagJumpAllMethodMode;
             UpdateControlAvailability();
+            btnCancel.Enabled = false;
+            pbProgress.Visible = false;
+            pbProgress.Style = ProgressBarStyle.Blocks;
+            pbProgress.Minimum = 0;
+            pbProgress.Maximum = 100;
+            pbProgress.Value = 0;
         }
 
         private void SaveSettings()
@@ -75,9 +87,14 @@ namespace SimpleMethodCallListCreator.Forms
             SettingsManager.Save(_settings);
         }
 
-        private void BtnRun_Click(object sender, EventArgs e)
+        private async void BtnRun_Click(object sender, EventArgs e)
         {
-            ExecuteEmbedding();
+            if (_isRunning)
+            {
+                return;
+            }
+
+            await ExecuteEmbeddingAsync();
         }
 
         private void BtnRefMethodListPath_Click(object sender, EventArgs e)
@@ -144,6 +161,17 @@ namespace SimpleMethodCallListCreator.Forms
             }
         }
 
+        private void BtnCancel_Click(object sender, EventArgs e)
+        {
+            if (!_isRunning)
+            {
+                return;
+            }
+
+            btnCancel.Enabled = false;
+            _cancellationTokenSource?.Cancel();
+        }
+
         private void TxtStartSrcFilePath_TextChanged(object sender, EventArgs e)
         {
             UpdateSourceRootDisplay(txtStartSrcFilePath.Text);
@@ -164,6 +192,16 @@ namespace SimpleMethodCallListCreator.Forms
 
         private void UpdateControlAvailability()
         {
+            if (_isRunning)
+            {
+                txtSrcRootDirPath.Enabled = false;
+                btnRefSrcRootDirPath.Enabled = false;
+                txtStartSrcFilePath.Enabled = false;
+                btnRefStartSrcFilePath.Enabled = false;
+                txtStartMethod.Enabled = false;
+                return;
+            }
+
             var allMode = chkAllMethodMode.Checked;
 
             txtSrcRootDirPath.Enabled = allMode;
@@ -321,10 +359,15 @@ namespace SimpleMethodCallListCreator.Forms
 
         private void InsertTagJumpForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (_isRunning)
+            {
+                _cancellationTokenSource?.Cancel();
+            }
+
             SaveSettings();
         }
 
-        private void ExecuteEmbedding()
+        private async Task ExecuteEmbeddingAsync()
         {
             var methodListPath = (txtMethodListPath.Text ?? string.Empty).Trim();
             var sourceFilePath = (txtStartSrcFilePath.Text ?? string.Empty).Trim();
@@ -376,17 +419,22 @@ namespace SimpleMethodCallListCreator.Forms
             var sourceContextPath = isAllMethodMode ? sourceRootDirectory : sourceFilePath;
             var startMethodContext = isAllMethodMode ? "全メソッドモード" : startMethod;
 
-            Cursor = Cursors.WaitCursor;
+            BeginExecution(isAllMethodMode);
+            var token = _cancellationTokenSource.Token;
+            var progress = new Progress<TagJumpProgressInfo>(UpdateProgressBar);
+
             try
             {
                 TagJumpEmbeddingResult result;
                 if (isAllMethodMode)
                 {
-                    result = _service.ExecuteAll(methodListPath, sourceRootDirectory, prefix, _mode);
+                    result = await Task.Run(() =>
+                        _service.ExecuteAll(methodListPath, sourceRootDirectory, prefix, _mode, progress, token), token);
                 }
                 else
                 {
-                    result = _service.Execute(methodListPath, sourceFilePath, startMethod, prefix, _mode);
+                    result = await Task.Run(() =>
+                        _service.Execute(methodListPath, sourceFilePath, startMethod, prefix, _mode, progress, token), token);
                 }
 
                 SaveSettings();
@@ -418,6 +466,12 @@ namespace SimpleMethodCallListCreator.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     UpdateFailedLabel(0);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show(this, "処理を中止しました。", "中止",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                UpdateFailedLabel(0);
             }
             catch (JavaParseException ex)
             {
@@ -481,8 +535,91 @@ namespace SimpleMethodCallListCreator.Forms
             }
             finally
             {
-                Cursor = Cursors.Default;
+                EndExecution();
             }
+        }
+
+        private void BeginExecution(bool isDeterminate)
+        {
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = new CancellationTokenSource();
+            _isDeterminateProgress = isDeterminate;
+            SetRunningState(true, isDeterminate);
+        }
+
+        private void EndExecution()
+        {
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+            _isDeterminateProgress = false;
+            SetRunningState(false, false);
+        }
+
+        private void SetRunningState(bool isRunning, bool determinateProgress)
+        {
+            _isRunning = isRunning;
+            btnRun.Enabled = !isRunning;
+            btnCancel.Enabled = isRunning;
+            chkAllMethodMode.Enabled = !isRunning;
+            txtMethodListPath.Enabled = !isRunning;
+            btnRefMethodListPath.Enabled = !isRunning;
+            txtTagJumpPrefix.Enabled = !isRunning;
+
+            if (isRunning)
+            {
+                txtSrcRootDirPath.Enabled = false;
+                btnRefSrcRootDirPath.Enabled = false;
+                txtStartSrcFilePath.Enabled = false;
+                btnRefStartSrcFilePath.Enabled = false;
+                txtStartMethod.Enabled = false;
+            }
+            else
+            {
+                UpdateControlAvailability();
+            }
+
+            pbProgress.Visible = isRunning;
+            if (isRunning)
+            {
+                pbProgress.Style = determinateProgress ? ProgressBarStyle.Continuous : ProgressBarStyle.Marquee;
+                pbProgress.Value = pbProgress.Minimum;
+            }
+            else
+            {
+                pbProgress.Style = ProgressBarStyle.Blocks;
+                pbProgress.Value = pbProgress.Minimum;
+            }
+
+            Cursor = isRunning ? Cursors.WaitCursor : Cursors.Default;
+        }
+
+        private void UpdateProgressBar(TagJumpProgressInfo info)
+        {
+            if (!_isRunning || info == null)
+            {
+                return;
+            }
+
+            if (!_isDeterminateProgress || !info.IsDeterminate)
+            {
+                pbProgress.Style = ProgressBarStyle.Marquee;
+                return;
+            }
+
+            pbProgress.Style = ProgressBarStyle.Continuous;
+            var maximum = Math.Max(1, info.TotalCount);
+            var value = Math.Max(pbProgress.Minimum, Math.Min(info.ProcessedCount, maximum));
+            if (pbProgress.Value > value)
+            {
+                pbProgress.Value = value;
+            }
+
+            if (pbProgress.Maximum != maximum)
+            {
+                pbProgress.Maximum = maximum;
+            }
+
+            pbProgress.Value = Math.Min(value, pbProgress.Maximum);
         }
 
         private static void LogFailureDetails(string methodListPath, string sourcePath,

@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SimpleMethodCallListCreator
 {
@@ -11,8 +14,11 @@ namespace SimpleMethodCallListCreator
         private const string FailureComment = "//★ メソッド特定失敗";
 
         public TagJumpEmbeddingResult Execute(string methodListPath, string startSourceFilePath,
-            string startMethodText, string tagPrefix, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
+            string startMethodText, string tagPrefix, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature,
+            IProgress<TagJumpProgressInfo> progress = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (string.IsNullOrWhiteSpace(methodListPath))
             {
                 throw new ArgumentException("メソッドリストのパスを入力してください。", nameof(methodListPath));
@@ -61,18 +67,24 @@ namespace SimpleMethodCallListCreator
             var modifications = new Dictionary<string, List<TagInsertion>>(StringComparer.OrdinalIgnoreCase);
             var failureDetails = new List<TagJumpFailureDetail>();
             var updatedCallCount = 0;
+            var processedMethodCount = 0;
 
             var stack = new Stack<MethodListEntry>();
             stack.Push(startMethod);
 
             while (stack.Count > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var current = stack.Pop();
                 var methodKey = CreateMethodKey(current);
                 if (!visited.Add(methodKey))
                 {
                     continue;
                 }
+
+                processedMethodCount++;
+                progress?.Report(new TagJumpProgressInfo("Processing", processedMethodCount, 0));
 
                 var structure = GetOrAnalyzeStructure(current.NormalizedFilePath, analysisCache);
                 var methodStructure = structure.FindMethodBySignature(current.Detail.MethodSignature);
@@ -84,8 +96,10 @@ namespace SimpleMethodCallListCreator
 
                 foreach (var call in methodStructure.Calls)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var calleeEntry = ProcessMethodCall(current, structure, call, index, modifications,
-                        failureDetails, prefix, normalizedMethodListPath, mode, ref updatedCallCount);
+                        detail => failureDetails.Add(detail), prefix, normalizedMethodListPath, mode,
+                        () => updatedCallCount++, cancellationToken);
                     if (calleeEntry == null)
                     {
                         continue;
@@ -103,8 +117,11 @@ namespace SimpleMethodCallListCreator
         }
 
         public TagJumpEmbeddingResult ExecuteAll(string methodListPath, string sourceRootDirectory,
-            string tagPrefix, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature)
+            string tagPrefix, TagJumpEmbeddingMode mode = TagJumpEmbeddingMode.MethodSignature,
+            IProgress<TagJumpProgressInfo> progress = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (string.IsNullOrWhiteSpace(methodListPath))
             {
                 throw new ArgumentException("メソッドリストのパスを入力してください。", nameof(methodListPath));
@@ -137,14 +154,17 @@ namespace SimpleMethodCallListCreator
             var index = new MethodListIndex(entries);
             var prefix = tagPrefix ?? string.Empty;
 
-            var analysisCache = new Dictionary<string, JavaFileStructure>(StringComparer.OrdinalIgnoreCase);
-            var modifications = new Dictionary<string, List<TagInsertion>>(StringComparer.OrdinalIgnoreCase);
-            var failureDetails = new List<TagJumpFailureDetail>();
-            var processedMethods = new HashSet<string>(StringComparer.Ordinal);
+            var analysisCache = new ConcurrentDictionary<string, JavaFileStructure>(StringComparer.OrdinalIgnoreCase);
+            var modifications =
+                new ConcurrentDictionary<string, List<TagInsertion>>(StringComparer.OrdinalIgnoreCase);
+            var failureDetails = new ConcurrentBag<TagJumpFailureDetail>();
+            var processedMethods = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
             var updatedCallCount = 0;
 
+            var targets = new List<FileProcessingTarget>();
             foreach (var filePath in EnumerateJavaFiles(normalizedSourceRoot))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var normalizedFilePath = NormalizePath(filePath);
                 var methodEntries = index.FindByFile(normalizedFilePath);
                 if (methodEntries.Count == 0)
@@ -152,11 +172,36 @@ namespace SimpleMethodCallListCreator
                     continue;
                 }
 
-                var structure = GetOrAnalyzeStructure(normalizedFilePath, analysisCache);
-                foreach (var methodEntry in methodEntries)
+                targets.Add(new FileProcessingTarget(normalizedFilePath, methodEntries));
+            }
+
+            if (targets.Count == 0)
+            {
+                return new TagJumpEmbeddingResult(0, 0, Array.Empty<string>(), 0,
+                    Array.Empty<TagJumpFailureDetail>());
+            }
+
+            var totalMethodTargetCount = 0;
+            foreach (var target in targets)
+            {
+                totalMethodTargetCount += target.MethodEntries.Count;
+            }
+
+            var processedCount = 0;
+            var parallelOptions = new ParallelOptions
+            {
+                CancellationToken = cancellationToken
+            };
+
+            Parallel.ForEach(targets, parallelOptions, target =>
+            {
+                var structure = GetOrAnalyzeStructure(target.FilePath, analysisCache);
+                foreach (var methodEntry in target.MethodEntries)
                 {
+                    parallelOptions.CancellationToken.ThrowIfCancellationRequested();
+
                     var methodKey = CreateMethodKey(methodEntry);
-                    if (!processedMethods.Add(methodKey))
+                    if (!processedMethods.TryAdd(methodKey, 0))
                     {
                         continue;
                     }
@@ -170,11 +215,16 @@ namespace SimpleMethodCallListCreator
 
                     foreach (var call in methodStructure.Calls)
                     {
-                        ProcessMethodCall(methodEntry, structure, call, index, modifications, failureDetails,
-                            prefix, normalizedMethodListPath, mode, ref updatedCallCount);
+                        parallelOptions.CancellationToken.ThrowIfCancellationRequested();
+                        ProcessMethodCall(methodEntry, structure, call, index, modifications,
+                            detail => failureDetails.Add(detail), prefix, normalizedMethodListPath, mode,
+                            () => Interlocked.Increment(ref updatedCallCount), parallelOptions.CancellationToken);
                     }
+
+                    var current = Interlocked.Increment(ref processedCount);
+                    progress?.Report(new TagJumpProgressInfo("Processing", current, totalMethodTargetCount));
                 }
-            }
+            });
 
             return BuildResultFromModifications(modifications, analysisCache, updatedCallCount, failureDetails);
         }
@@ -182,9 +232,11 @@ namespace SimpleMethodCallListCreator
         private static MethodListEntry ProcessMethodCall(MethodListEntry current, JavaFileStructure structure,
             JavaMethodCallStructure call, MethodListIndex index,
             IDictionary<string, List<TagInsertion>> modifications,
-            List<TagJumpFailureDetail> failureDetails, string prefix, string methodListPath,
-            TagJumpEmbeddingMode mode, ref int updatedCallCount)
+            Action<TagJumpFailureDetail> failureRecorder, string prefix, string methodListPath,
+            TagJumpEmbeddingMode mode, Action onInsertion, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             MethodListEntry calleeEntry;
             try
             {
@@ -192,21 +244,21 @@ namespace SimpleMethodCallListCreator
             }
             catch (MethodAmbiguityException ex)
             {
-                failureDetails?.Add(CreateFailureDetail(current, structure.FilePath, call,
-                    "メソッドリストに同名メソッドが複数存在するため特定できませんでした。",
-                    ex.Candidates, methodListPath));
+                failureRecorder?.Invoke(CreateFailureDetail(current, structure.FilePath, call,
+                    "メソッドリストに同名メソッドが複数存在するため特定できませんでした。", ex.Candidates,
+                    methodListPath));
                 var failureInsertion = BuildFailureInsertion(structure.OriginalText, call, prefix);
                 if (failureInsertion != null)
                 {
                     AddInsertion(modifications, structure.FilePath, failureInsertion);
-                    updatedCallCount++;
+                    onInsertion?.Invoke();
                 }
 
                 return null;
             }
             catch (InvalidOperationException ex)
             {
-                failureDetails?.Add(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
+                failureRecorder?.Invoke(CreateFailureDetail(current, structure.FilePath, call, ex.Message));
                 return null;
             }
 
@@ -225,7 +277,7 @@ namespace SimpleMethodCallListCreator
             if (insertion != null)
             {
                 AddInsertion(modifications, structure.FilePath, insertion);
-                updatedCallCount++;
+                onInsertion?.Invoke();
             }
 
             return calleeEntry;
@@ -234,7 +286,7 @@ namespace SimpleMethodCallListCreator
         private static TagJumpEmbeddingResult BuildResultFromModifications(
             IDictionary<string, List<TagInsertion>> modifications,
             IDictionary<string, JavaFileStructure> analysisCache, int updatedCallCount,
-            List<TagJumpFailureDetail> failureDetails)
+            IEnumerable<TagJumpFailureDetail> failureDetails)
         {
             var updatedFiles = new List<string>();
             if (modifications != null)
@@ -260,7 +312,9 @@ namespace SimpleMethodCallListCreator
                 }
             }
 
-            var failures = failureDetails ?? new List<TagJumpFailureDetail>();
+            var failures = failureDetails != null
+                ? new List<TagJumpFailureDetail>(failureDetails)
+                : new List<TagJumpFailureDetail>();
             return new TagJumpEmbeddingResult(updatedFiles.Count, updatedCallCount, updatedFiles,
                 failures.Count, failures);
         }
@@ -332,6 +386,17 @@ namespace SimpleMethodCallListCreator
         {
             if (insertion == null)
             {
+                return;
+            }
+
+            if (map is ConcurrentDictionary<string, List<TagInsertion>> concurrentDictionary)
+            {
+                var insertionList = concurrentDictionary.GetOrAdd(filePath, _ => new List<TagInsertion>());
+                lock (insertionList)
+                {
+                    insertionList.Add(insertion);
+                }
+
                 return;
             }
 
@@ -1050,6 +1115,19 @@ namespace SimpleMethodCallListCreator
         private static string CreateMethodKey(MethodListEntry entry)
         {
             return $"{entry.NormalizedFilePath}|{entry.Detail.MethodSignature}";
+        }
+
+        private sealed class FileProcessingTarget
+        {
+            public FileProcessingTarget(string filePath, List<MethodListEntry> methodEntries)
+            {
+                FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+                MethodEntries = methodEntries ?? throw new ArgumentNullException(nameof(methodEntries));
+            }
+
+            public string FilePath { get; }
+
+            public List<MethodListEntry> MethodEntries { get; }
         }
 
         private sealed class MethodListEntry

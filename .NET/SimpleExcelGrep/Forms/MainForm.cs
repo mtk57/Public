@@ -26,6 +26,7 @@ namespace SimpleExcelGrep.Forms
         private bool _isLoading = false;
         private List<SearchResult> _searchResults = new List<SearchResult>();
         private bool _isUpdatingGridFilter = false;
+        private string _multiKeywordsText = string.Empty;
 
         private System.Windows.Forms.Timer _uiTimer;
 
@@ -160,7 +161,7 @@ namespace SimpleExcelGrep.Forms
             var controlsToToggle = new Control[] {
                 cmbFolderPath, btnSelectFolder, cmbKeyword, cmbIgnoreKeywords,
                 txtIgnoreFileSizeMB, chkRegex, chkSearchShapes, chkFirstHitOnly,
-                nudParallelism, btnStartSearch, btnLoadTsv, chkCellMode,
+                nudParallelism, btnStartSearch, btnLoadTsv, chkCellMode, btnMultiKeywords,
                 chkSearchSubDir, chkEnableLog, chkEnableInvisibleSheet, chkCollectStrInShape
             };
             foreach (var control in controlsToToggle)

@@ -20,20 +20,27 @@ namespace SimpleExcelGrep.Forms
         /// <summary>
         /// GREP検索モードを実行
         /// </summary>
-        private async Task RunGrepSearchModeAsync()
+        private async Task RunGrepSearchModeAsync(IReadOnlyList<string> overrideKeywords = null)
         {
             _logService.LogMessage("GREP検索モードを開始します");
-            if (!ValidateGrepInputs()) return;
+
+            var keywords = ResolveKeywords(overrideKeywords);
+            if (!ValidateGrepInputs(keywords)) return;
 
             ClearGridFilters();
 
             await ExecuteSearchAsync(async (pendingResults, token) =>
             {
-                var regex = chkRegex.Checked ? new Regex(cmbKeyword.Text, RegexOptions.Compiled | RegexOptions.IgnoreCase) : null;
+                List<Regex> regexList = null;
+                if (chkRegex.Checked)
+                {
+                    regexList = keywords.Select(k => new Regex(k, RegexOptions.Compiled | RegexOptions.IgnoreCase)).ToList();
+                }
+
                 var ignoreKeywords = cmbIgnoreKeywords.Text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(k => k.Trim()).ToList();
                 double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out var ignoreSize);
 
-                return await _excelSearchService.SearchExcelFilesAsync(cmbFolderPath.Text, cmbKeyword.Text, chkRegex.Checked, regex,
+                return await _excelSearchService.SearchExcelFilesAsync(cmbFolderPath.Text, keywords, chkRegex.Checked, regexList,
                     ignoreKeywords, chkRealTimeDisplay.Checked, chkSearchShapes.Checked, chkFirstHitOnly.Checked,
                     (int)nudParallelism.Value, ignoreSize, chkSearchSubDir.Checked, chkEnableInvisibleSheet.Checked, 
                     pendingResults, UpdateStatus, token);
@@ -161,20 +168,36 @@ namespace SimpleExcelGrep.Forms
         /// <summary>
         /// GREP検索の入力検証
         /// </summary>
-        private bool ValidateGrepInputs()
+        private IReadOnlyList<string> ResolveKeywords(IReadOnlyList<string> overrideKeywords)
         {
-            if (string.IsNullOrWhiteSpace(cmbKeyword.Text))
+            if (overrideKeywords != null && overrideKeywords.Any())
+            {
+                return overrideKeywords.ToList();
+            }
+
+            return new List<string> { cmbKeyword.Text ?? string.Empty };
+        }
+
+        /// <summary>
+        /// GREP検索の入力検証
+        /// </summary>
+        private bool ValidateGrepInputs(IReadOnlyList<string> keywords)
+        {
+            if (keywords == null || !keywords.Any(k => !string.IsNullOrWhiteSpace(k)))
             {
                 MessageBox.Show("検索キーワードを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
             if (chkRegex.Checked)
             {
-                try { new Regex(cmbKeyword.Text); }
-                catch (ArgumentException ex)
+                foreach (var keyword in keywords)
                 {
-                    MessageBox.Show($"正規表現が無効です: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
+                    try { new Regex(keyword); }
+                    catch (ArgumentException ex)
+                    {
+                        MessageBox.Show($"正規表現が無効です: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return false;
+                    }
                 }
             }
             return true;

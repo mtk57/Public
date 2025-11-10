@@ -35,9 +35,9 @@ namespace SimpleExcelGrep.Services
         /// </summary>
         public async Task<List<SearchResult>> SearchExcelFilesAsync(
             string folderPath,
-            string keyword,
+            IReadOnlyList<string> keywords,
             bool useRegex,
-            Regex regex,
+            IReadOnlyList<Regex> regexList,
             List<string> ignoreKeywords,
             bool isRealTimeDisplay,
             bool searchShapes,
@@ -51,7 +51,8 @@ namespace SimpleExcelGrep.Services
             CancellationToken cancellationToken)
         {
             _logger.LogMessage($"SearchExcelFilesAsync 開始: フォルダ={folderPath}");
-            _logger.LogMessage($"GREP検索開始: キーワード='{keyword}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}, サブフォルダ対象={searchSubDirectories}, 非表示シート対象={searchInvisibleSheets}");
+            var keywordDescription = keywords != null ? string.Join(", ", keywords) : string.Empty;
+            _logger.LogMessage($"GREP検索開始: キーワード='{keywordDescription}', 正規表現={useRegex}, 最初のヒットのみ={firstHitOnly}, 図形内検索={searchShapes}, 無視ファイルサイズ(MB)={ignoreFileSizeMB}, サブフォルダ対象={searchSubDirectories}, 非表示シート対象={searchInvisibleSheets}");
 
             List<SearchResult> results = new List<SearchResult>();
 
@@ -112,7 +113,7 @@ namespace SimpleExcelGrep.Services
                         {
                             _logger.LogMessage($"ファイル処理開始: {filePath}");
                             List<SearchResult> fileResults = SearchInXlsxFile(
-                                filePath, keyword, useRegex, regex, resultQueue,
+                                filePath, keywords, useRegex, regexList, resultQueue,
                                 firstHitOnly, searchShapes, searchInvisibleSheets, cancellationToken);
 
                             _logger.LogMessage($"ファイル処理完了: {filePath}, 見つかった結果(セル+図形): {fileResults.Count}件");
@@ -520,9 +521,9 @@ namespace SimpleExcelGrep.Services
         /// </summary>
         private List<SearchResult> SearchInXlsxFile(
             string filePath,
-            string keyword,
+            IReadOnlyList<string> keywords,
             bool useRegex,
-            Regex regex,
+            IReadOnlyList<Regex> regexList,
             ConcurrentQueue<SearchResult> pendingResults,
             bool firstHitOnly,
             bool searchShapes,
@@ -562,7 +563,7 @@ namespace SimpleExcelGrep.Services
                         // 1. セル内のテキスト検索
                         foundHitInFile = SearchInCells(
                             filePath, sheetName, worksheetPart, sharedStringTable,
-                            keyword, useRegex, regex, pendingResults,
+                            keywords, useRegex, regexList, pendingResults,
                             localResults, firstHitOnly, foundHitInFile, cancellationToken);
 
                         // 2. 図形内のテキスト検索
@@ -573,7 +574,7 @@ namespace SimpleExcelGrep.Services
 
                             foundHitInFile = SearchInShapes(
                                 filePath, sheetName, worksheetPart,
-                                keyword, useRegex, regex, pendingResults,
+                                keywords, useRegex, regexList, pendingResults,
                                 localResults, firstHitOnly, foundHitInFile, cancellationToken);
                         }
                     }
@@ -592,15 +593,13 @@ namespace SimpleExcelGrep.Services
             return localResults;
         }
 
-        // 以下、既存のプライベートメソッド (SearchInCells, SearchInShapes, GetSheetName, GetCellValue, GetCellReference, TruncateString) は変更なし
-        // ... (省略) ...
         /// <summary>
         /// ワークシート内のセルを検索
         /// </summary>
         private bool SearchInCells(
             string filePath, string sheetName, WorksheetPart worksheetPart,
-            SharedStringTable sharedStringTable, string keyword, bool useRegex,
-            Regex regex, ConcurrentQueue<SearchResult> pendingResults,
+            SharedStringTable sharedStringTable, IReadOnlyList<string> keywords, bool useRegex,
+            IReadOnlyList<Regex> regexList, ConcurrentQueue<SearchResult> pendingResults,
             List<SearchResult> localResults, bool firstHitOnly,
             bool foundHitInFile, CancellationToken cancellationToken)
         {
@@ -622,11 +621,7 @@ namespace SimpleExcelGrep.Services
                     string cellValue = GetCellValue(cell, sharedStringTable);
                     if (string.IsNullOrEmpty(cellValue)) continue;
 
-                    bool isMatch = useRegex && regex != null ?
-                                   regex.IsMatch(cellValue) :
-                                   cellValue.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-
-                    if (isMatch)
+                    if (IsMatch(cellValue, useRegex, keywords, regexList))
                     {
                         SearchResult result = new SearchResult
                         {
@@ -655,7 +650,7 @@ namespace SimpleExcelGrep.Services
         /// </summary>
         private bool SearchInShapes(
             string filePath, string sheetName, WorksheetPart worksheetPart,
-            string keyword, bool useRegex, Regex regex,
+            IReadOnlyList<string> keywords, bool useRegex, IReadOnlyList<Regex> regexList,
             ConcurrentQueue<SearchResult> pendingResults, List<SearchResult> localResults,
             bool firstHitOnly, bool foundHitInFile, CancellationToken cancellationToken)
         {
@@ -666,11 +661,7 @@ namespace SimpleExcelGrep.Services
                 cancellationToken.ThrowIfCancellationRequested();
                 if (firstHitOnly && foundHitInFile) break;
 
-                bool isMatch = useRegex && regex != null ?
-                              regex.IsMatch(shapeText) :
-                              shapeText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-
-                if (isMatch)
+                if (IsMatch(shapeText, useRegex, keywords, regexList))
                 {
                     SearchResult result = new SearchResult
                     {
@@ -690,6 +681,33 @@ namespace SimpleExcelGrep.Services
                 }
             }
             return foundHitInFile;
+        }
+
+        private bool IsMatch(string target, bool useRegex, IReadOnlyList<string> keywords, IReadOnlyList<Regex> regexList)
+        {
+            if (string.IsNullOrEmpty(target)) return false;
+
+            if (useRegex)
+            {
+                if (regexList == null || regexList.Count == 0) return false;
+                foreach (var regex in regexList)
+                {
+                    if (regex?.IsMatch(target) == true) return true;
+                }
+                return false;
+            }
+
+            if (keywords == null || keywords.Count == 0) return false;
+            foreach (var keyword in keywords)
+            {
+                if (string.IsNullOrWhiteSpace(keyword)) continue;
+                if (target.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -21,6 +21,7 @@ namespace SimpleExcelGrep.Forms
             btnStartSearch.Click += BtnStartSearch_Click;
             btnCancelSearch.Click += BtnCancelSearch_Click;
             btnLoadTsv.Click += BtnLoadTsv_Click;
+            btnMultiKeywords.Click += BtnMultiKeywords_Click;
 
             grdResults.DoubleClick += GrdResults_DoubleClick;
             grdResults.KeyDown += GrdResults_KeyDown;
@@ -87,6 +88,33 @@ namespace SimpleExcelGrep.Forms
             else
             {
                 await RunGrepSearchModeAsync();
+            }
+        }
+
+        /// <summary>
+        /// 複数キーワードボタン押下時の処理
+        /// </summary>
+        private async void BtnMultiKeywords_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new MultiKeywordsForm())
+            {
+                dialog.KeywordsText = _multiKeywordsText;
+
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                _multiKeywordsText = dialog.KeywordsText;
+
+                if (!ValidateFolderPath()) return;
+
+                _settingsService.AddToComboBoxHistory(cmbFolderPath, cmbFolderPath.Text);
+                _settingsService.AddToComboBoxHistory(cmbKeyword, cmbKeyword.Text);
+                _settingsService.AddToComboBoxHistory(cmbIgnoreKeywords, cmbIgnoreKeywords.Text);
+                SaveCurrentSettings();
+
+                await RunGrepSearchModeAsync(dialog.ParsedKeywords);
             }
         }
 

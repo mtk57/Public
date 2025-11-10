@@ -33,7 +33,7 @@
             this.btnRefImgFilePath = new System.Windows.Forms.Button();
             this.txtResultOCR = new System.Windows.Forms.TextBox();
             this.btnStart = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btnImageAdjust = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -80,21 +80,22 @@
             this.btnStart.Text = "読み取り開始";
             this.btnStart.UseVisualStyleBackColor = true;
             // 
-            // button1
+            // btnImageAdjust
             // 
-            this.button1.Location = new System.Drawing.Point(28, 89);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(108, 23);
-            this.button1.TabIndex = 5;
-            this.button1.Text = "画像調整";
-            this.button1.UseVisualStyleBackColor = true;
+            this.btnImageAdjust.Enabled = false;
+            this.btnImageAdjust.Location = new System.Drawing.Point(28, 89);
+            this.btnImageAdjust.Name = "btnImageAdjust";
+            this.btnImageAdjust.Size = new System.Drawing.Size(108, 23);
+            this.btnImageAdjust.TabIndex = 5;
+            this.btnImageAdjust.Text = "画像調整";
+            this.btnImageAdjust.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(759, 450);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.btnImageAdjust);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.txtResultOCR);
             this.Controls.Add(this.btnRefImgFilePath);
@@ -114,7 +115,7 @@
         private System.Windows.Forms.Button btnRefImgFilePath;
         private System.Windows.Forms.TextBox txtResultOCR;
         private System.Windows.Forms.Button btnStart;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button btnImageAdjust;
     }
 }
 

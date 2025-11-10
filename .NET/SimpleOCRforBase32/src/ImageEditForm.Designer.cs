@@ -29,7 +29,7 @@
         private void InitializeComponent ()
         {
             this.btnSave = new System.Windows.Forms.Button();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.picPreview = new System.Windows.Forms.PictureBox();
             this.trackBarContrast = new System.Windows.Forms.TrackBar();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -38,7 +38,7 @@
             this.label3 = new System.Windows.Forms.Label();
             this.btnDefault = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.picPreview)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarContrast)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarBrightness)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarBinary)).BeginInit();
@@ -54,16 +54,16 @@
             this.btnSave.Text = "保存";
             this.btnSave.UseVisualStyleBackColor = true;
             // 
-            // pictureBox1
+            // picPreview
             // 
-            this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.picPreview.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pictureBox1.Location = new System.Drawing.Point(23, 27);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(694, 392);
-            this.pictureBox1.TabIndex = 1;
-            this.pictureBox1.TabStop = false;
+            this.picPreview.Location = new System.Drawing.Point(23, 27);
+            this.picPreview.Name = "picPreview";
+            this.picPreview.Size = new System.Drawing.Size(694, 392);
+            this.picPreview.TabIndex = 1;
+            this.picPreview.TabStop = false;
             // 
             // trackBarContrast
             // 
@@ -152,11 +152,11 @@
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.trackBarContrast);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.picPreview);
             this.Controls.Add(this.btnSave);
             this.Name = "ImageEditForm";
             this.Text = "画像調整";
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.picPreview)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarContrast)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarBrightness)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarBinary)).EndInit();
@@ -168,7 +168,7 @@
         #endregion
 
         private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox picPreview;
         private System.Windows.Forms.TrackBar trackBarContrast;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;

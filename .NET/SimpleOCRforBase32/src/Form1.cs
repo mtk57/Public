@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -646,8 +647,50 @@ namespace SimpleOCRforBase32
             txtImgFilePath.AllowDrop = true;
             txtImgFilePath.DragEnter += TxtImgFilePath_DragEnter;
             txtImgFilePath.DragDrop += TxtImgFilePath_DragDrop;
+            txtImgFilePath.TextChanged += TxtImgFilePath_TextChanged;
             btnRefImgFilePath.Click += BtnRefImgFilePath_Click;
             btnStart.Click += BtnStart_Click;
+            btnImageAdjust.Click += BtnImageAdjust_Click;
+            UpdateImageAdjustButtonState();
+        }
+
+        private void TxtImgFilePath_TextChanged ( object sender, EventArgs e ) => UpdateImageAdjustButtonState();
+
+        private void UpdateImageAdjustButtonState ()
+        {
+            var filePath = txtImgFilePath.Text;
+            btnImageAdjust.Enabled = IsValidImageFile( filePath );
+        }
+
+        private static bool IsValidImageFile ( string path )
+        {
+            if ( string.IsNullOrWhiteSpace( path ) )
+            {
+                return false;
+            }
+
+            if ( !File.Exists( path ) )
+            {
+                return false;
+            }
+
+            var extension = Path.GetExtension( path );
+            if ( string.IsNullOrEmpty( extension ) || !SupportedImageExtensions.Contains( extension ) )
+            {
+                return false;
+            }
+
+            try
+            {
+                using ( var image = Image.FromFile( path ) )
+                {
+                    return image != null;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void TxtImgFilePath_DragEnter ( object sender, DragEventArgs e )
@@ -718,6 +761,26 @@ namespace SimpleOCRforBase32
             finally
             {
                 btnStart.Enabled = true;
+            }
+        }
+
+        private void BtnImageAdjust_Click ( object sender, EventArgs e )
+        {
+            var filePath = txtImgFilePath.Text;
+            if ( !IsValidImageFile( filePath ) )
+            {
+                MessageBox.Show( this, "有効な画像ファイルを指定してください。", "画像未指定", MessageBoxButtons.OK, MessageBoxIcon.Warning );
+                UpdateImageAdjustButtonState();
+                return;
+            }
+
+            using ( var editForm = new ImageEditForm( filePath ) )
+            {
+                if ( editForm.ShowDialog( this ) == DialogResult.OK
+                    && !string.IsNullOrEmpty( editForm.EditedImagePath ) )
+                {
+                    txtImgFilePath.Text = editForm.EditedImagePath;
+                }
             }
         }
 
@@ -867,6 +930,15 @@ namespace SimpleOCRforBase32
             { '0', 'O' },
             { '1', 'I' },
             { '8', 'B' }
+        };
+        private static readonly HashSet<string> SupportedImageExtensions = new HashSet<string>( StringComparer.OrdinalIgnoreCase )
+        {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".bmp",
+            ".tif",
+            ".tiff"
         };
 
         private static string NormalizeText ( string rawText )

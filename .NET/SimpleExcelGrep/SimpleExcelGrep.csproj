@@ -88,6 +88,12 @@
     <Compile Include="Forms\MainForm.Tsv.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\MultiKeywordsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\MultiKeywordsForm.Designer.cs">
+      <DependentUpon>MultiKeywordsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Models\SearchResult.cs" />
     <Compile Include="Models\Settings.cs" />
     <Compile Include="Program.cs" />
@@ -100,6 +106,9 @@
     <Compile Include="Utilities\ExcelUtils.cs" />
     <EmbeddedResource Include="Forms\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\MultiKeywordsForm.resx">
+      <DependentUpon>MultiKeywordsForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

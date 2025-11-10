@@ -75,6 +75,7 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
+            this.btnMultiKeywords = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -508,11 +509,22 @@
             this.label6.Text = "セルの値";
             this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
+            // btnMultiKeywords
+            // 
+            this.btnMultiKeywords.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnMultiKeywords.Location = new System.Drawing.Point(732, 57);
+            this.btnMultiKeywords.Name = "btnMultiKeywords";
+            this.btnMultiKeywords.Size = new System.Drawing.Size(53, 22);
+            this.btnMultiKeywords.TabIndex = 32;
+            this.btnMultiKeywords.Text = "複数";
+            this.btnMultiKeywords.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(844, 489);
+            this.Controls.Add(this.btnMultiKeywords);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
@@ -610,5 +622,6 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Button btnMultiKeywords;
     }
 }

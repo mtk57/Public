@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 
 namespace SimpleOCRforBase32
 {
@@ -40,7 +40,7 @@ namespace SimpleOCRforBase32
             UpdatePreview();
         }
 
-        protected override void OnFormClosed ( EventArgs e )
+        protected override void OnFormClosed ( FormClosedEventArgs e )
         {
             base.OnFormClosed( e );
             DisposeResources();
@@ -131,7 +131,7 @@ namespace SimpleOCRforBase32
                     currentProcessedMat?.Dispose();
                     currentProcessedMat = binary.Clone();
 
-                    var previewBitmap = BitmapConverter.ToBitmap( display );
+                    var previewBitmap = CreateBitmapFromMat( display );
                     var previousImage = picPreview.Image;
                     picPreview.Image = previewBitmap;
                     previousImage?.Dispose();
@@ -228,6 +228,20 @@ namespace SimpleOCRforBase32
             currentProcessedMat = null;
             originalMat?.Dispose();
             originalMat = null;
+        }
+
+        private static Bitmap CreateBitmapFromMat ( Mat mat )
+        {
+            if ( mat == null || mat.Empty() )
+            {
+                return null;
+            }
+
+            Cv2.ImEncode( ".png", mat, out var buffer );
+            using ( var stream = new MemoryStream( buffer ) )
+            {
+                return new Bitmap( stream );
+            }
         }
     }
 }

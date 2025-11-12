@@ -36,32 +36,12 @@
             this.label2 = new System.Windows.Forms.Label();
             this.btnRun = new System.Windows.Forms.Button();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.chkOutputInfo = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // splitContainer1
-            // 
-            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 0);
-            this.splitContainer1.Name = "splitContainer1";
-            this.splitContainer1.Orientation = System.Windows.Forms.Orientation.Horizontal;
-            // 
-            // splitContainer1.Panel1
-            // 
-            this.splitContainer1.Panel1.Controls.Add(this.label1);
-            this.splitContainer1.Panel1.Controls.Add(this.btnRun);
-            this.splitContainer1.Panel1.Controls.Add(this.txtBeforeSQL);
-            // 
-            // splitContainer1.Panel2
-            // 
-            this.splitContainer1.Panel2.Controls.Add(this.label2);
-            this.splitContainer1.Panel2.Controls.Add(this.txtAfterSQL);
-            this.splitContainer1.Size = new System.Drawing.Size(542, 486);
-            this.splitContainer1.SplitterDistance = 234;
-            this.splitContainer1.TabIndex = 1;
             // 
             // txtBeforeSQL
             // 
@@ -73,7 +53,7 @@
             this.txtBeforeSQL.Multiline = true;
             this.txtBeforeSQL.Name = "txtBeforeSQL";
             this.txtBeforeSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtBeforeSQL.Size = new System.Drawing.Size(518, 186);
+            this.txtBeforeSQL.Size = new System.Drawing.Size(518, 185);
             this.txtBeforeSQL.TabIndex = 4;
             // 
             // txtAfterSQL
@@ -87,7 +67,7 @@
             this.txtAfterSQL.Name = "txtAfterSQL";
             this.txtAfterSQL.ReadOnly = true;
             this.txtAfterSQL.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtAfterSQL.Size = new System.Drawing.Size(518, 200);
+            this.txtAfterSQL.Size = new System.Drawing.Size(518, 201);
             this.txtAfterSQL.TabIndex = 3;
             this.txtAfterSQL.TextChanged += new System.EventHandler(this.txtAfterSQL_TextChanged);
             // 
@@ -119,6 +99,38 @@
             this.btnRun.Text = "実行";
             this.btnRun.UseVisualStyleBackColor = true;
             // 
+            // splitContainer1
+            // 
+            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer1.Location = new System.Drawing.Point(0, 0);
+            this.splitContainer1.Name = "splitContainer1";
+            this.splitContainer1.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            // 
+            // splitContainer1.Panel1
+            // 
+            this.splitContainer1.Panel1.Controls.Add(this.chkOutputInfo);
+            this.splitContainer1.Panel1.Controls.Add(this.label1);
+            this.splitContainer1.Panel1.Controls.Add(this.btnRun);
+            this.splitContainer1.Panel1.Controls.Add(this.txtBeforeSQL);
+            // 
+            // splitContainer1.Panel2
+            // 
+            this.splitContainer1.Panel2.Controls.Add(this.label2);
+            this.splitContainer1.Panel2.Controls.Add(this.txtAfterSQL);
+            this.splitContainer1.Size = new System.Drawing.Size(542, 486);
+            this.splitContainer1.SplitterDistance = 233;
+            this.splitContainer1.TabIndex = 1;
+            // 
+            // chkOutputInfo
+            // 
+            this.chkOutputInfo.AutoSize = true;
+            this.chkOutputInfo.Location = new System.Drawing.Point(338, 12);
+            this.chkOutputInfo.Name = "chkOutputInfo";
+            this.chkOutputInfo.Size = new System.Drawing.Size(96, 16);
+            this.chkOutputInfo.TabIndex = 5;
+            this.chkOutputInfo.Text = "付加情報出力";
+            this.chkOutputInfo.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -145,5 +157,6 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnRun;
         private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.CheckBox chkOutputInfo;
     }
 }

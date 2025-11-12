@@ -376,6 +376,11 @@ namespace SimpleSqlAdjuster
                         break;
                     }
 
+                    if (TryWriteParenthesizedListBlock(0, extraTokens, false))
+                    {
+                        continue;
+                    }
+
                     WriteClauseItem(1, extraTokens);
                 }
 
@@ -426,7 +431,86 @@ namespace SimpleSqlAdjuster
 
             private void FormatValuesClause()
             {
-                FormatCommaSeparatedClause(ValuesStops);
+                var itemTokens = new List<SqlToken>();
+                var depth = 0;
+
+                while (_index < _tokens.Count)
+                {
+                    if (depth == 0 && MatchesStopper(_index, ValuesStops))
+                    {
+                        break;
+                    }
+
+                    var token = _tokens[_index];
+
+                    if (token.Kind == TokenKind.Comment)
+                    {
+                        itemTokens.Add(token);
+                        _index++;
+                        continue;
+                    }
+
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                        itemTokens.Add(token);
+                        _index++;
+                        continue;
+                    }
+
+                    if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                        itemTokens.Add(token);
+                        _index++;
+                        continue;
+                    }
+
+                    if (depth == 0 && token.IsSymbol(","))
+                    {
+                        WriteValuesItem(itemTokens, appendComma: true);
+                        itemTokens = new List<SqlToken>();
+                        _index++;
+                        continue;
+                    }
+
+                    itemTokens.Add(token);
+                    _index++;
+                }
+
+                if (itemTokens.Count > 0)
+                {
+                    WriteValuesItem(itemTokens, appendComma: false);
+                }
+            }
+
+            private void WriteValuesItem(List<SqlToken> tokens, bool appendComma)
+            {
+                if (tokens == null || tokens.Count == 0)
+                {
+                    if (appendComma)
+                    {
+                        _writer.WriteLine(0, ",");
+                    }
+
+                    return;
+                }
+
+                if (TryWriteParenthesizedListBlock(0, tokens, appendComma))
+                {
+                    return;
+                }
+
+                var text = RenderTokens(tokens);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    if (appendComma)
+                    {
+                        text += ",";
+                    }
+
+                    _writer.WriteLine(1, text);
+                }
             }
 
             private List<SqlToken> ReadParenthesizedTokens()
@@ -461,6 +545,71 @@ namespace SimpleSqlAdjuster
                 }
 
                 return collected;
+            }
+
+            private bool TryWriteParenthesizedListBlock(int indentLevel, List<SqlToken> tokens, bool appendTrailingComma)
+            {
+                if (tokens == null || tokens.Count == 0 || !tokens[0].IsSymbol("("))
+                {
+                    return false;
+                }
+
+                var closingIndex = FindMatchingParenthesis(tokens, 0);
+                if (closingIndex <= 0)
+                {
+                    return false;
+                }
+
+                var trailingCount = tokens.Count - closingIndex - 1;
+                List<SqlToken> trailingComments = null;
+                if (trailingCount > 0)
+                {
+                    trailingComments = new List<SqlToken>();
+                    for (var i = closingIndex + 1; i < tokens.Count; i++)
+                    {
+                        var trailing = tokens[i];
+                        if (trailing == null)
+                        {
+                            continue;
+                        }
+
+                        if (trailing.Kind == TokenKind.Comment)
+                        {
+                            trailingComments.Add(trailing);
+                            continue;
+                        }
+
+                        return false;
+                    }
+                }
+
+                var innerCount = closingIndex - 1;
+                var innerTokens = innerCount > 0 ? tokens.GetRange(1, innerCount) : new List<SqlToken>();
+                var entries = SplitTopLevelList(innerTokens);
+
+                _writer.WriteLine(indentLevel, "(");
+
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    var appendComma = i < entries.Count - 1;
+                    WriteParenthesizedEntry(indentLevel + 1, entries[i], appendComma);
+                }
+
+                var closingText = appendTrailingComma ? ")," : ")";
+                _writer.WriteLine(indentLevel, closingText);
+
+                if (trailingComments != null)
+                {
+                    foreach (var comment in trailingComments)
+                    {
+                        if (!string.IsNullOrEmpty(comment?.Value))
+                        {
+                            _writer.WriteLine(indentLevel, comment.Value.TrimEnd());
+                        }
+                    }
+                }
+
+                return true;
             }
 
             private void FormatCommaSeparatedClause(ClauseStopper[] stops)
@@ -518,6 +667,70 @@ namespace SimpleSqlAdjuster
                 {
                     WriteClauseItem(1, itemTokens);
                 }
+            }
+
+            private void WriteParenthesizedEntry(int indentLevel, List<SqlToken> tokens, bool appendComma)
+            {
+                var text = RenderTokens(tokens);
+                if (string.IsNullOrEmpty(text))
+                {
+                    if (appendComma)
+                    {
+                        _writer.WriteLine(indentLevel, ",");
+                    }
+
+                    return;
+                }
+
+                if (appendComma)
+                {
+                    text += ",";
+                }
+
+                _writer.WriteLine(indentLevel, text);
+            }
+
+            private static List<List<SqlToken>> SplitTopLevelList(List<SqlToken> tokens)
+            {
+                var result = new List<List<SqlToken>>();
+                if (tokens == null || tokens.Count == 0)
+                {
+                    return result;
+                }
+
+                var current = new List<SqlToken>();
+                var depth = 0;
+
+                foreach (var token in tokens)
+                {
+                    if (token == null)
+                    {
+                        continue;
+                    }
+
+                    if (token.IsSymbol(",") && depth == 0)
+                    {
+                        result.Add(current);
+                        current = new List<SqlToken>();
+                        continue;
+                    }
+
+                    current.Add(token);
+
+                    if (token.IsSymbol("("))
+                    {
+                        depth++;
+                        continue;
+                    }
+
+                    if (token.IsSymbol(")"))
+                    {
+                        depth = Math.Max(0, depth - 1);
+                    }
+                }
+
+                result.Add(current);
+                return result;
             }
 
             private void WriteGeneralLine()

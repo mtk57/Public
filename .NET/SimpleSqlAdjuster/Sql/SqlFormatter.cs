@@ -359,10 +359,13 @@ namespace SimpleSqlAdjuster
                     _index++;
                 }
 
-                var headerText = RenderTokens(headerTokens);
-                if (!string.IsNullOrEmpty(headerText))
+                if (!TryWriteInsertHeader(headerTokens))
                 {
-                    _writer.WriteLine(0, headerText);
+                    var headerText = RenderTokens(headerTokens);
+                    if (!string.IsNullOrEmpty(headerText))
+                    {
+                        _writer.WriteLine(0, headerText);
+                    }
                 }
 
                 while (_index < _tokens.Count && _tokens[_index].IsSymbol("("))
@@ -382,6 +385,43 @@ namespace SimpleSqlAdjuster
                     _index++;
                     FormatValuesClause();
                 }
+            }
+
+            private bool TryWriteInsertHeader(List<SqlToken> headerTokens)
+            {
+                if (headerTokens == null || headerTokens.Count == 0)
+                {
+                    return false;
+                }
+
+                var intoIndex = -1;
+                for (var i = 0; i < headerTokens.Count; i++)
+                {
+                    if (headerTokens[i] != null && headerTokens[i].IsKeyword("INTO"))
+                    {
+                        intoIndex = i;
+                        break;
+                    }
+                }
+
+                if (intoIndex < 0 || intoIndex >= headerTokens.Count - 1)
+                {
+                    return false;
+                }
+
+                var prefixTokens = headerTokens.GetRange(0, intoIndex + 1);
+                var tableTokens = headerTokens.GetRange(intoIndex + 1, headerTokens.Count - intoIndex - 1);
+                var prefixText = RenderTokens(prefixTokens);
+                var tableText = RenderTokens(tableTokens);
+
+                if (string.IsNullOrEmpty(prefixText) || string.IsNullOrEmpty(tableText))
+                {
+                    return false;
+                }
+
+                _writer.WriteLine(0, prefixText);
+                _writer.WriteLine(1, tableText);
+                return true;
             }
 
             private void FormatValuesClause()

@@ -41,6 +41,8 @@ namespace SimpleSqlAdjuster
             {
                 txtBeforeSQL.Text = _settings.LastBeforeSql;
             }
+
+            chkOutputInfo.Checked = _settings.OutputAdditionalInfo;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -54,6 +56,7 @@ namespace SimpleSqlAdjuster
 
                 var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
                 _settings.LastBeforeSql = txtBeforeSQL.Text;
+                _settings.OutputAdditionalInfo = chkOutputInfo.Checked;
 
                 _settingsService.Save(
                     _settings,
@@ -70,7 +73,7 @@ namespace SimpleSqlAdjuster
         {
             try
             {
-                var result = _sqlAdjuster.Process(txtBeforeSQL.Text);
+                var result = _sqlAdjuster.Process(txtBeforeSQL.Text, chkOutputInfo.Checked);
                 txtAfterSQL.Text = result;
                 if (!string.IsNullOrEmpty(result))
                 {

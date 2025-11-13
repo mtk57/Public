@@ -4,6 +4,11 @@ using System.Text;
 
 namespace SimpleSqlAdjuster
 {
+    internal sealed class SqlFormatterOptions
+    {
+        public bool AppendTableMetadata { get; set; }
+    }
+
     internal sealed class SqlFormatter
     {
         private const int IndentSize = 2;
@@ -72,7 +77,7 @@ namespace SimpleSqlAdjuster
 
         private static readonly ClauseStopper[] FromClauseStops = FromStops;
 
-        public string Format(string sql, int lineNumber)
+        public string Format(string sql, int lineNumber, SqlFormatterOptions options = null)
         {
             try
             {
@@ -83,7 +88,7 @@ namespace SimpleSqlAdjuster
                 }
 
                 var writer = new SqlWriter(IndentSize);
-                var formatter = new StatementFormatter(tokens, writer);
+                var formatter = new StatementFormatter(tokens, writer, options ?? new SqlFormatterOptions());
                 formatter.Format();
 
                 return writer.ToString();
@@ -102,12 +107,16 @@ namespace SimpleSqlAdjuster
         {
             private readonly List<SqlToken> _tokens;
             private readonly SqlWriter _writer;
+            private readonly SqlFormatterOptions _options;
+            private readonly bool _appendTableMetadata;
             private int _index;
 
-            public StatementFormatter(List<SqlToken> tokens, SqlWriter writer)
+            public StatementFormatter(List<SqlToken> tokens, SqlWriter writer, SqlFormatterOptions options)
             {
                 _tokens = tokens;
                 _writer = writer;
+                _options = options ?? new SqlFormatterOptions();
+                _appendTableMetadata = _options.AppendTableMetadata;
             }
 
             public void Format()
@@ -303,7 +312,7 @@ namespace SimpleSqlAdjuster
                         continue;
                     }
 
-                    WriteClauseItem(1, item);
+                    WriteClauseItem(1, item, text => ApplyTableMetadata(text, item));
                 }
             }
 
@@ -327,7 +336,7 @@ namespace SimpleSqlAdjuster
                     _index++;
                 }
 
-                WriteClauseItem(1, targetTokens);
+                WriteClauseItem(1, targetTokens, text => ApplyTableMetadata(text, targetTokens));
 
                 if (_index < _tokens.Count && _tokens[_index].IsKeyword("SET"))
                 {
@@ -423,6 +432,8 @@ namespace SimpleSqlAdjuster
                 {
                     return false;
                 }
+
+                tableText = ApplyTableMetadata(tableText, tableTokens);
 
                 _writer.WriteLine(0, prefixText);
                 _writer.WriteLine(1, tableText);
@@ -767,7 +778,7 @@ namespace SimpleSqlAdjuster
                 }
             }
 
-            private void WriteClauseItem(int indentLevel, List<SqlToken> tokens)
+            private void WriteClauseItem(int indentLevel, List<SqlToken> tokens, Func<string, string> textTransform = null)
             {
                 if (tokens == null || tokens.Count == 0)
                 {
@@ -785,11 +796,213 @@ namespace SimpleSqlAdjuster
                 }
 
                 var text = RenderTokens(tokens);
+                if (textTransform != null)
+                {
+                    text = textTransform(text);
+                }
+
                 if (!string.IsNullOrEmpty(text))
                 {
                     _writer.WriteLine(indentLevel, text);
                 }
             }
+
+            private string ApplyTableMetadata(string text, List<SqlToken> tokens)
+            {
+                if (!_appendTableMetadata || string.IsNullOrEmpty(text) || tokens == null || tokens.Count == 0)
+                {
+                    return text;
+                }
+
+                var tableName = ExtractTableName(tokens);
+                if (string.IsNullOrEmpty(tableName))
+                {
+                    return text;
+                }
+
+                var hasTrailingComma = text.EndsWith(",", StringComparison.Ordinal);
+                var workingText = hasTrailingComma ? text.Substring(0, text.Length - 1).TrimEnd() : text;
+                if (string.IsNullOrEmpty(workingText))
+                {
+                    return text;
+                }
+
+                var builder = new StringBuilder(workingText.Length + tableName.Length + 2);
+                builder.Append(workingText);
+                builder.Append('\t');
+                builder.Append(tableName);
+
+                if (hasTrailingComma)
+                {
+                    builder.Append(',');
+                }
+
+                return builder.ToString();
+            }
+
+            private string ExtractTableName(List<SqlToken> originalTokens)
+            {
+                if (originalTokens == null || originalTokens.Count == 0)
+                {
+                    return null;
+                }
+
+                var filtered = new List<SqlToken>(originalTokens.Count);
+                foreach (var token in originalTokens)
+                {
+                    if (token == null || token.Kind == TokenKind.Comment)
+                    {
+                        continue;
+                    }
+
+                    filtered.Add(token);
+                }
+
+                if (filtered.Count == 0)
+                {
+                    return null;
+                }
+
+                var start = SkipJoinPrefixes(filtered);
+                if (start >= filtered.Count)
+                {
+                    return null;
+                }
+
+                var firstToken = filtered[start];
+                if (firstToken.IsSymbol("("))
+                {
+                    return null;
+                }
+
+                var end = start;
+                var sawNameToken = false;
+                SqlToken previous = null;
+
+                while (end < filtered.Count)
+                {
+                    var current = filtered[end];
+                    if (IsTableNameTerminator(current, previous, sawNameToken))
+                    {
+                        break;
+                    }
+
+                    if (!IsIdentifierLike(current) && !current.IsSymbol("."))
+                    {
+                        if (!sawNameToken)
+                        {
+                            return null;
+                        }
+
+                        break;
+                    }
+
+                    sawNameToken |= IsIdentifierLike(current);
+                    previous = current;
+                    end++;
+                }
+
+                if (!sawNameToken || end <= start)
+                {
+                    return null;
+                }
+
+                var nameTokens = filtered.GetRange(start, end - start);
+                var name = RenderTokens(nameTokens);
+                if (string.IsNullOrEmpty(name))
+                {
+                    return null;
+                }
+
+                return name.TrimEnd('.');
+            }
+
+            private static int SkipJoinPrefixes(List<SqlToken> tokens)
+            {
+                var index = 0;
+                while (index < tokens.Count)
+                {
+                    var token = tokens[index];
+                    if (token == null)
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    if (token.Kind == TokenKind.Keyword && JoinLeadingKeywords.Contains(token.UpperValue))
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                return index;
+            }
+
+            private static bool IsTableNameTerminator(SqlToken token, SqlToken previous, bool sawNameToken)
+            {
+                if (token == null)
+                {
+                    return true;
+                }
+
+                if (token.IsKeyword("AS") ||
+                    token.IsKeyword("ON") ||
+                    token.IsKeyword("USING") ||
+                    token.IsKeyword("WHERE") ||
+                    token.IsKeyword("GROUP") ||
+                    token.IsKeyword("ORDER") ||
+                    token.IsKeyword("HAVING") ||
+                    token.IsKeyword("WITH"))
+                {
+                    return true;
+                }
+
+                if (token.Kind == TokenKind.Keyword && JoinLeadingKeywords.Contains(token.UpperValue))
+                {
+                    return true;
+                }
+
+                if (token.IsSymbol("(") || token.IsSymbol(")") || token.IsSymbol(","))
+                {
+                    return true;
+                }
+
+                if (sawNameToken && IsIdentifierLike(token) && previous != null && !previous.IsSymbol("."))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            private static bool IsIdentifierLike(SqlToken token)
+            {
+                if (token == null)
+                {
+                    return false;
+                }
+
+                return token.Kind == TokenKind.Identifier ||
+                       token.Kind == TokenKind.Keyword ||
+                       token.Kind == TokenKind.StringLiteral ||
+                       token.Kind == TokenKind.Number;
+            }
+
+            private static readonly HashSet<string> JoinLeadingKeywords = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "JOIN",
+                "INNER",
+                "LEFT",
+                "RIGHT",
+                "FULL",
+                "OUTER",
+                "CROSS",
+                "APPLY",
+                "NATURAL"
+            };
 
             private bool TryWriteAssignmentWithSubquery(int indentLevel, List<SqlToken> tokens)
             {
@@ -1054,7 +1267,7 @@ namespace SimpleSqlAdjuster
                 try
                 {
                     var nestedFormatter = new SqlFormatter();
-                    var formattedInner = nestedFormatter.Format(sql, 0);
+                    var formattedInner = nestedFormatter.Format(sql, 0, _options);
                     var innerLines = formattedInner.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
                     foreach (var line in innerLines)
                     {

@@ -13,6 +13,8 @@ namespace SimpleSqlAdjuster
         public int WindowY { get; set; }
 
         public string LastBeforeSql { get; set; }
+
+        public bool OutputAdditionalInfo { get; set; }
     }
 
     internal sealed class UserSettingsService

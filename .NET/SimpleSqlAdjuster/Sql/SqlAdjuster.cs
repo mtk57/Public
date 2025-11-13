@@ -9,7 +9,7 @@ namespace SimpleSqlAdjuster
     {
         private readonly SqlFormatter _formatter = new SqlFormatter();
 
-        public string Process(string input)
+        public string Process(string input, bool appendTableMetadata = false)
         {
             if (string.IsNullOrWhiteSpace(input))
             {
@@ -17,6 +17,9 @@ namespace SimpleSqlAdjuster
             }
 
             var outputs = new List<string>();
+            var formatterOptions = appendTableMetadata
+                ? new SqlFormatterOptions { AppendTableMetadata = true }
+                : null;
             using (var reader = new StringReader(input))
             {
                 string line;
@@ -25,7 +28,7 @@ namespace SimpleSqlAdjuster
                 {
                     if (!string.IsNullOrWhiteSpace(line))
                     {
-                        outputs.Add(ProcessLine(line, lineNumber));
+                        outputs.Add(ProcessLine(line, lineNumber, formatterOptions));
                     }
 
                     lineNumber++;
@@ -35,7 +38,7 @@ namespace SimpleSqlAdjuster
             return string.Join(Environment.NewLine + Environment.NewLine, outputs);
         }
 
-        private string ProcessLine(string rawLine, int lineNumber)
+        private string ProcessLine(string rawLine, int lineNumber, SqlFormatterOptions formatterOptions)
         {
             var trimmed = rawLine.Trim();
             if (string.IsNullOrEmpty(trimmed))
@@ -80,7 +83,7 @@ namespace SimpleSqlAdjuster
             var columnBase = sqlStartIndex + 1;
 
             var expansion = MacroExpander.Expand(sqlText, lineNumber, columnBase);
-            var formatted = _formatter.Format(expansion.Sql, lineNumber);
+            var formatted = _formatter.Format(expansion.Sql, lineNumber, formatterOptions);
             formatted = MacroExpander.ApplyMacroFormatting(formatted, expansion.Macros);
 
             if (string.IsNullOrEmpty(variableName))

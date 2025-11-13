@@ -18,7 +18,11 @@ namespace SimpleSqlAdjuster
 
             var outputs = new List<string>();
             var formatterOptions = appendTableMetadata
-                ? new SqlFormatterOptions { AppendTableMetadata = true }
+                ? new SqlFormatterOptions
+                {
+                    AppendTableMetadata = true,
+                    AppendColumnMetadata = true
+                }
                 : null;
             using (var reader = new StringReader(input))
             {
@@ -84,7 +88,7 @@ namespace SimpleSqlAdjuster
 
             var expansion = MacroExpander.Expand(sqlText, lineNumber, columnBase);
             var formatted = _formatter.Format(expansion.Sql, lineNumber, formatterOptions);
-            formatted = MacroExpander.ApplyMacroFormatting(formatted, expansion.Macros);
+            formatted = MacroExpander.ApplyMacroFormatting(formatted, expansion.Macros, formatterOptions);
 
             if (string.IsNullOrEmpty(variableName))
             {
@@ -238,13 +242,14 @@ namespace SimpleSqlAdjuster
             return new MacroExpansionResult(builder.ToString(), macros);
         }
 
-        public static string ApplyMacroFormatting(string formattedSql, IList<WhereMacroReplacement> macros)
+        public static string ApplyMacroFormatting(string formattedSql, IList<WhereMacroReplacement> macros, SqlFormatterOptions options)
         {
             if (string.IsNullOrEmpty(formattedSql) || macros == null || macros.Count == 0)
             {
                 return formattedSql;
             }
 
+            var appendColumnMetadata = options != null && options.AppendColumnMetadata;
             var lookup = new Dictionary<string, WhereMacroReplacement>(StringComparer.Ordinal);
             foreach (var macro in macros)
             {
@@ -261,9 +266,23 @@ namespace SimpleSqlAdjuster
                 {
                     var nextLine = lines[i + 1];
                     var placeholderKey = nextLine.Trim();
+                    if (appendColumnMetadata)
+                    {
+                        var tabIndex = placeholderKey.IndexOf('\t');
+                        if (tabIndex >= 0)
+                        {
+                            placeholderKey = placeholderKey.Substring(0, tabIndex).TrimEnd();
+                        }
+                    }
+
+                    if (placeholderKey.EndsWith(",", StringComparison.Ordinal))
+                    {
+                        placeholderKey = placeholderKey.Substring(0, placeholderKey.Length - 1).TrimEnd();
+                    }
+
                     if (lookup.TryGetValue(placeholderKey, out var replacement))
                     {
-                        AppendMacroLines(resultLines, replacement);
+                        AppendMacroLines(resultLines, replacement, appendColumnMetadata);
                         i++; // skip placeholder line
                         continue;
                     }
@@ -275,7 +294,7 @@ namespace SimpleSqlAdjuster
             return string.Join(Environment.NewLine, resultLines).TrimEnd();
         }
 
-        private static void AppendMacroLines(List<string> lines, WhereMacroReplacement replacement)
+        private static void AppendMacroLines(List<string> lines, WhereMacroReplacement replacement, bool appendColumnMetadata)
         {
             lines.Add(":_WHERE_" + replacement.MacroType);
             lines.Add("(");
@@ -285,10 +304,31 @@ namespace SimpleSqlAdjuster
             {
                 var segment = replacement.Segments[i];
                 var suffix = i < count - 1 ? "," : string.Empty;
-                lines.Add("  " + segment + suffix);
+                var formattedSegment = appendColumnMetadata
+                    ? FormatMacroSegment(segment, suffix)
+                    : segment + suffix;
+                lines.Add("  " + formattedSegment);
             }
 
             lines.Add(")");
+        }
+
+        private static string FormatMacroSegment(string segment, string suffix)
+        {
+            if (string.IsNullOrEmpty(segment))
+            {
+                return suffix;
+            }
+
+            var tokens = SqlTokenizer.Tokenize(segment);
+            var columnName = ColumnMetadataHelper.ExtractColumnName(tokens, ColumnMetadataContext.MacroSegment);
+            var segmentWithSuffix = segment + suffix;
+            if (columnName == null)
+            {
+                return segmentWithSuffix;
+            }
+
+            return MetadataTextHelper.Append(segmentWithSuffix, columnName);
         }
 
         private static bool TryParseWhereMacro(string sql, int startIndex, int lineNumber, int columnOffset, out WhereMacroParseResult macro)

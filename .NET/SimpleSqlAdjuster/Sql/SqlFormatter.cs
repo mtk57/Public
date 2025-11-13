@@ -7,6 +7,21 @@ namespace SimpleSqlAdjuster
     internal sealed class SqlFormatterOptions
     {
         public bool AppendTableMetadata { get; set; }
+
+        public bool AppendColumnMetadata { get; set; }
+    }
+
+    internal enum ColumnMetadataContext
+    {
+        None,
+        SelectItem,
+        WhereCondition,
+        GroupItem,
+        OrderItem,
+        UpdateSet,
+        InsertColumn,
+        ValuesItem,
+        MacroSegment
     }
 
     internal sealed class SqlFormatter
@@ -105,22 +120,26 @@ namespace SimpleSqlAdjuster
 
         private sealed class StatementFormatter
         {
-            private readonly List<SqlToken> _tokens;
-            private readonly SqlWriter _writer;
-            private readonly SqlFormatterOptions _options;
-            private readonly bool _appendTableMetadata;
-            private int _index;
+        private readonly List<SqlToken> _tokens;
+        private readonly SqlWriter _writer;
+        private readonly SqlFormatterOptions _options;
+        private readonly bool _appendTableMetadata;
+        private readonly bool _appendColumnMetadata;
+        private List<string> _pendingInsertColumnNames;
+        private int _index;
 
-            public StatementFormatter(List<SqlToken> tokens, SqlWriter writer, SqlFormatterOptions options)
-            {
-                _tokens = tokens;
-                _writer = writer;
-                _options = options ?? new SqlFormatterOptions();
-                _appendTableMetadata = _options.AppendTableMetadata;
-            }
+        public StatementFormatter(List<SqlToken> tokens, SqlWriter writer, SqlFormatterOptions options)
+        {
+            _tokens = tokens;
+            _writer = writer;
+            _options = options ?? new SqlFormatterOptions();
+            _appendTableMetadata = _options.AppendTableMetadata;
+            _appendColumnMetadata = _options.AppendColumnMetadata;
+        }
 
             public void Format()
             {
+                _pendingInsertColumnNames = null;
                 while (_index < _tokens.Count)
                 {
                     var token = _tokens[_index];
@@ -161,7 +180,7 @@ namespace SimpleSqlAdjuster
                     {
                         _writer.WriteLine(0, "SELECT");
                         _index++;
-                        FormatCommaSeparatedClause(SelectStops);
+                        FormatCommaSeparatedClause(SelectStops, ColumnMetadataContext.SelectItem);
                         continue;
                     }
 
@@ -185,7 +204,7 @@ namespace SimpleSqlAdjuster
                     {
                         _writer.WriteLine(0, "GROUP BY");
                         _index += 2;
-                        FormatCommaSeparatedClause(GroupStops);
+                        FormatCommaSeparatedClause(GroupStops, ColumnMetadataContext.GroupItem);
                         continue;
                     }
 
@@ -193,7 +212,7 @@ namespace SimpleSqlAdjuster
                     {
                         _writer.WriteLine(0, "ORDER BY");
                         _index += 2;
-                        FormatCommaSeparatedClause(OrderStops);
+                        FormatCommaSeparatedClause(OrderStops, ColumnMetadataContext.OrderItem);
                         continue;
                     }
 
@@ -298,7 +317,7 @@ namespace SimpleSqlAdjuster
                         _writer.WriteLine(1, segment.Operator);
                     }
 
-                    WriteClauseItem(1, segment.Tokens);
+                    WriteClauseItem(1, segment.Tokens, metadataContext: ColumnMetadataContext.WhereCondition);
                 }
             }
 
@@ -342,7 +361,7 @@ namespace SimpleSqlAdjuster
                 {
                     _writer.WriteLine(0, "SET");
                     _index++;
-                    FormatCommaSeparatedClause(UpdateSetStops);
+                    FormatCommaSeparatedClause(UpdateSetStops, ColumnMetadataContext.UpdateSet);
                 }
             }
 
@@ -377,6 +396,7 @@ namespace SimpleSqlAdjuster
                     }
                 }
 
+                var columnListProcessed = false;
                 while (_index < _tokens.Count && _tokens[_index].IsSymbol("("))
                 {
                     var extraTokens = ReadParenthesizedTokens();
@@ -384,6 +404,14 @@ namespace SimpleSqlAdjuster
                     {
                         break;
                     }
+
+                    if (!columnListProcessed && TryWriteInsertColumnList(extraTokens))
+                    {
+                        columnListProcessed = true;
+                        continue;
+                    }
+
+                    columnListProcessed = true;
 
                     if (TryWriteParenthesizedListBlock(0, extraTokens, false))
                     {
@@ -399,6 +427,54 @@ namespace SimpleSqlAdjuster
                     _index++;
                     FormatValuesClause();
                 }
+
+                _pendingInsertColumnNames = null;
+            }
+
+            private bool TryWriteInsertColumnList(List<SqlToken> tokens)
+            {
+                if (!_appendColumnMetadata || tokens == null || tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                var columnNames = new List<string>();
+                var handled = TryWriteParenthesizedListBlock(
+                    0,
+                    tokens,
+                    appendTrailingComma: false,
+                    entryWriter: (index, entryTokens, appendComma) =>
+                    {
+                        var text = RenderTokens(entryTokens);
+                        if (string.IsNullOrEmpty(text))
+                        {
+                            if (appendComma)
+                            {
+                                _writer.WriteLine(1, ",");
+                            }
+
+                            columnNames.Add(string.Empty);
+                            return true;
+                        }
+
+                        if (appendComma)
+                        {
+                            text += ",";
+                        }
+
+                        var columnName = ColumnMetadataHelper.ExtractColumnName(entryTokens, ColumnMetadataContext.InsertColumn);
+                        var line = ApplyColumnMetadata(text, entryTokens, ColumnMetadataContext.InsertColumn, columnName, forceAppendWhenEmpty: true);
+                        columnNames.Add(columnName ?? string.Empty);
+                        _writer.WriteLine(1, line);
+                        return true;
+                    });
+
+                if (handled)
+                {
+                    _pendingInsertColumnNames = columnNames;
+                }
+
+                return handled;
             }
 
             private bool TryWriteInsertHeader(List<SqlToken> headerTokens)
@@ -479,7 +555,7 @@ namespace SimpleSqlAdjuster
 
                     if (depth == 0 && token.IsSymbol(","))
                     {
-                        WriteValuesItem(itemTokens, appendComma: true);
+                        WriteValuesItem(itemTokens, appendComma: true, _pendingInsertColumnNames);
                         itemTokens = new List<SqlToken>();
                         _index++;
                         continue;
@@ -491,11 +567,11 @@ namespace SimpleSqlAdjuster
 
                 if (itemTokens.Count > 0)
                 {
-                    WriteValuesItem(itemTokens, appendComma: false);
+                    WriteValuesItem(itemTokens, appendComma: false, _pendingInsertColumnNames);
                 }
             }
 
-            private void WriteValuesItem(List<SqlToken> tokens, bool appendComma)
+            private void WriteValuesItem(List<SqlToken> tokens, bool appendComma, IReadOnlyList<string> columnNames)
             {
                 if (tokens == null || tokens.Count == 0)
                 {
@@ -505,6 +581,53 @@ namespace SimpleSqlAdjuster
                     }
 
                     return;
+                }
+
+                if (columnNames != null && tokens.Count > 0 && tokens[0].IsSymbol("("))
+                {
+                    var handledWithMetadata = TryWriteParenthesizedListBlock(
+                        0,
+                        tokens,
+                        appendComma,
+                        (index, entryTokens, entryAppendComma) =>
+                        {
+                            var entryText = RenderTokens(entryTokens);
+                            if (string.IsNullOrEmpty(entryText))
+                            {
+                                if (entryAppendComma)
+                                {
+                                    _writer.WriteLine(1, ",");
+                                }
+
+                                return true;
+                            }
+
+                            if (entryAppendComma)
+                            {
+                                entryText += ",";
+                            }
+
+                            string overrideName = null;
+                            if (index < columnNames.Count)
+                            {
+                                overrideName = columnNames[index];
+                            }
+
+                            var forceAppend = overrideName != null;
+                            var line = ApplyColumnMetadata(
+                                entryText,
+                                entryTokens,
+                                ColumnMetadataContext.ValuesItem,
+                                overrideName,
+                                forceAppendWhenEmpty: forceAppend);
+                            _writer.WriteLine(1, line);
+                            return true;
+                        });
+
+                    if (handledWithMetadata)
+                    {
+                        return;
+                    }
                 }
 
                 if (TryWriteParenthesizedListBlock(0, tokens, appendComma))
@@ -558,7 +681,7 @@ namespace SimpleSqlAdjuster
                 return collected;
             }
 
-            private bool TryWriteParenthesizedListBlock(int indentLevel, List<SqlToken> tokens, bool appendTrailingComma)
+            private bool TryWriteParenthesizedListBlock(int indentLevel, List<SqlToken> tokens, bool appendTrailingComma, Func<int, List<SqlToken>, bool, bool> entryWriter = null)
             {
                 if (tokens == null || tokens.Count == 0 || !tokens[0].IsSymbol("("))
                 {
@@ -603,6 +726,11 @@ namespace SimpleSqlAdjuster
                 for (var i = 0; i < entries.Count; i++)
                 {
                     var appendComma = i < entries.Count - 1;
+                    if (entryWriter != null && entryWriter(i, entries[i], appendComma))
+                    {
+                        continue;
+                    }
+
                     WriteParenthesizedEntry(indentLevel + 1, entries[i], appendComma);
                 }
 
@@ -623,7 +751,7 @@ namespace SimpleSqlAdjuster
                 return true;
             }
 
-            private void FormatCommaSeparatedClause(ClauseStopper[] stops)
+            private void FormatCommaSeparatedClause(ClauseStopper[] stops, ColumnMetadataContext metadataContext = ColumnMetadataContext.None)
             {
                 var itemTokens = new List<SqlToken>();
                 var depth = 0;
@@ -663,7 +791,7 @@ namespace SimpleSqlAdjuster
                     if (depth == 0 && token.IsSymbol(","))
                     {
                         itemTokens.Add(token);
-                        WriteClauseItem(1, itemTokens);
+                        WriteClauseItem(1, itemTokens, metadataContext: metadataContext);
 
                         itemTokens = new List<SqlToken>();
                         _index++;
@@ -676,7 +804,7 @@ namespace SimpleSqlAdjuster
 
                 if (itemTokens.Count > 0)
                 {
-                    WriteClauseItem(1, itemTokens);
+                    WriteClauseItem(1, itemTokens, metadataContext: metadataContext);
                 }
             }
 
@@ -778,19 +906,19 @@ namespace SimpleSqlAdjuster
                 }
             }
 
-            private void WriteClauseItem(int indentLevel, List<SqlToken> tokens, Func<string, string> textTransform = null)
+            private void WriteClauseItem(int indentLevel, List<SqlToken> tokens, Func<string, string> textTransform = null, ColumnMetadataContext metadataContext = ColumnMetadataContext.None)
             {
                 if (tokens == null || tokens.Count == 0)
                 {
                     return;
                 }
 
-                if (TryWriteAssignmentWithSubquery(indentLevel, tokens))
+                if (TryWriteAssignmentWithSubquery(indentLevel, tokens, metadataContext))
                 {
                     return;
                 }
 
-                if (TryWriteSpecialExpression(indentLevel, tokens))
+                if (TryWriteSpecialExpression(indentLevel, tokens, metadataContext))
                 {
                     return;
                 }
@@ -801,10 +929,57 @@ namespace SimpleSqlAdjuster
                     text = textTransform(text);
                 }
 
+                text = ApplyColumnMetadata(text, tokens, metadataContext);
+
                 if (!string.IsNullOrEmpty(text))
                 {
                     _writer.WriteLine(indentLevel, text);
                 }
+            }
+
+            private string ApplyColumnMetadata(
+                string text,
+                List<SqlToken> tokens,
+                ColumnMetadataContext context,
+                string overrideColumnName = null,
+                bool forceAppendWhenEmpty = false)
+            {
+                if (!_appendColumnMetadata || context == ColumnMetadataContext.None || string.IsNullOrEmpty(text))
+                {
+                    return text;
+                }
+
+                var trimmed = text.Trim();
+                if (context == ColumnMetadataContext.SelectItem && string.Equals(trimmed, "*", StringComparison.Ordinal))
+                {
+                    return text;
+                }
+
+                if (context == ColumnMetadataContext.ValuesItem && overrideColumnName == null)
+                {
+                    return text;
+                }
+
+                var columnName = overrideColumnName ?? ColumnMetadataHelper.ExtractColumnName(tokens, context);
+                var shouldAppend = !string.IsNullOrEmpty(columnName);
+
+                if (!shouldAppend)
+                {
+                    if (context == ColumnMetadataContext.SelectItem ||
+                        context == ColumnMetadataContext.InsertColumn ||
+                        forceAppendWhenEmpty)
+                    {
+                        shouldAppend = true;
+                    }
+                }
+
+                if (!shouldAppend)
+                {
+                    return text;
+                }
+
+                var metadata = columnName ?? string.Empty;
+                return MetadataTextHelper.Append(text, metadata);
             }
 
             private string ApplyTableMetadata(string text, List<SqlToken> tokens)
@@ -820,24 +995,17 @@ namespace SimpleSqlAdjuster
                     return text;
                 }
 
-                var hasTrailingComma = text.EndsWith(",", StringComparison.Ordinal);
-                var workingText = hasTrailingComma ? text.Substring(0, text.Length - 1).TrimEnd() : text;
+                var workingText = text;
+                if (text.EndsWith(",", StringComparison.Ordinal))
+                {
+                    workingText = text.Substring(0, text.Length - 1).TrimEnd();
+                }
                 if (string.IsNullOrEmpty(workingText))
                 {
                     return text;
                 }
 
-                var builder = new StringBuilder(workingText.Length + tableName.Length + 2);
-                builder.Append(workingText);
-                builder.Append('\t');
-                builder.Append(tableName);
-
-                if (hasTrailingComma)
-                {
-                    builder.Append(',');
-                }
-
-                return builder.ToString();
+                return MetadataTextHelper.Append(text, tableName);
             }
 
             private string ExtractTableName(List<SqlToken> originalTokens)
@@ -1004,7 +1172,7 @@ namespace SimpleSqlAdjuster
                 "NATURAL"
             };
 
-            private bool TryWriteAssignmentWithSubquery(int indentLevel, List<SqlToken> tokens)
+            private bool TryWriteAssignmentWithSubquery(int indentLevel, List<SqlToken> tokens, ColumnMetadataContext metadataContext)
             {
                 if (tokens == null || tokens.Count == 0)
                 {
@@ -1049,7 +1217,9 @@ namespace SimpleSqlAdjuster
                     return false;
                 }
 
-                _writer.WriteLine(indentLevel, leftText + " =");
+                var leftLine = leftText + " =";
+                leftLine = ApplyColumnMetadata(leftLine, leftTokens, metadataContext);
+                _writer.WriteLine(indentLevel, leftLine);
 
                 foreach (var comment in commentTokens)
                 {
@@ -1063,7 +1233,7 @@ namespace SimpleSqlAdjuster
                 return true;
             }
 
-            private bool TryWriteSpecialExpression(int indentLevel, List<SqlToken> tokens)
+            private bool TryWriteSpecialExpression(int indentLevel, List<SqlToken> tokens, ColumnMetadataContext metadataContext)
             {
                 if (tokens == null || tokens.Count == 0)
                 {
@@ -1114,7 +1284,7 @@ namespace SimpleSqlAdjuster
                     return true;
                 }
 
-                if (TryWriteInSubquery(indentLevel, tokens))
+                if (TryWriteInSubquery(indentLevel, tokens, metadataContext))
                 {
                     return true;
                 }
@@ -1176,7 +1346,7 @@ namespace SimpleSqlAdjuster
                 return true;
             }
 
-            private bool TryWriteInSubquery(int indentLevel, List<SqlToken> tokens)
+            private bool TryWriteInSubquery(int indentLevel, List<SqlToken> tokens, ColumnMetadataContext metadataContext)
             {
                 if (tokens == null || tokens.Count == 0)
                 {
@@ -1239,6 +1409,7 @@ namespace SimpleSqlAdjuster
                     }
 
                     var headText = RenderTokens(headTokens);
+                    headText = ApplyColumnMetadata(headText, headTokens, metadataContext);
                     if (!string.IsNullOrEmpty(headText))
                     {
                         _writer.WriteLine(indentLevel, headText);
@@ -2000,6 +2171,304 @@ namespace SimpleSqlAdjuster
             }
 
             return tokens;
+        }
+    }
+
+    internal static class MetadataTextHelper
+    {
+        public static string Append(string text, string metadata)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var trimmed = text.TrimEnd();
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                return text;
+            }
+
+            var hasTrailingComma = trimmed.EndsWith(",", StringComparison.Ordinal);
+            var mainPart = hasTrailingComma
+                ? trimmed.Substring(0, trimmed.Length - 1).TrimEnd()
+                : trimmed;
+
+            if (string.IsNullOrEmpty(mainPart))
+            {
+                return text;
+            }
+
+            var trailingWhitespace = text.Substring(trimmed.Length);
+            var builder = new StringBuilder(mainPart.Length + (metadata?.Length ?? 0) + trailingWhitespace.Length + 2);
+
+            if (string.IsNullOrEmpty(metadata))
+            {
+                builder.Append(mainPart);
+                builder.Append('\t');
+                if (hasTrailingComma)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(trailingWhitespace);
+                return builder.ToString();
+            }
+
+            builder.Append(mainPart);
+            if (hasTrailingComma)
+            {
+                builder.Append(',');
+            }
+
+            builder.Append('\t');
+            builder.Append(metadata);
+            builder.Append(trailingWhitespace);
+            return builder.ToString();
+        }
+    }
+
+    internal static class ColumnMetadataHelper
+    {
+        public static string ExtractColumnName(List<SqlToken> tokens, ColumnMetadataContext context)
+        {
+            if (tokens == null || tokens.Count == 0)
+            {
+                return null;
+            }
+
+            var normalized = NormalizeTokens(tokens);
+            if (normalized.Count == 0)
+            {
+                return null;
+            }
+
+            switch (context)
+            {
+                case ColumnMetadataContext.UpdateSet:
+                case ColumnMetadataContext.WhereCondition:
+                case ColumnMetadataContext.MacroSegment:
+                    return ExtractLeadingIdentifier(normalized);
+                case ColumnMetadataContext.GroupItem:
+                case ColumnMetadataContext.OrderItem:
+                case ColumnMetadataContext.SelectItem:
+                case ColumnMetadataContext.InsertColumn:
+                    return ExtractTrailingIdentifier(normalized);
+                default:
+                    return ExtractTrailingIdentifier(normalized);
+            }
+        }
+
+        private static List<SqlToken> NormalizeTokens(List<SqlToken> tokens)
+        {
+            var result = new List<SqlToken>(tokens.Count);
+            foreach (var token in tokens)
+            {
+                if (token == null || token.Kind == TokenKind.Comment)
+                {
+                    continue;
+                }
+
+                result.Add(token);
+            }
+
+            TrimTrailingComma(result);
+            TrimTrailingAlias(result);
+            return result;
+        }
+
+        private static void TrimTrailingComma(List<SqlToken> tokens)
+        {
+            while (tokens.Count > 0 && tokens[tokens.Count - 1].IsSymbol(","))
+            {
+                tokens.RemoveAt(tokens.Count - 1);
+            }
+        }
+
+        private static void TrimTrailingAlias(List<SqlToken> tokens)
+        {
+            if (tokens.Count < 2)
+            {
+                return;
+            }
+
+            var lastIndex = tokens.Count - 1;
+            var last = tokens[lastIndex];
+            var prev = tokens[lastIndex - 1];
+
+            if (!IsIdentifierLike(last))
+            {
+                return;
+            }
+
+            if (prev != null && prev.Kind == TokenKind.Keyword && string.Equals(prev.UpperValue, "AS", StringComparison.Ordinal))
+            {
+                tokens.RemoveRange(lastIndex - 1, 2);
+                TrimTrailingAlias(tokens);
+                return;
+            }
+
+            if (IsImplicitAliasPreviousToken(prev))
+            {
+                tokens.RemoveAt(lastIndex);
+            }
+        }
+
+        private static bool IsImplicitAliasPreviousToken(SqlToken token)
+        {
+            if (token == null || token.IsSymbol("."))
+            {
+                return false;
+            }
+
+            return token.Kind == TokenKind.Identifier ||
+                   token.Kind == TokenKind.StringLiteral ||
+                   token.Kind == TokenKind.Number ||
+                   token.Kind == TokenKind.Parameter ||
+                   token.IsSymbol(")");
+        }
+
+        private static string ExtractLeadingIdentifier(List<SqlToken> tokens)
+        {
+            for (var i = 0; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+                if (IsComparisonBoundary(token))
+                {
+                    break;
+                }
+
+                if (!IsIdentifierLike(token))
+                {
+                    continue;
+                }
+
+                var sequence = ConsumeIdentifierSequence(tokens, i);
+                if (IsFunctionCall(tokens, sequence.NextIndex))
+                {
+                    i = sequence.NextIndex - 1;
+                    continue;
+                }
+
+                return sequence.LastIdentifier;
+            }
+
+            return null;
+        }
+
+        private static string ExtractTrailingIdentifier(List<SqlToken> tokens)
+        {
+            string candidate = null;
+
+            for (var i = 0; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+                if (!IsIdentifierLike(token))
+                {
+                    continue;
+                }
+
+                var sequence = ConsumeIdentifierSequence(tokens, i);
+                if (IsFunctionCall(tokens, sequence.NextIndex))
+                {
+                    i = sequence.NextIndex - 1;
+                    continue;
+                }
+
+                candidate = sequence.LastIdentifier;
+                i = sequence.NextIndex - 1;
+            }
+
+            return candidate;
+        }
+
+        private static bool IsComparisonBoundary(SqlToken token)
+        {
+            if (token == null)
+            {
+                return false;
+            }
+
+            if (token.Kind == TokenKind.Symbol)
+            {
+                if (token.Value == "=" ||
+                    token.Value == "<" ||
+                    token.Value == ">" ||
+                    token.Value == "<=" ||
+                    token.Value == ">=" ||
+                    token.Value == "<>" ||
+                    token.Value == "!=")
+                {
+                    return true;
+                }
+            }
+
+            if (token.Kind == TokenKind.Keyword)
+            {
+                if (string.Equals(token.UpperValue, "IN", StringComparison.Ordinal) ||
+                    string.Equals(token.UpperValue, "BETWEEN", StringComparison.Ordinal) ||
+                    string.Equals(token.UpperValue, "LIKE", StringComparison.Ordinal) ||
+                    string.Equals(token.UpperValue, "IS", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsIdentifierLike(SqlToken token)
+        {
+            return token != null && token.Kind == TokenKind.Identifier;
+        }
+
+        private static bool IsFunctionCall(List<SqlToken> tokens, int index)
+        {
+            var nextToken = GetNextNonCommentToken(tokens, index);
+            return nextToken != null && nextToken.IsSymbol("(");
+        }
+
+        private static SqlToken GetNextNonCommentToken(List<SqlToken> tokens, int startIndex)
+        {
+            for (var i = startIndex; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+                if (token == null || token.Kind == TokenKind.Comment)
+                {
+                    continue;
+                }
+
+                return token;
+            }
+
+            return null;
+        }
+
+        private static IdentifierSequence ConsumeIdentifierSequence(List<SqlToken> tokens, int startIndex)
+        {
+            var lastIdentifier = tokens[startIndex].Value;
+            var index = startIndex + 1;
+
+            while (index + 1 < tokens.Count && tokens[index].IsSymbol(".") && IsIdentifierLike(tokens[index + 1]))
+            {
+                lastIdentifier = tokens[index + 1].Value;
+                index += 2;
+            }
+
+            return new IdentifierSequence(index, lastIdentifier);
+        }
+
+        private readonly struct IdentifierSequence
+        {
+            public IdentifierSequence(int nextIndex, string lastIdentifier)
+            {
+                NextIndex = nextIndex;
+                LastIdentifier = lastIdentifier;
+            }
+
+            public int NextIndex { get; }
+
+            public string LastIdentifier { get; }
         }
     }
 }

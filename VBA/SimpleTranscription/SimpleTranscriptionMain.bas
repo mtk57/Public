@@ -1,7 +1,7 @@
 Attribute VB_Name = "SimpleTranscriptionMain"
 Option Explicit
 
-Private Const VER = "1.1.1"
+Private Const VER = "1.1.2"
 
 Private Enum NotFoundBehavior
     NotFoundIgnore = 0
@@ -60,6 +60,7 @@ Private Const SETTING_CASE_SENSITIVE As String = "H9"
 Private Const SETTING_ALLOW_PARTIAL As String = "H10"
 Private Const SETTING_DISTINGUISH_WIDTH As String = "H11"
 Private Const SETTING_AS_COMMENT As String = "H12"
+Private Const LOG_EMPTY_DESTINATION As Boolean = True 'Detailed trace log for empty destination cells (toggle)
 
 Public Sub Run_Click()
     Const PROC_NAME As String = "Run_Click"
@@ -470,6 +471,9 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
     End If
 
     SimpleTranscriptionLogging.WriteLog "çs" & instruction.rowIndex & " : ì]ãLêÊ " & destinationCell.Address(False, False) & " Ç÷èëÇ´çûÇ›Ç‹ÇµÇΩ"
+    If ShouldLogEmptyDestination(config, transferValue, destinationCell) Then
+        LogEmptyDestinationTrace instruction, destSheet, searchValue, transferValue, sourceRowIndex, targetPosition, destinationCell
+    End If
 End Sub
 
 
@@ -537,6 +541,91 @@ Private Sub ApplyAsComment(ByVal destinationCell As Range, ByVal transferValue A
     On Error GoTo 0
 End Sub
 
+
+
+Private Function ShouldLogEmptyDestination(ByRef config As AppConfig, ByVal transferValue As Variant, ByVal destinationCell As Range) As Boolean
+    If LOG_EMPTY_DESTINATION = False Then Exit Function
+    If SimpleTranscriptionLogging.DEBUG_LOG_ENABLED = False Then Exit Function
+    If destinationCell Is Nothing Then Exit Function
+    If config.WriteAsComment Then Exit Function
+    If IsBlankValue(transferValue) Then Exit Function
+    Dim destValue As Variant
+    destValue = destinationCell.Value
+    If IsBlankValue(destValue) = False Then Exit Function
+    ShouldLogEmptyDestination = True
+End Function
+
+Private Sub LogEmptyDestinationTrace(ByRef instruction As TransferInstruction, ByVal destSheet As Worksheet, ByVal searchValue As Variant, ByVal transferValue As Variant, ByVal sourceRowIndex As Long, ByRef targetPosition As CellPosition, ByVal destinationCell As Range)
+    Dim sourceSearchCell As String
+    sourceSearchCell = instruction.SourceSheetName & "!" & FormatCellAddress(sourceRowIndex, instruction.SourceSearchColumn)
+    Dim sourceTransferCell As String
+    sourceTransferCell = instruction.SourceSheetName & "!" & FormatCellAddress(sourceRowIndex, instruction.SourceTransferColumn)
+    Dim destSearchRow As Long
+    Dim destSearchColumn As Long
+    If instruction.DestSearch.IsRow Then
+        destSearchRow = instruction.DestSearch.Index
+        destSearchColumn = targetPosition.ColumnIndex
+    Else
+        destSearchRow = targetPosition.RowIndex
+        destSearchColumn = instruction.DestSearch.Index
+    End If
+    Dim destSearchCell As String
+    destSearchCell = destSheet.Name & "!" & FormatCellAddress(destSearchRow, destSearchColumn)
+    Dim destSearchValue As Variant
+    destSearchValue = destSheet.Cells(destSearchRow, destSearchColumn).Value
+    Dim destWriteCell As String
+    destWriteCell = destSheet.Name & "!" & destinationCell.Address(False, False)
+    Dim destValueAfter As Variant
+    destValueAfter = destinationCell.Value
+    SimpleTranscriptionLogging.WriteLog "[EmptyTrace] row=" & instruction.rowIndex & ", destination=" & destWriteCell & " stayed blank"
+    SimpleTranscriptionLogging.WriteLog "    SourceFile : " & instruction.SourcePath
+    SimpleTranscriptionLogging.WriteLog "    SourceSearch : " & sourceSearchCell & " = " & DescribeVariantValue(searchValue)
+    SimpleTranscriptionLogging.WriteLog "    SourceTransfer : " & sourceTransferCell & " = " & DescribeVariantValue(transferValue)
+    SimpleTranscriptionLogging.WriteLog "    DestFile : " & instruction.DestPath
+    SimpleTranscriptionLogging.WriteLog "    DestSearchHit : " & destSearchCell & " = " & DescribeVariantValue(destSearchValue)
+    SimpleTranscriptionLogging.WriteLog "    DestWriteCell : " & destWriteCell & " = " & DescribeVariantValue(destValueAfter)
+    SimpleTranscriptionLogging.WriteLog "    DestAxis(Search/Transfer) : " & DescribeDestinationAxis(instruction.DestSearch) & " / " & DescribeDestinationAxis(instruction.DestTransfer)
+    SimpleTranscriptionLogging.WriteLog "    SourceLoopRow : " & sourceRowIndex & ", TargetRow/Col : " & targetPosition.RowIndex & "/" & targetPosition.ColumnIndex
+End Sub
+
+Private Function FormatCellAddress(ByVal rowIndex As Long, ByVal columnIndex As Long) As String
+    If rowIndex <= 0 Or columnIndex <= 0 Then
+        FormatCellAddress = "R" & CStr(rowIndex) & "C" & CStr(columnIndex)
+        Exit Function
+    End If
+    Dim letter As String
+    letter = ColumnNumberToLetter(columnIndex)
+    If Len(letter) > 0 Then
+        FormatCellAddress = letter & CStr(rowIndex)
+    Else
+        FormatCellAddress = "R" & CStr(rowIndex) & "C" & CStr(columnIndex)
+    End If
+End Function
+
+Private Function DescribeVariantValue(ByVal valueData As Variant) As String
+    Dim typeLabel As String
+    typeLabel = TypeName(valueData)
+    Dim resultText As String
+    Select Case VarType(valueData)
+        Case vbError
+            resultText = "#ERROR"
+        Case vbNull
+            resultText = "<Null>"
+        Case vbEmpty
+            resultText = "<Empty>"
+        Case vbString
+            resultText = """" & valueData & """"
+        Case Else
+            On Error Resume Next
+            resultText = CStr(valueData)
+            If Err.Number <> 0 Then
+                resultText = "<ConversionError>"
+                Err.Clear
+            End If
+            On Error GoTo 0
+    End Select
+    DescribeVariantValue = resultText & " [" & typeLabel & "]"
+End Function
 Private Function GetOrOpenWorkbook(ByVal fileNameOrPath As String, ByVal openedByMacro As Object) As Workbook
     Dim fullPath As String
     fullPath = ResolveWorkbookPath(fileNameOrPath)
@@ -620,5 +709,3 @@ Private Function BuildLogPath() As String
     If Len(basePath) = 0 Then Exit Function
     BuildLogPath = basePath & Application.PathSeparator & "SimpleTranscription_debug.log"
 End Function
-
-

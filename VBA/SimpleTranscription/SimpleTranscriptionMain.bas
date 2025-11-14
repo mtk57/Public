@@ -1,7 +1,7 @@
 Attribute VB_Name = "SimpleTranscriptionMain"
 Option Explicit
 
-Private Const VER = "1.1.2"
+Private Const VER = "1.1.3"
 
 Private Enum NotFoundBehavior
     NotFoundIgnore = 0
@@ -388,45 +388,43 @@ Private Function DescribeDestinationAxis(ByRef axis As DestinationAxis) As Strin
     End If
 End Function
 
-Private Function FindDestinationPosition(ByVal destSheet As Worksheet, ByRef searchAxis As DestinationAxis, ByVal searchValue As Variant, ByRef config As AppConfig) As CellPosition
-    Dim position As CellPosition
+Private Function FindDestinationCells(ByVal destSheet As Worksheet, ByRef searchAxis As DestinationAxis, ByVal searchValue As Variant, ByRef config As AppConfig) As Collection
+    Dim results As Collection
+    Set results = New Collection
+    Dim candidate As Variant
 
     If searchAxis.IsRow Then
-        Dim targetColumn As Long
-        targetColumn = FindDestinationColumn(destSheet, searchAxis.Index, searchValue, config)
-        If targetColumn <> 0 Then
-            position.RowIndex = searchAxis.Index
-            position.ColumnIndex = targetColumn
+        Dim targetRow As Long
+        targetRow = searchAxis.Index
+        If targetRow > 0 Then
+            Dim lastColumn As Long
+            lastColumn = GetLastUsedColumn(destSheet, targetRow)
+            Dim columnIndex As Long
+            For columnIndex = 1 To lastColumn
+                candidate = destSheet.Cells(targetRow, columnIndex).Value
+                If StringsMatch(searchValue, candidate, config.AllowPartialMatch, config.CaseSensitive, config.DistinguishWidth) Then
+                    results.Add destSheet.Cells(targetRow, columnIndex)
+                End If
+            Next columnIndex
         End If
     Else
-        Dim targetRow As Long
-        targetRow = FindDestinationRow(destSheet, searchAxis.Index, searchValue, config)
-        If targetRow <> 0 Then
-            position.RowIndex = targetRow
-            position.ColumnIndex = searchAxis.Index
+        Dim targetColumn As Long
+        targetColumn = searchAxis.Index
+        If targetColumn > 0 Then
+            Dim lastRow As Long
+            lastRow = GetLastUsedRow(destSheet, targetColumn)
+            Dim rowIndex As Long
+            For rowIndex = 1 To lastRow
+                candidate = destSheet.Cells(rowIndex, targetColumn).Value
+                If StringsMatch(searchValue, candidate, config.AllowPartialMatch, config.CaseSensitive, config.DistinguishWidth) Then
+                    results.Add destSheet.Cells(rowIndex, targetColumn)
+                End If
+            Next rowIndex
         End If
     End If
 
-    FindDestinationPosition = position
+    Set FindDestinationCells = results
 End Function
-
-Private Function FindDestinationColumn(ByVal destSheet As Worksheet, ByVal rowIndex As Long, ByVal searchValue As Variant, ByRef config As AppConfig) As Long
-    If rowIndex <= 0 Then Exit Function
-
-    Dim lastColumn As Long
-    lastColumn = GetLastUsedColumn(destSheet, rowIndex)
-
-    Dim columnIndex As Long
-    For columnIndex = 1 To lastColumn
-        Dim candidate As Variant
-        candidate = destSheet.Cells(rowIndex, columnIndex).Value
-        If StringsMatch(searchValue, candidate, config.AllowPartialMatch, config.CaseSensitive, config.DistinguishWidth) Then
-            FindDestinationColumn = columnIndex
-            Exit Function
-        End If
-    Next columnIndex
-End Function
-
 
 Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config As AppConfig, ByVal openedByMacro As Object, ByVal searchValue As Variant, ByVal transferValue As Variant, ByVal sourceRowIndex As Long)
     Dim destBook As Workbook
@@ -435,10 +433,10 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
     Dim destSheet As Worksheet
     Set destSheet = GetWorksheetByName(destBook, instruction.DestSheetName, "転記先", instruction.rowIndex)
 
-    Dim targetPosition As CellPosition
-    targetPosition = FindDestinationPosition(destSheet, instruction.DestSearch, searchValue, config)
+    Dim targetCells As Collection
+    Set targetCells = FindDestinationCells(destSheet, instruction.DestSearch, searchValue, config)
 
-    If targetPosition.RowIndex = 0 Or targetPosition.ColumnIndex = 0 Then
+    If targetCells Is Nothing Or targetCells.Count = 0 Then
         Dim message As String
         message = "行" & instruction.rowIndex & " : " & _
                   "転記先シート """ & destSheet.Name & """ の" & DescribeDestinationAxis(instruction.DestSearch) & "で一致が見つかりません。" & _
@@ -452,28 +450,35 @@ Private Sub ApplyTransfer(ByRef instruction As TransferInstruction, ByRef config
 
     Dim destRow As Long
     Dim destColumn As Long
-
-    If instruction.DestTransfer.IsRow Then
-        destRow = instruction.DestTransfer.Index
-        destColumn = targetPosition.ColumnIndex
-    Else
-        destRow = targetPosition.RowIndex
-        destColumn = instruction.DestTransfer.Index
-    End If
-
     Dim destinationCell As Range
-    Set destinationCell = destSheet.Cells(destRow, destColumn)
+    Dim matchCell As Range
 
-    If config.WriteAsComment Then
-        ApplyAsComment destinationCell, transferValue
-    Else
-        destinationCell.Value = transferValue
-    End If
+    For Each matchCell In targetCells
+        Dim targetPosition As CellPosition
+        targetPosition.RowIndex = matchCell.Row
+        targetPosition.ColumnIndex = matchCell.Column
 
-    SimpleTranscriptionLogging.WriteLog "行" & instruction.rowIndex & " : 転記先 " & destinationCell.Address(False, False) & " へ書き込みました"
-    If ShouldLogEmptyDestination(config, transferValue, destinationCell) Then
-        LogEmptyDestinationTrace instruction, destSheet, searchValue, transferValue, sourceRowIndex, targetPosition, destinationCell
-    End If
+        If instruction.DestTransfer.IsRow Then
+            destRow = instruction.DestTransfer.Index
+            destColumn = matchCell.Column
+        Else
+            destRow = matchCell.Row
+            destColumn = instruction.DestTransfer.Index
+        End If
+
+        Set destinationCell = destSheet.Cells(destRow, destColumn)
+
+        If config.WriteAsComment Then
+            ApplyAsComment destinationCell, transferValue
+        Else
+            destinationCell.Value = transferValue
+        End If
+
+        SimpleTranscriptionLogging.WriteLog "行" & instruction.rowIndex & " : 転記先 " & destinationCell.Address(False, False) & " へ書き込みました"
+        If ShouldLogEmptyDestination(config, transferValue, destinationCell) Then
+            LogEmptyDestinationTrace instruction, destSheet, searchValue, transferValue, sourceRowIndex, targetPosition, destinationCell
+        End If
+    Next matchCell
 End Sub
 
 
@@ -504,20 +509,6 @@ Private Function GetLastUsedColumn(ByVal targetSheet As Worksheet, ByVal rowInde
 End Function
 
 
-Private Function FindDestinationRow(ByVal destSheet As Worksheet, ByVal columnIndex As Long, ByVal searchValue As Variant, ByRef config As AppConfig) As Long
-    Dim lastRow As Long
-    lastRow = GetLastUsedRow(destSheet, columnIndex)
-    
-    Dim rowIndex As Long
-    For rowIndex = 1 To lastRow
-        Dim candidate As Variant
-        candidate = destSheet.Cells(rowIndex, columnIndex).Value
-        If StringsMatch(searchValue, candidate, config.AllowPartialMatch, config.CaseSensitive, config.DistinguishWidth) Then
-            FindDestinationRow = rowIndex
-            Exit Function
-        End If
-    Next rowIndex
-End Function
 
 Private Sub ApplyAsComment(ByVal destinationCell As Range, ByVal transferValue As Variant)
     On Error Resume Next

@@ -38,6 +38,7 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.pbProgress = new System.Windows.Forms.ProgressBar();
             this.lblProgressStatus = new System.Windows.Forms.Label();
+            this.chkStepCount = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // label1
@@ -79,7 +80,7 @@
             this.cmbExt.FormattingEnabled = true;
             this.cmbExt.Items.AddRange(new object[] {
             "Java"});
-            this.cmbExt.Location = new System.Drawing.Point(25, 101);
+            this.cmbExt.Location = new System.Drawing.Point(25, 88);
             this.cmbExt.Name = "cmbExt";
             this.cmbExt.Size = new System.Drawing.Size(81, 20);
             this.cmbExt.TabIndex = 6;
@@ -87,7 +88,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(23, 86);
+            this.label2.Location = new System.Drawing.Point(23, 73);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(65, 12);
             this.label2.TabIndex = 7;
@@ -96,7 +97,7 @@
             // btnCreate
             // 
             this.btnCreate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCreate.Location = new System.Drawing.Point(300, 128);
+            this.btnCreate.Location = new System.Drawing.Point(283, 133);
             this.btnCreate.Name = "btnCreate";
             this.btnCreate.Size = new System.Drawing.Size(103, 29);
             this.btnCreate.TabIndex = 9;
@@ -106,7 +107,7 @@
             // chkEnableLogging
             // 
             this.chkEnableLogging.AutoSize = true;
-            this.chkEnableLogging.Location = new System.Drawing.Point(25, 135);
+            this.chkEnableLogging.Location = new System.Drawing.Point(242, 88);
             this.chkEnableLogging.Name = "chkEnableLogging";
             this.chkEnableLogging.Size = new System.Drawing.Size(200, 16);
             this.chkEnableLogging.TabIndex = 8;
@@ -117,7 +118,7 @@
             // 
             this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnCancel.Enabled = false;
-            this.btnCancel.Location = new System.Drawing.Point(423, 128);
+            this.btnCancel.Location = new System.Drawing.Point(406, 133);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(103, 29);
             this.btnCancel.TabIndex = 10;
@@ -143,11 +144,22 @@
             this.lblProgressStatus.Size = new System.Drawing.Size(0, 12);
             this.lblProgressStatus.TabIndex = 12;
             // 
+            // chkStepCount
+            // 
+            this.chkStepCount.AutoSize = true;
+            this.chkStepCount.Location = new System.Drawing.Point(143, 88);
+            this.chkStepCount.Name = "chkStepCount";
+            this.chkStepCount.Size = new System.Drawing.Size(93, 16);
+            this.chkStepCount.TabIndex = 13;
+            this.chkStepCount.Text = "ステップカウント";
+            this.chkStepCount.UseVisualStyleBackColor = true;
+            // 
             // MethodListForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(736, 228);
+            this.Controls.Add(this.chkStepCount);
             this.Controls.Add(this.lblProgressStatus);
             this.Controls.Add(this.pbProgress);
             this.Controls.Add(this.btnCancel);
@@ -179,5 +191,6 @@
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.ProgressBar pbProgress;
         private System.Windows.Forms.Label lblProgressStatus;
+        private System.Windows.Forms.CheckBox chkStepCount;
     }
 }

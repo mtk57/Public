@@ -5,13 +5,20 @@ namespace SimpleMethodCallListCreator
 {
     public class MethodDefinitionDetail
     {
-        public MethodDefinitionDetail(string filePath, string packageName, string className, string methodSignature, int lineNumber = -1)
+        public MethodDefinitionDetail(
+            string filePath,
+            string packageName,
+            string className,
+            string methodSignature,
+            int lineNumber = -1,
+            int stepCount = -1)
         {
             FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             PackageName = packageName ?? string.Empty;
             ClassName = className ?? string.Empty;
             MethodSignature = methodSignature ?? string.Empty;
             LineNumber = lineNumber > 0 ? lineNumber : -1;
+            StepCount = stepCount >= 0 ? stepCount : -1;
         }
 
         public string FilePath { get; }
@@ -28,5 +35,7 @@ namespace SimpleMethodCallListCreator
         public string MethodSignature { get; }
 
         public int LineNumber { get; }
+
+        public int StepCount { get; }
     }
 }

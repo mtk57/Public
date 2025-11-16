@@ -105,6 +105,7 @@ namespace SimpleMethodCallListCreator
             }
 
             chkEnableLogging.Checked = _settings.EnableMethodListLogging;
+            chkStepCount.Checked = _settings.EnableMethodListStepCount;
         }
 
         private void BtnBrowse_Click(object sender, EventArgs e)
@@ -170,6 +171,7 @@ namespace SimpleMethodCallListCreator
 
             var files = EnumerateSourceFiles(directoryPath, extension).ToList();
             var loggingEnabled = IsLoggingEnabled;
+            var includeStepCount = IsStepCountEnabled;
 
             if (files.Count == 0)
             {
@@ -205,7 +207,7 @@ namespace SimpleMethodCallListCreator
             try
             {
                 result = await Task.Run(
-                    () => ProcessMethodList(files, loggingEnabled, token, progress),
+                    () => ProcessMethodList(files, loggingEnabled, includeStepCount, token, progress),
                     token);
 
                 UpdateDirectoryHistory(directoryPath);
@@ -308,7 +310,7 @@ namespace SimpleMethodCallListCreator
             return Path.Combine(baseDirectory, fileName);
         }
 
-        private void WriteResults(string exportPath, IEnumerable<MethodDefinitionDetail> results)
+        private void WriteResults(string exportPath, IEnumerable<MethodDefinitionDetail> results, bool includeStepCount)
         {
             if (string.IsNullOrEmpty(exportPath))
             {
@@ -326,6 +328,10 @@ namespace SimpleMethodCallListCreator
             if (_exportMode == MethodListExportMode.RowNumber)
             {
                 headers.Add("RowNum");
+            }
+            if (includeStepCount)
+            {
+                headers.Add("Steps");
             }
 
             using (var writer = new StreamWriter(exportPath, false, Encoding.UTF8))
@@ -347,6 +353,14 @@ namespace SimpleMethodCallListCreator
                             ? detail.LineNumber.ToString(CultureInfo.InvariantCulture)
                             : string.Empty;
                         fields.Add(lineNumber);
+                    }
+
+                    if (includeStepCount)
+                    {
+                        var steps = detail?.StepCount >= 0
+                            ? detail.StepCount.ToString(CultureInfo.InvariantCulture)
+                            : string.Empty;
+                        fields.Add(steps);
                     }
                     writer.WriteLine(string.Join("\t", fields));
                 }
@@ -414,6 +428,7 @@ namespace SimpleMethodCallListCreator
                 if (_settings != null)
                 {
                     _settings.EnableMethodListLogging = chkEnableLogging.Checked;
+                    _settings.EnableMethodListStepCount = chkStepCount.Checked;
 
                     var directoryHistory = new List<string>();
                     foreach (var item in cmbDirPath.Items)
@@ -500,6 +515,7 @@ namespace SimpleMethodCallListCreator
         private MethodListProcessResult ProcessMethodList(
             List<string> files,
             bool loggingEnabled,
+            bool includeStepCount,
             CancellationToken token,
             IProgress<MethodListProgressStatus> progress)
         {
@@ -521,7 +537,7 @@ namespace SimpleMethodCallListCreator
                         MethodListLogger.LogInfo($"解析開始: {file}");
                     }
 
-                    var definitions = JavaMethodCallAnalyzer.ExtractMethodDefinitions(file);
+                    var definitions = JavaMethodCallAnalyzer.ExtractMethodDefinitions(file, includeStepCount);
                     results.AddRange(definitions);
 
                     if (loggingEnabled)
@@ -558,7 +574,7 @@ namespace SimpleMethodCallListCreator
             token.ThrowIfCancellationRequested();
 
             var exportPath = BuildExportPath();
-            WriteResults(exportPath, results);
+            WriteResults(exportPath, results, includeStepCount);
 
             return new MethodListProcessResult(exportPath, successCount, failureCount, failedFiles);
         }
@@ -707,6 +723,11 @@ namespace SimpleMethodCallListCreator
         private bool IsLoggingEnabled
         {
             get { return chkEnableLogging != null && chkEnableLogging.Checked; }
+        }
+
+        private bool IsStepCountEnabled
+        {
+            get { return chkStepCount != null && chkStepCount.Checked; }
         }
 
         private void UpdateTitleForMode()

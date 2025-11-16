@@ -71,5 +71,8 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public bool EnableMethodListLogging { get; set; }
+
+        [DataMember]
+        public bool EnableMethodListStepCount { get; set; }
     }
 }

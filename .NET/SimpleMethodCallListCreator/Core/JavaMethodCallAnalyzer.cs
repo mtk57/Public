@@ -55,7 +55,7 @@ namespace SimpleMethodCallListCreator
             return results;
         }
 
-        public static List<MethodDefinitionDetail> ExtractMethodDefinitions(string filePath)
+        public static List<MethodDefinitionDetail> ExtractMethodDefinitions(string filePath, bool includeStepCount = false)
         {
             ValidateJavaFile(filePath);
 
@@ -78,7 +78,14 @@ namespace SimpleMethodCallListCreator
                 {
                     var signature = BuildMethodSignature(cleanedText, method);
                     var lineNumber = lineIndexer.GetLineNumber(method.SignatureIndex);
-                    results.Add(new MethodDefinitionDetail(filePath, packageName, javaClass.Name, signature, lineNumber));
+                    var stepCount = includeStepCount ? CountMethodSteps(cleanedText, method) : -1;
+                    results.Add(new MethodDefinitionDetail(
+                        filePath,
+                        packageName,
+                        javaClass.Name,
+                        signature,
+                        lineNumber,
+                        stepCount));
                 }
             }
 
@@ -558,6 +565,106 @@ namespace SimpleMethodCallListCreator
             }
 
             return results;
+        }
+
+        private static int CountMethodSteps(string text, JavaMethodInfo method)
+        {
+            if (method == null)
+            {
+                return -1;
+            }
+
+            var start = method.SignatureStartIndex >= 0 ? method.SignatureStartIndex : method.SignatureIndex;
+            if (start < 0 || start >= text.Length)
+            {
+                return -1;
+            }
+
+            var end = method.BodyEndIndex;
+            if (end < start)
+            {
+                return -1;
+            }
+
+            if (end >= text.Length)
+            {
+                end = text.Length - 1;
+            }
+
+            var length = (end - start) + 1;
+            if (length <= 0)
+            {
+                return -1;
+            }
+
+            var segment = text.Substring(start, length);
+            return CountLogicalLines(segment);
+        }
+
+        private static int CountLogicalLines(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            var state = new StringState();
+            var parenDepth = 0;
+            var hasContent = false;
+            var count = 0;
+
+            for (var i = 0; i < text.Length; i++)
+            {
+                var current = text[i];
+                UpdateStringState(text, i, state);
+                var inString = state.InString;
+
+                if (!inString)
+                {
+                    if (current == '(')
+                    {
+                        parenDepth++;
+                    }
+                    else if (current == ')')
+                    {
+                        if (parenDepth > 0)
+                        {
+                            parenDepth--;
+                        }
+                    }
+                }
+
+                if (current == '\r')
+                {
+                    continue;
+                }
+
+                if (current == '\n')
+                {
+                    if (parenDepth == 0)
+                    {
+                        if (hasContent)
+                        {
+                            count++;
+                            hasContent = false;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (!char.IsWhiteSpace(current))
+                {
+                    hasContent = true;
+                }
+            }
+
+            if (hasContent)
+            {
+                count++;
+            }
+
+            return count;
         }
 
         private static IEnumerable<MethodCallParseResult> EnumerateMethodCalls(string text,

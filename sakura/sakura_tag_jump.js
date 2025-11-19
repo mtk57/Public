@@ -7,21 +7,21 @@ var shell = new ActiveXObject("WScript.Shell");
 if (!fso.FileExists(EXE_PATH)) {
     shell.Popup("実行ファイルが見つかりません:\n" + EXE_PATH, 0, "エラー", 16);
 } else {
-    // 以降の処理...
-
     // 現在行の文字列を取得
     var lineText = GetLineStr(0);
 
     // 末尾の改行文字を削除
     lineText = lineText.replace(/\r?\n$/, '');
 
-    // ダブルクォーテーションをエスケープ（"を\"に変換）
+    // ダブルクォーテーションをエスケープ
     lineText = lineText.replace(/"/g, '\\"');
 
-    // コマンドライン引数として渡す（ダブルクォートで囲む）
-    var args = '"' + lineText + '"'
+    // コマンドライン引数
+    var args = '"' + lineText + '"';
 
-    // ①現在のファイルパスと行番号をワークファイルに書き出す
+    // ---------------------------------------------------------
+    // スタック処理：現在のファイルパスと行番号を追記する
+    // ---------------------------------------------------------
     var currentFilePath = ExpandParameter("$F"); // 現在のファイルパス
     var currentLineNo = ExpandParameter("$y");   // 現在の行番号
     
@@ -29,8 +29,18 @@ if (!fso.FileExists(EXE_PATH)) {
     var tempFolder = shell.ExpandEnvironmentStrings("%TEMP%");
     var workFile = tempFolder + "\\SimpleMethodCallListCreator.tmp";
     
-    // ファイルに書き出し（タブ区切り）
-    var file = fso.CreateTextFile(workFile, true);
+    var file;
+    // ファイルが存在するかチェック
+    if (fso.FileExists(workFile)) {
+        // 存在する場合は「追記モード(8)」で開く
+        // 引数: ファイルパス, IOMode(8=Append), Create(false), Format(0=ASCII)
+        file = fso.OpenTextFile(workFile, 8, false, 0);
+    } else {
+        // 存在しない場合は新規作成
+        file = fso.CreateTextFile(workFile, true);
+    }
+
+    // ファイルに書き出し（タブ区切り）して改行
     file.WriteLine(currentFilePath + "\t" + currentLineNo);
     file.Close();
     

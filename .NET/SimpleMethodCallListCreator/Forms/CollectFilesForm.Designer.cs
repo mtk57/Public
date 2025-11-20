@@ -45,19 +45,22 @@
             this.txtCollectDirPath = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.btnRefCollectDirPath = new System.Windows.Forms.Button();
+            this.txtSrcRootDirPath = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.btnRefSrcRootDirPath = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblStatus
             // 
             this.lblStatus.AutoSize = true;
-            this.lblStatus.Location = new System.Drawing.Point(537, 330);
+            this.lblStatus.Location = new System.Drawing.Point(537, 383);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(0, 12);
             this.lblStatus.TabIndex = 49;
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(381, 288);
+            this.btnCancel.Location = new System.Drawing.Point(381, 341);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 33);
             this.btnCancel.TabIndex = 48;
@@ -68,7 +71,7 @@
             // 
             this.pbProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pbProgress.Location = new System.Drawing.Point(269, 332);
+            this.pbProgress.Location = new System.Drawing.Point(269, 385);
             this.pbProgress.Name = "pbProgress";
             this.pbProgress.Size = new System.Drawing.Size(266, 10);
             this.pbProgress.TabIndex = 47;
@@ -78,7 +81,7 @@
             // 
             this.lblFailed.AutoSize = true;
             this.lblFailed.ForeColor = System.Drawing.Color.Red;
-            this.lblFailed.Location = new System.Drawing.Point(471, 298);
+            this.lblFailed.Location = new System.Drawing.Point(471, 351);
             this.lblFailed.Name = "lblFailed";
             this.lblFailed.Size = new System.Drawing.Size(88, 12);
             this.lblFailed.TabIndex = 45;
@@ -87,7 +90,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(146, 143);
+            this.label4.Location = new System.Drawing.Point(146, 196);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(318, 12);
             this.label4.TabIndex = 39;
@@ -96,7 +99,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(37, 143);
+            this.label3.Location = new System.Drawing.Point(37, 196);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(74, 12);
             this.label3.TabIndex = 38;
@@ -104,14 +107,14 @@
             // 
             // txtStartMethod
             // 
-            this.txtStartMethod.Location = new System.Drawing.Point(39, 162);
+            this.txtStartMethod.Location = new System.Drawing.Point(39, 215);
             this.txtStartMethod.Name = "txtStartMethod";
             this.txtStartMethod.Size = new System.Drawing.Size(669, 19);
             this.txtStartMethod.TabIndex = 37;
             // 
             // txtStartSrcFilePath
             // 
-            this.txtStartSrcFilePath.Location = new System.Drawing.Point(39, 98);
+            this.txtStartSrcFilePath.Location = new System.Drawing.Point(39, 151);
             this.txtStartSrcFilePath.Name = "txtStartSrcFilePath";
             this.txtStartSrcFilePath.Size = new System.Drawing.Size(669, 19);
             this.txtStartSrcFilePath.TabIndex = 36;
@@ -144,7 +147,7 @@
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(300, 288);
+            this.btnRun.Location = new System.Drawing.Point(300, 341);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 33);
             this.btnRun.TabIndex = 32;
@@ -154,7 +157,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(37, 79);
+            this.label1.Location = new System.Drawing.Point(37, 132);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(110, 12);
             this.label1.TabIndex = 30;
@@ -163,7 +166,7 @@
             // btnRefStartSrcFilePath
             // 
             this.btnRefStartSrcFilePath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRefStartSrcFilePath.Location = new System.Drawing.Point(718, 94);
+            this.btnRefStartSrcFilePath.Location = new System.Drawing.Point(718, 147);
             this.btnRefStartSrcFilePath.Name = "btnRefStartSrcFilePath";
             this.btnRefStartSrcFilePath.Size = new System.Drawing.Size(45, 23);
             this.btnRefStartSrcFilePath.TabIndex = 31;
@@ -172,7 +175,7 @@
             // 
             // txtCollectDirPath
             // 
-            this.txtCollectDirPath.Location = new System.Drawing.Point(39, 225);
+            this.txtCollectDirPath.Location = new System.Drawing.Point(39, 278);
             this.txtCollectDirPath.Name = "txtCollectDirPath";
             this.txtCollectDirPath.Size = new System.Drawing.Size(669, 19);
             this.txtCollectDirPath.TabIndex = 52;
@@ -180,7 +183,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(37, 206);
+            this.label5.Location = new System.Drawing.Point(37, 259);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(83, 12);
             this.label5.TabIndex = 50;
@@ -189,18 +192,47 @@
             // btnRefCollectDirPath
             // 
             this.btnRefCollectDirPath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRefCollectDirPath.Location = new System.Drawing.Point(718, 221);
+            this.btnRefCollectDirPath.Location = new System.Drawing.Point(718, 274);
             this.btnRefCollectDirPath.Name = "btnRefCollectDirPath";
             this.btnRefCollectDirPath.Size = new System.Drawing.Size(45, 23);
             this.btnRefCollectDirPath.TabIndex = 51;
             this.btnRefCollectDirPath.Text = "参照";
             this.btnRefCollectDirPath.UseVisualStyleBackColor = true;
             // 
+            // txtSrcRootDirPath
+            // 
+            this.txtSrcRootDirPath.Location = new System.Drawing.Point(39, 92);
+            this.txtSrcRootDirPath.Name = "txtSrcRootDirPath";
+            this.txtSrcRootDirPath.Size = new System.Drawing.Size(669, 19);
+            this.txtSrcRootDirPath.TabIndex = 55;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(37, 73);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(115, 12);
+            this.label6.TabIndex = 53;
+            this.label6.Text = "ソースルートフォルダパス";
+            // 
+            // btnRefSrcRootDirPath
+            // 
+            this.btnRefSrcRootDirPath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnRefSrcRootDirPath.Location = new System.Drawing.Point(718, 88);
+            this.btnRefSrcRootDirPath.Name = "btnRefSrcRootDirPath";
+            this.btnRefSrcRootDirPath.Size = new System.Drawing.Size(45, 23);
+            this.btnRefSrcRootDirPath.TabIndex = 54;
+            this.btnRefSrcRootDirPath.Text = "参照";
+            this.btnRefSrcRootDirPath.UseVisualStyleBackColor = true;
+            // 
             // CollectFilesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(804, 382);
+            this.ClientSize = new System.Drawing.Size(804, 421);
+            this.Controls.Add(this.txtSrcRootDirPath);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.btnRefSrcRootDirPath);
             this.Controls.Add(this.txtCollectDirPath);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.btnRefCollectDirPath);
@@ -218,8 +250,6 @@
             this.Controls.Add(this.btnRun);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.btnRefStartSrcFilePath);
-            this.MaximumSize = new System.Drawing.Size(820, 421);
-            this.MinimumSize = new System.Drawing.Size(820, 421);
             this.Name = "CollectFilesForm";
             this.Text = "ファイル収集";
             this.ResumeLayout(false);
@@ -246,5 +276,8 @@
         private System.Windows.Forms.TextBox txtCollectDirPath;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button btnRefCollectDirPath;
+        private System.Windows.Forms.TextBox txtSrcRootDirPath;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Button btnRefSrcRootDirPath;
     }
 }

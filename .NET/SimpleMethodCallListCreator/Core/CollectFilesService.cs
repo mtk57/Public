@@ -11,7 +11,7 @@ namespace SimpleMethodCallListCreator
     public sealed class CollectFilesService
     {
         public CollectFilesResult CollectFiles(string methodListPath, string startSourceFilePath,
-            string startMethodText, string collectRootDirectory,
+            string startMethodText, string collectRootDirectory, string sourceRootDirectory,
             IProgress<CollectFilesProgressInfo> progress = null, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -34,6 +34,11 @@ namespace SimpleMethodCallListCreator
             if (string.IsNullOrWhiteSpace(collectRootDirectory))
             {
                 throw new ArgumentException("収集フォルダパスを入力してください。", nameof(collectRootDirectory));
+            }
+
+            if (string.IsNullOrWhiteSpace(sourceRootDirectory))
+            {
+                throw new ArgumentException("ソースルートフォルダのパスを入力してください。", nameof(sourceRootDirectory));
             }
 
             var normalizedMethodListPath = NormalizePath(methodListPath);
@@ -59,6 +64,12 @@ namespace SimpleMethodCallListCreator
                 Directory.CreateDirectory(normalizedCollectRoot);
             }
 
+            var normalizedSourceRoot = NormalizePath(sourceRootDirectory);
+            if (!Directory.Exists(normalizedSourceRoot))
+            {
+                throw new DirectoryNotFoundException($"ソースルートフォルダが見つかりません: {normalizedSourceRoot}");
+            }
+
             var entries = LoadMethodList(normalizedMethodListPath);
             if (entries.Count == 0)
             {
@@ -72,13 +83,14 @@ namespace SimpleMethodCallListCreator
                 throw new InvalidOperationException("開始メソッドがメソッドリストに見つかりません。");
             }
 
-            var traversal = CollectMethodFiles(index, startMethod, cancellationToken);
-            return CopyFiles(traversal.Files, normalizedCollectRoot, traversal.FailureDetails, progress,
+            var traversal = CollectMethodFiles(index, startMethod, normalizedSourceRoot, cancellationToken);
+            return CopyFiles(traversal.Files, normalizedCollectRoot, normalizedSourceRoot, traversal.FailureDetails, progress,
                 cancellationToken);
         }
 
         private static CollectFilesResult CopyFiles(IReadOnlyCollection<string> sourceFiles, string collectRootDirectory,
-            IReadOnlyList<string> failureDetails, IProgress<CollectFilesProgressInfo> progress,
+            string sourceRootDirectory, IReadOnlyList<string> failureDetails,
+            IProgress<CollectFilesProgressInfo> progress,
             CancellationToken cancellationToken)
         {
             var targets = sourceFiles?.ToList() ?? new List<string>();
@@ -99,7 +111,7 @@ namespace SimpleMethodCallListCreator
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var destination = BuildDestinationPath(source, collectRootDirectory);
+                var destination = BuildDestinationPath(source, sourceRootDirectory, collectRootDirectory);
                 var destinationDirectory = Path.GetDirectoryName(destination);
                 if (!string.IsNullOrEmpty(destinationDirectory) && !Directory.Exists(destinationDirectory))
                 {
@@ -121,40 +133,24 @@ namespace SimpleMethodCallListCreator
             return new CollectFilesResult(targets, copiedCount, skippedCount, collectRootDirectory, failureDetails);
         }
 
-        private static string BuildDestinationPath(string sourcePath, string collectRootDirectory)
+        private static string BuildDestinationPath(string sourcePath, string sourceRootDirectory,
+            string collectRootDirectory)
         {
             var normalizedSource = NormalizePath(sourcePath);
-            var root = Path.GetPathRoot(normalizedSource) ?? string.Empty;
-            var relative = normalizedSource.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar,
-                Path.AltDirectorySeparatorChar);
-            var rootSegment = NormalizeRootSegment(root);
-            return Path.Combine(collectRootDirectory, rootSegment, relative);
-        }
-
-        private static string NormalizeRootSegment(string root)
-        {
-            if (string.IsNullOrEmpty(root))
+            var normalizedRoot = NormalizePath(sourceRootDirectory);
+            if (!normalizedSource.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
             {
-                return "root";
+                throw new InvalidOperationException(
+                    $"ソースルートフォルダ外のファイルが検出されました。ファイル: {normalizedSource}, ルート: {normalizedRoot}");
             }
 
-            var trimmed = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (trimmed.StartsWith("\\\\"))
-            {
-                trimmed = trimmed.TrimStart('\\');
-            }
-
-            trimmed = trimmed.Replace(":", string.Empty);
-            if (trimmed.Length == 0)
-            {
-                return "root";
-            }
-
-            return trimmed;
+            var relative = normalizedSource.Substring(normalizedRoot.Length)
+                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return Path.Combine(collectRootDirectory, relative);
         }
 
         private static CollectTraversalResult CollectMethodFiles(MethodListIndex index, MethodListEntry startMethod,
-            CancellationToken cancellationToken)
+            string sourceRootDirectory, CancellationToken cancellationToken)
         {
             var visited = new HashSet<string>(StringComparer.Ordinal);
             var collectedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -172,6 +168,12 @@ namespace SimpleMethodCallListCreator
                 if (!visited.Add(methodKey))
                 {
                     continue;
+                }
+
+                if (!current.NormalizedFilePath.StartsWith(sourceRootDirectory, StringComparison.OrdinalIgnoreCase))
+                {
+                    var errorText = $"ソースルートフォルダ外のファイルを検出しました。ファイル: {current.Detail.FilePath}, ルート: {sourceRootDirectory}";
+                    throw new InvalidOperationException(errorText);
                 }
 
                 collectedFiles.Add(current.NormalizedFilePath);

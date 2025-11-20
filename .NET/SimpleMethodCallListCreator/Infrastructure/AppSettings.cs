@@ -86,5 +86,8 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public string LastCollectTargetDirectory { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastCollectSourceRootDirectory { get; set; } = string.Empty;
     }
 }

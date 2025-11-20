@@ -42,6 +42,7 @@ namespace SimpleMethodCallListCreator.Forms
             txtMethodListPath.AllowDrop = true;
             txtStartSrcFilePath.AllowDrop = true;
             txtCollectDirPath.AllowDrop = true;
+            txtSrcRootDirPath.AllowDrop = true;
         }
 
         private void HookEvents ()
@@ -54,10 +55,13 @@ namespace SimpleMethodCallListCreator.Forms
             txtMethodListPath.DragEnter += FilePathTextBox_DragEnter;
             txtStartSrcFilePath.DragEnter += FilePathTextBox_DragEnter;
             txtCollectDirPath.DragEnter += FilePathTextBox_DragEnter;
+            txtSrcRootDirPath.DragEnter += FilePathTextBox_DragEnter;
             txtMethodListPath.DragDrop += TxtMethodListPath_DragDrop;
             txtStartSrcFilePath.DragDrop += TxtStartSrcFilePath_DragDrop;
             txtCollectDirPath.DragDrop += TxtCollectDirPath_DragDrop;
+            txtSrcRootDirPath.DragDrop += TxtSrcRootDirPath_DragDrop;
             FormClosing += CollectFilesForm_FormClosing;
+            txtStartSrcFilePath.TextChanged += TxtStartSrcFilePath_TextChanged;
         }
 
         private void LoadSettings ()
@@ -66,6 +70,7 @@ namespace SimpleMethodCallListCreator.Forms
             txtStartSrcFilePath.Text = _settings.LastCollectSourceFilePath ?? string.Empty;
             txtStartMethod.Text = _settings.LastCollectMethod ?? string.Empty;
             txtCollectDirPath.Text = _settings.LastCollectTargetDirectory ?? string.Empty;
+            txtSrcRootDirPath.Text = _settings.LastCollectSourceRootDirectory ?? string.Empty;
         }
 
         private void SaveSettings ()
@@ -74,6 +79,7 @@ namespace SimpleMethodCallListCreator.Forms
             _settings.LastCollectSourceFilePath = ( txtStartSrcFilePath.Text ?? string.Empty ).Trim();
             _settings.LastCollectMethod = ( txtStartMethod.Text ?? string.Empty ).Trim();
             _settings.LastCollectTargetDirectory = ( txtCollectDirPath.Text ?? string.Empty ).Trim();
+            _settings.LastCollectSourceRootDirectory = ( txtSrcRootDirPath.Text ?? string.Empty ).Trim();
             SettingsManager.Save( _settings );
         }
 
@@ -114,6 +120,7 @@ namespace SimpleMethodCallListCreator.Forms
             var startSourceFilePath = ( txtStartSrcFilePath.Text ?? string.Empty ).Trim();
             var startMethod = ( txtStartMethod.Text ?? string.Empty ).Trim();
             var collectDirPath = ( txtCollectDirPath.Text ?? string.Empty ).Trim();
+            var sourceRootDirPath = ( txtSrcRootDirPath.Text ?? string.Empty ).Trim();
 
             if ( methodListPath.Length == 0 )
             {
@@ -164,6 +171,20 @@ namespace SimpleMethodCallListCreator.Forms
                 return;
             }
 
+            if ( sourceRootDirPath.Length == 0 )
+            {
+                MessageBox.Show( this, "ソースルートフォルダのパスを入力してください。", "入力エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning );
+                return;
+            }
+
+            if ( !Directory.Exists( sourceRootDirPath ) )
+            {
+                MessageBox.Show( this, "ソースルートフォルダが見つかりません。", "入力エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning );
+                return;
+            }
+
             if ( collectDirPath.Length == 0 )
             {
                 MessageBox.Show( this, "収集フォルダパスを入力してください。", "入力エラー",
@@ -178,8 +199,8 @@ namespace SimpleMethodCallListCreator.Forms
             try
             {
                 var result = await Task.Run( () =>
-                    _service.CollectFiles( methodListPath, startSourceFilePath, startMethod, collectDirPath, progress,
-                        token ), token );
+                    _service.CollectFiles( methodListPath, startSourceFilePath, startMethod, collectDirPath,
+                        sourceRootDirPath, progress, token ), token );
 
                 SaveSettings();
 
@@ -268,6 +289,8 @@ namespace SimpleMethodCallListCreator.Forms
             txtStartMethod.Enabled = !isRunning;
             txtCollectDirPath.Enabled = !isRunning;
             btnRefCollectDirPath.Enabled = !isRunning;
+            txtSrcRootDirPath.Enabled = !isRunning;
+            btnRefSrcRootDirPath.Enabled = !isRunning;
 
             pbProgress.Visible = isRunning;
             pbProgress.Style = style;
@@ -393,6 +416,7 @@ namespace SimpleMethodCallListCreator.Forms
             }
 
             txtStartSrcFilePath.Text = files[0];
+            UpdateSourceRootFromFile();
         }
 
         private void TxtCollectDirPath_DragDrop ( object sender, DragEventArgs e )
@@ -417,6 +441,53 @@ namespace SimpleMethodCallListCreator.Forms
             }
         }
 
+        private void TxtSrcRootDirPath_DragDrop ( object sender, DragEventArgs e )
+        {
+            var files = e.Data.GetData( DataFormats.FileDrop ) as string[];
+            if ( files == null || files.Length == 0 )
+            {
+                return;
+            }
+
+            var path = files[0];
+            if ( Directory.Exists( path ) )
+            {
+                txtSrcRootDirPath.Text = path;
+                return;
+            }
+
+            var directory = Path.GetDirectoryName( path );
+            if ( !string.IsNullOrEmpty( directory ) && Directory.Exists( directory ) )
+            {
+                txtSrcRootDirPath.Text = directory;
+            }
+        }
+
+        private void TxtStartSrcFilePath_TextChanged ( object sender, EventArgs e )
+        {
+            UpdateSourceRootFromFile();
+        }
+
+        private void UpdateSourceRootFromFile ()
+        {
+            var sourcePath = ( txtStartSrcFilePath.Text ?? string.Empty ).Trim();
+            if ( sourcePath.Length == 0 || !File.Exists( sourcePath ) )
+            {
+                return;
+            }
+
+            var directory = Path.GetDirectoryName( sourcePath );
+            if ( string.IsNullOrEmpty( directory ) )
+            {
+                return;
+            }
+
+            var currentRoot = ( txtSrcRootDirPath.Text ?? string.Empty ).Trim();
+            if ( currentRoot.Length == 0 )
+            {
+                txtSrcRootDirPath.Text = directory;
+            }
+        }
         private static void LogErrorDetail ( string methodListPath, string startSourceFilePath, string startMethod,
             string collectDirPath, Exception ex )
         {

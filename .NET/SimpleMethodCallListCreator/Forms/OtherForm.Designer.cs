@@ -34,6 +34,7 @@
             this.btnMethodListWithRowNum = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.btnCollectFiles = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
@@ -79,11 +80,12 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.btnCollectFiles);
             this.groupBox1.Controls.Add(this.btnMethodList);
             this.groupBox1.Controls.Add(this.btnInsertTagJump);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(222, 135);
+            this.groupBox1.Size = new System.Drawing.Size(222, 212);
             this.groupBox1.TabIndex = 4;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "ファイルパス+シグネチャ+メソッドリストパス";
@@ -99,11 +101,20 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "ファイルパス＋行番号";
             // 
+            // btnCollectFiles
+            // 
+            this.btnCollectFiles.Location = new System.Drawing.Point(42, 132);
+            this.btnCollectFiles.Name = "btnCollectFiles";
+            this.btnCollectFiles.Size = new System.Drawing.Size(128, 29);
+            this.btnCollectFiles.TabIndex = 2;
+            this.btnCollectFiles.Text = "ファイル収集";
+            this.btnCollectFiles.UseVisualStyleBackColor = true;
+            // 
             // OtherForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(510, 178);
+            this.ClientSize = new System.Drawing.Size(510, 236);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Name = "OtherForm";
@@ -122,5 +133,6 @@
         private System.Windows.Forms.Button btnMethodListWithRowNum;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.Button btnCollectFiles;
     }
 }

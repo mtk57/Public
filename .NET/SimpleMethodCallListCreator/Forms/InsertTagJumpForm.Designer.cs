@@ -71,7 +71,7 @@
             // btnRefStartSrcFilePath
             // 
             this.btnRefStartSrcFilePath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRefStartSrcFilePath.Location = new System.Drawing.Point(722, 138);
+            this.btnRefStartSrcFilePath.Location = new System.Drawing.Point(730, 138);
             this.btnRefStartSrcFilePath.Name = "btnRefStartSrcFilePath";
             this.btnRefStartSrcFilePath.Size = new System.Drawing.Size(45, 23);
             this.btnRefStartSrcFilePath.TabIndex = 8;
@@ -90,7 +90,7 @@
             // btnRefMethodListPath
             // 
             this.btnRefMethodListPath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRefMethodListPath.Location = new System.Drawing.Point(722, 42);
+            this.btnRefMethodListPath.Location = new System.Drawing.Point(730, 42);
             this.btnRefMethodListPath.Name = "btnRefMethodListPath";
             this.btnRefMethodListPath.Size = new System.Drawing.Size(45, 23);
             this.btnRefMethodListPath.TabIndex = 13;
@@ -157,7 +157,7 @@
             // 
             this.btnRefSrcRootDirPath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnRefSrcRootDirPath.Enabled = false;
-            this.btnRefSrcRootDirPath.Location = new System.Drawing.Point(721, 88);
+            this.btnRefSrcRootDirPath.Location = new System.Drawing.Point(729, 88);
             this.btnRefSrcRootDirPath.Name = "btnRefSrcRootDirPath";
             this.btnRefSrcRootDirPath.Size = new System.Drawing.Size(45, 23);
             this.btnRefSrcRootDirPath.TabIndex = 20;
@@ -207,7 +207,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.pbProgress.Location = new System.Drawing.Point(277, 338);
             this.pbProgress.Name = "pbProgress";
-            this.pbProgress.Size = new System.Drawing.Size(262, 10);
+            this.pbProgress.Size = new System.Drawing.Size(270, 10);
             this.pbProgress.TabIndex = 27;
             this.pbProgress.Visible = false;
             // 
@@ -232,7 +232,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 383);
+            this.ClientSize = new System.Drawing.Size(808, 388);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.pbProgress);
@@ -253,6 +253,8 @@
             this.Controls.Add(this.btnRun);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.btnRefStartSrcFilePath);
+            this.MaximumSize = new System.Drawing.Size(824, 427);
+            this.MinimumSize = new System.Drawing.Size(824, 427);
             this.Name = "InsertTagJumpForm";
             this.Text = "タグジャンプ情報 埋め込み";
             this.ResumeLayout(false);

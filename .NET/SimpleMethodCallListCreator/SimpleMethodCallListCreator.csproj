@@ -51,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\CollectFilesService.cs" />
     <Compile Include="Forms\CollectFilesForm.cs">
       <SubType>Form</SubType>
     </Compile>

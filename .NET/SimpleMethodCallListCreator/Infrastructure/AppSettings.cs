@@ -74,5 +74,17 @@ namespace SimpleMethodCallListCreator
 
         [DataMember]
         public bool EnableMethodListStepCount { get; set; }
+
+        [DataMember]
+        public string LastCollectMethodListPath { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastCollectSourceFilePath { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastCollectMethod { get; set; } = string.Empty;
+
+        [DataMember]
+        public string LastCollectTargetDirectory { get; set; } = string.Empty;
     }
 }

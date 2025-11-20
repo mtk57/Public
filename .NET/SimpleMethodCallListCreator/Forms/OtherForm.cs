@@ -24,6 +24,7 @@ namespace SimpleMethodCallListCreator
         private void HookEvents()
         {
             btnMethodList.Click += BtnMethodList_Click;
+            btnCollectFiles.Click += BtnCollectFiles_Click;
         }
 
         private void BtnMethodList_Click(object sender, EventArgs e)
@@ -32,6 +33,15 @@ namespace SimpleMethodCallListCreator
             {
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.ShowDialog(this);
+            }
+        }
+
+        private void BtnCollectFiles_Click ( object sender, EventArgs e )
+        {
+            using ( var dialog = new Forms.CollectFilesForm( _settings ) )
+            {
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.ShowDialog( this );
             }
         }
 

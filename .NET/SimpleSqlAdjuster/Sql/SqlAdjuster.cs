@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 namespace SimpleSqlAdjuster
@@ -222,6 +221,13 @@ namespace SimpleSqlAdjuster
                 {
                     var placeholder = "__SIMPLE_SQL_ADJUSTER_MACRO_" + placeholderIndex + "__";
                     placeholderIndex++;
+
+                    if (builder.Length > 0 && !char.IsWhiteSpace(builder[builder.Length - 1]))
+                    {
+                        builder.Append(' ');
+                    }
+
+                    builder.Append("WHERE ");
                     builder.Append(placeholder);
 
                     macros.Add(new WhereMacroReplacement(placeholder, macro.MacroType, macro.Segments));
@@ -244,69 +250,54 @@ namespace SimpleSqlAdjuster
             }
 
             var appendColumnMetadata = options != null && options.AppendColumnMetadata;
-            var lookup = macros.ToDictionary(m => m.Placeholder, StringComparer.Ordinal);
-
-            var resultBuilder = new StringBuilder();
-            using (var reader = new StringReader(formattedSql))
+            var lookup = new Dictionary<string, WhereMacroReplacement>(StringComparer.Ordinal);
+            foreach (var macro in macros)
             {
-                string line;
-                var isFirstLine = true;
-                while ((line = reader.ReadLine()) != null)
+                lookup[macro.Placeholder] = macro;
+            }
+
+            var lines = formattedSql.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            var resultLines = new List<string>(lines.Length);
+
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (string.Equals(line.Trim(), "WHERE", StringComparison.OrdinalIgnoreCase) && i + 1 < lines.Length)
                 {
-                    var processedLine = line;
-                    while (true)
+                    var nextLine = lines[i + 1];
+                    var placeholderKey = nextLine.Trim();
+                    if (appendColumnMetadata)
                     {
-                        var foundMacro = FindMacroInLine(processedLine, lookup);
-                        if (foundMacro == null)
+                        var tabIndex = placeholderKey.IndexOf('\t');
+                        if (tabIndex >= 0)
                         {
-                            break;
+                            placeholderKey = placeholderKey.Substring(0, tabIndex).TrimEnd();
                         }
-                        
-                        var indent = GetIndent(processedLine);
-                        var macroLines = new List<string>();
-                        AppendMacroLines(macroLines, foundMacro, appendColumnMetadata, indent);
-
-                        var replacement = string.Join(Environment.NewLine, macroLines);
-                        processedLine = processedLine.Replace(foundMacro.Placeholder, replacement);
                     }
-                    
-                    if (!isFirstLine) resultBuilder.AppendLine();
-                    resultBuilder.Append(processedLine);
-                    isFirstLine = false;
+
+                    if (placeholderKey.EndsWith(",", StringComparison.Ordinal))
+                    {
+                        placeholderKey = placeholderKey.Substring(0, placeholderKey.Length - 1).TrimEnd();
+                    }
+
+                    if (lookup.TryGetValue(placeholderKey, out var replacement))
+                    {
+                        AppendMacroLines(resultLines, replacement, appendColumnMetadata);
+                        i++; // skip placeholder line
+                        continue;
+                    }
                 }
+
+                resultLines.Add(line);
             }
 
-            return resultBuilder.ToString().TrimEnd();
+            return string.Join(Environment.NewLine, resultLines).TrimEnd();
         }
 
-        private static WhereMacroReplacement FindMacroInLine(string line, IReadOnlyDictionary<string, WhereMacroReplacement> lookup)
-        {
-            foreach (var placeholder in lookup.Keys)
-            {
-                if (line.Contains(placeholder))
-                {
-                    return lookup[placeholder];
-                }
-            }
-
-            return null;
-        }
-
-        private static string GetIndent(string line)
-        {
-            var indentCount = 0;
-            while (indentCount < line.Length && char.IsWhiteSpace(line[indentCount]))
-            {
-                indentCount++;
-            }
-
-            return line.Substring(0, indentCount);
-        }
-
-        private static void AppendMacroLines(List<string> lines, WhereMacroReplacement replacement, bool appendColumnMetadata, string baseIndent)
+        private static void AppendMacroLines(List<string> lines, WhereMacroReplacement replacement, bool appendColumnMetadata)
         {
             lines.Add(":_WHERE_" + replacement.MacroType);
-            lines.Add(baseIndent + "(");
+            lines.Add("(");
 
             var count = replacement.Segments.Count;
             for (var i = 0; i < count; i++)
@@ -316,10 +307,10 @@ namespace SimpleSqlAdjuster
                 var formattedSegment = appendColumnMetadata
                     ? FormatMacroSegment(segment, suffix)
                     : segment + suffix;
-                lines.Add(baseIndent + "  " + formattedSegment);
+                lines.Add("  " + formattedSegment);
             }
 
-            lines.Add(baseIndent + ")");
+            lines.Add(")");
         }
 
         private static string FormatMacroSegment(string segment, string suffix)
@@ -349,14 +340,12 @@ namespace SimpleSqlAdjuster
                 return false;
             }
 
-            const string macroPrefix = ":_WHERE_";
-            if (sql.Length < startIndex + macroPrefix.Length ||
-                !string.Equals(sql.Substring(startIndex, macroPrefix.Length), macroPrefix, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(sql.Substring(startIndex, 8), ":_WHERE_", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            var typeStart = startIndex + macroPrefix.Length;
+            var typeStart = startIndex + 8;
             if (typeStart >= sql.Length)
             {
                 throw new SqlProcessingException("WHEREマクロの形式が不正です。", lineNumber, columnOffset + typeStart);
@@ -371,7 +360,7 @@ namespace SimpleSqlAdjuster
             var macroType = sql.Substring(typeStart, typeEnd - typeStart).ToUpperInvariant();
             if (macroType != "AND" && macroType != "OR")
             {
-                return false;
+                throw new SqlProcessingException("WHEREマクロの種類を判別できません。", lineNumber, columnOffset + typeStart);
             }
 
             var index = typeEnd;
@@ -422,11 +411,6 @@ namespace SimpleSqlAdjuster
         private static List<string> SplitMacroArguments(string content)
         {
             var results = new List<string>();
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                return results;
-            }
-
             var depth = 0;
             var segmentStart = 0;
             for (var i = 0; i < content.Length; i++)
@@ -435,19 +419,31 @@ namespace SimpleSqlAdjuster
                 if (c == '(')
                 {
                     depth++;
+                    continue;
                 }
-                else if (c == ')')
+
+                if (c == ')')
                 {
                     depth = Math.Max(0, depth - 1);
+                    continue;
                 }
-                else if (depth == 0 && (c == ',' || c == '.'))
+
+                var isDotDelimiter = c == '.' && (i + 1 >= content.Length || char.IsWhiteSpace(content[i + 1]));
+                var isCommaDelimiter = c == ','; // カンマは常に区切りとする
+
+                if (depth == 0 && (isDotDelimiter || isCommaDelimiter))
                 {
                     var segment = content.Substring(segmentStart, i - segmentStart).Trim();
                     if (!string.IsNullOrEmpty(segment))
                     {
                         results.Add(segment);
                     }
+
                     segmentStart = i + 1;
+                    while (segmentStart < content.Length && char.IsWhiteSpace(content[segmentStart]))
+                    {
+                        segmentStart++;
+                    }
                 }
             }
 

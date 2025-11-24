@@ -74,3 +74,8 @@ CTRL + SHIFT + V
 ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
 
 
+■
+アップロードした文字列の画像をテキストにしてください。
+ちなみに文字列のフォントはConsolasで、使用している文字種はBase32 + ハイフンのみです。（全て半角文字）
+
+

@@ -198,5 +198,10 @@ namespace SimpleExcelGrep.Forms
             }
             _logService.LogMessage($"ステータス更新: {message}", false);
         }
+
+        private void button1_Click ( object sender, EventArgs e )
+        {
+
+        }
     }
 }

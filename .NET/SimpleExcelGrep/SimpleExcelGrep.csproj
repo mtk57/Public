@@ -94,6 +94,12 @@
     <Compile Include="Forms\MultiKeywordsForm.Designer.cs">
       <DependentUpon>MultiKeywordsForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\OtherForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\OtherForm.Designer.cs">
+      <DependentUpon>OtherForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Models\SearchResult.cs" />
     <Compile Include="Models\Settings.cs" />
     <Compile Include="Program.cs" />
@@ -109,6 +115,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\MultiKeywordsForm.resx">
       <DependentUpon>MultiKeywordsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\OtherForm.resx">
+      <DependentUpon>OtherForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

@@ -76,6 +76,7 @@
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.btnMultiKeywords = new System.Windows.Forms.Button();
+            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -178,7 +179,7 @@
             // 
             this.lblIgnoreHint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblIgnoreHint.Font = new System.Drawing.Font("MS UI Gothic", 9F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.lblIgnoreHint.Location = new System.Drawing.Point(741, 95);
+            this.lblIgnoreHint.Location = new System.Drawing.Point(746, 95);
             this.lblIgnoreHint.Name = "lblIgnoreHint";
             this.lblIgnoreHint.Size = new System.Drawing.Size(78, 28);
             this.lblIgnoreHint.TabIndex = 0;
@@ -192,7 +193,7 @@
             this.cmbIgnoreKeywords.FormattingEnabled = true;
             this.cmbIgnoreKeywords.Location = new System.Drawing.Point(107, 100);
             this.cmbIgnoreKeywords.Name = "cmbIgnoreKeywords";
-            this.cmbIgnoreKeywords.Size = new System.Drawing.Size(610, 20);
+            this.cmbIgnoreKeywords.Size = new System.Drawing.Size(615, 20);
             this.cmbIgnoreKeywords.TabIndex = 5;
             // 
             // lblIgnore
@@ -235,13 +236,13 @@
             this.cmbKeyword.FormattingEnabled = true;
             this.cmbKeyword.Location = new System.Drawing.Point(107, 57);
             this.cmbKeyword.Name = "cmbKeyword";
-            this.cmbKeyword.Size = new System.Drawing.Size(606, 20);
+            this.cmbKeyword.Size = new System.Drawing.Size(611, 20);
             this.cmbKeyword.TabIndex = 4;
             // 
             // btnSelectFolder
             // 
             this.btnSelectFolder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSelectFolder.Location = new System.Drawing.Point(728, 11);
+            this.btnSelectFolder.Location = new System.Drawing.Point(733, 11);
             this.btnSelectFolder.Name = "btnSelectFolder";
             this.btnSelectFolder.Size = new System.Drawing.Size(57, 22);
             this.btnSelectFolder.TabIndex = 1;
@@ -282,7 +283,7 @@
             this.cmbFolderPath.FormattingEnabled = true;
             this.cmbFolderPath.Location = new System.Drawing.Point(107, 13);
             this.cmbFolderPath.Name = "cmbFolderPath";
-            this.cmbFolderPath.Size = new System.Drawing.Size(610, 20);
+            this.cmbFolderPath.Size = new System.Drawing.Size(615, 20);
             this.cmbFolderPath.TabIndex = 0;
             // 
             // colCellValue
@@ -311,7 +312,7 @@
             this.grdResults.ReadOnly = true;
             this.grdResults.RowTemplate.Height = 21;
             this.grdResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.grdResults.Size = new System.Drawing.Size(824, 150);
+            this.grdResults.Size = new System.Drawing.Size(829, 151);
             this.grdResults.TabIndex = 25;
             // 
             // lblIgnoreFileSize
@@ -343,7 +344,7 @@
             // btnLoadTsv
             // 
             this.btnLoadTsv.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnLoadTsv.Location = new System.Drawing.Point(728, 208);
+            this.btnLoadTsv.Location = new System.Drawing.Point(733, 208);
             this.btnLoadTsv.Name = "btnLoadTsv";
             this.btnLoadTsv.Size = new System.Drawing.Size(107, 28);
             this.btnLoadTsv.TabIndex = 19;
@@ -512,18 +513,30 @@
             // btnMultiKeywords
             // 
             this.btnMultiKeywords.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnMultiKeywords.Location = new System.Drawing.Point(732, 57);
+            this.btnMultiKeywords.Location = new System.Drawing.Point(737, 57);
             this.btnMultiKeywords.Name = "btnMultiKeywords";
             this.btnMultiKeywords.Size = new System.Drawing.Size(53, 22);
             this.btnMultiKeywords.TabIndex = 32;
             this.btnMultiKeywords.Text = "複数";
             this.btnMultiKeywords.UseVisualStyleBackColor = true;
             // 
+            // button1
+            // 
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.button1.Location = new System.Drawing.Point(737, 245);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(100, 22);
+            this.button1.TabIndex = 33;
+            this.button1.Text = "その他";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(844, 489);
+            this.ClientSize = new System.Drawing.Size(849, 490);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.btnMultiKeywords);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label5);
@@ -623,5 +636,6 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Button btnMultiKeywords;
+        private System.Windows.Forms.Button button1;
     }
 }

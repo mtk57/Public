@@ -13,6 +13,12 @@ namespace SimpleExcelGrep.Forms
         private readonly ExcelModificationService _modificationService;
         private CancellationTokenSource _cancellationTokenSource;
         private bool _isRunning;
+        private string _folderPath = string.Empty;
+        private bool _includeSubDirectories;
+        private double _ignoreFileSizeMb;
+        private bool _includeInvisibleSheets;
+        private int _parallelism;
+        private bool _enableLog;
 
         public OtherForm(LogService logService, ExcelModificationService modificationService)
         {
@@ -24,12 +30,15 @@ namespace SimpleExcelGrep.Forms
 
         public void ApplyMainFormState(string folderPath, bool includeSubDirectories, string ignoreFileSizeText, bool includeInvisibleSheets, int parallelism, bool enableLog)
         {
-            txtFolderPath.Text = folderPath ?? string.Empty;
-            chkSubFolders.Checked = includeSubDirectories;
-            txtIgnoreFileSizeMB.Text = ignoreFileSizeText ?? string.Empty;
-            chkInvisibleSheets.Checked = includeInvisibleSheets;
-            nudParallelism.Value = Math.Max(nudParallelism.Minimum, Math.Min(nudParallelism.Maximum, parallelism));
-            chkEnableLog.Checked = enableLog;
+            _folderPath = folderPath ?? string.Empty;
+            _includeSubDirectories = includeSubDirectories;
+            if (!double.TryParse(ignoreFileSizeText, NumberStyles.Any, CultureInfo.InvariantCulture, out _ignoreFileSizeMb))
+            {
+                _ignoreFileSizeMb = 0;
+            }
+            _includeInvisibleSheets = includeInvisibleSheets;
+            _parallelism = parallelism;
+            _enableLog = enableLog;
         }
 
         private async void BtnRun_Click(object sender, EventArgs e)
@@ -90,36 +99,28 @@ namespace SimpleExcelGrep.Forms
         {
             options = null;
 
-            if (string.IsNullOrWhiteSpace(txtFolderPath.Text))
+            if (string.IsNullOrWhiteSpace(_folderPath))
             {
                 MessageBox.Show("フォルダパスを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
-            if (!Directory.Exists(txtFolderPath.Text))
+            if (!Directory.Exists(_folderPath))
             {
                 MessageBox.Show("指定されたフォルダが存在しません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
-            double ignoreFileSize = 0;
-            if (!string.IsNullOrWhiteSpace(txtIgnoreFileSizeMB.Text) &&
-                !double.TryParse(txtIgnoreFileSizeMB.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out ignoreFileSize))
-            {
-                MessageBox.Show("無視ファイルサイズは数値で入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
-
             options = new OtherOperationOptions
             {
-                FolderPath = txtFolderPath.Text,
-                IncludeSubDirectories = chkSubFolders.Checked,
-                IgnoreFileSizeMb = ignoreFileSize,
-                IncludeInvisibleSheets = chkInvisibleSheets.Checked,
-                MaxParallelism = (int)nudParallelism.Value,
+                FolderPath = _folderPath,
+                IncludeSubDirectories = _includeSubDirectories,
+                IgnoreFileSizeMb = _ignoreFileSizeMb,
+                IncludeInvisibleSheets = _includeInvisibleSheets,
+                MaxParallelism = _parallelism,
                 RemoveAllShapes = chkAllShape.Checked,
                 RemoveAllFormulas = chkAllFormula.Checked,
-                EnableLogOutput = chkEnableLog.Checked
+                EnableLogOutput = _enableLog
             };
 
             return true;
@@ -133,12 +134,6 @@ namespace SimpleExcelGrep.Forms
 
             chkAllShape.Enabled = !isRunning;
             chkAllFormula.Enabled = !isRunning;
-            txtFolderPath.Enabled = !isRunning;
-            chkSubFolders.Enabled = !isRunning;
-            txtIgnoreFileSizeMB.Enabled = !isRunning;
-            chkInvisibleSheets.Enabled = !isRunning;
-            nudParallelism.Enabled = !isRunning;
-            chkEnableLog.Enabled = !isRunning;
         }
 
         private void ReportProgress(int processed, int total, string message)

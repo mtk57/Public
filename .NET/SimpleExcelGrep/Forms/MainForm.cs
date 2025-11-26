@@ -19,6 +19,7 @@ namespace SimpleExcelGrep.Forms
         private readonly SettingsService _settingsService;
         private readonly ExcelSearchService _excelSearchService;
         private readonly ExcelInteropService _excelInteropService;
+        private readonly ExcelModificationService _excelModificationService;
 
         // 状態変数
         private CancellationTokenSource _cancellationTokenSource;
@@ -39,6 +40,7 @@ namespace SimpleExcelGrep.Forms
             _settingsService = new SettingsService(_logService);
             _excelSearchService = new ExcelSearchService(_logService);
             _excelInteropService = new ExcelInteropService(_logService);
+            _excelModificationService = new ExcelModificationService(_logService);
             _uiTimer = null;
 
             // イベントハンドラの登録
@@ -169,6 +171,7 @@ namespace SimpleExcelGrep.Forms
                 control.Enabled = !isSearching;
             }
 
+            btnOther.Enabled = !isSearching;
             txtCellAddress.Enabled = !isSearching && chkCellMode.Checked;
             btnCancelSearch.Enabled = isSearching;
 
@@ -199,9 +202,20 @@ namespace SimpleExcelGrep.Forms
             _logService.LogMessage($"ステータス更新: {message}", false);
         }
 
-        private void button1_Click ( object sender, EventArgs e )
+        private void BtnOther_Click(object sender, EventArgs e)
         {
+            using (var dialog = new OtherForm(_logService, _excelModificationService))
+            {
+                dialog.ApplyMainFormState(
+                    cmbFolderPath.Text,
+                    chkSearchSubDir.Checked,
+                    txtIgnoreFileSizeMB.Text,
+                    chkEnableInvisibleSheet.Checked,
+                    (int)nudParallelism.Value,
+                    chkEnableLog.Checked);
 
+                dialog.ShowDialog(this);
+            }
         }
     }
 }

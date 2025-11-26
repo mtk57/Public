@@ -76,7 +76,7 @@
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.btnMultiKeywords = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btnOther = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.nudParallelism)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
@@ -520,23 +520,23 @@
             this.btnMultiKeywords.Text = "複数";
             this.btnMultiKeywords.UseVisualStyleBackColor = true;
             // 
-            // button1
+            // btnOther
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(737, 245);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(100, 22);
-            this.button1.TabIndex = 33;
-            this.button1.Text = "その他";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.btnOther.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnOther.Location = new System.Drawing.Point(737, 245);
+            this.btnOther.Name = "btnOther";
+            this.btnOther.Size = new System.Drawing.Size(100, 22);
+            this.btnOther.TabIndex = 33;
+            this.btnOther.Text = "その他";
+            this.btnOther.UseVisualStyleBackColor = true;
+            this.btnOther.Click += new System.EventHandler(this.BtnOther_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(849, 490);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.btnOther);
             this.Controls.Add(this.btnMultiKeywords);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label5);
@@ -636,6 +636,6 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Button btnMultiKeywords;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button btnOther;
     }
 }

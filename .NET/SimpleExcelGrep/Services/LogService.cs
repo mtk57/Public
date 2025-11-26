@@ -9,7 +9,7 @@ namespace SimpleExcelGrep.Services
     /// <summary>
     /// アプリケーションのログ記録を担当するサービス
     /// </summary>
-    internal class LogService
+    public class LogService
     {
         private readonly string _logFilePath;
         public bool IsLoggingEnabled { get; set; }
@@ -32,9 +32,9 @@ namespace SimpleExcelGrep.Services
         /// <summary>
         /// メッセージをログに記録し、オプションでステータスラベルに表示
         /// </summary>
-        public void LogMessage(string message, bool showInStatus = false)
+        public void LogMessage(string message, bool showInStatus = false, bool force = false)
         {
-            if (!IsLoggingEnabled) return;
+            if (!IsLoggingEnabled && !force) return;
 
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string logEntry = $"[{timestamp}] {message}";

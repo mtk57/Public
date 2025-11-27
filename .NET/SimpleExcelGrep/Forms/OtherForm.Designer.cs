@@ -46,8 +46,8 @@
             this.rbtnClm = new System.Windows.Forms.RadioButton();
             this.chkAll = new System.Windows.Forms.CheckBox();
             this.chkFullMatch = new System.Windows.Forms.CheckBox();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.chkCaseSensitive = new System.Windows.Forms.CheckBox();
+            this.chkWidthSensitive = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -109,8 +109,8 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.checkBox2);
-            this.groupBox1.Controls.Add(this.checkBox1);
+            this.groupBox1.Controls.Add(this.chkWidthSensitive);
+            this.groupBox1.Controls.Add(this.chkCaseSensitive);
             this.groupBox1.Controls.Add(this.chkFullMatch);
             this.groupBox1.Controls.Add(this.chkAll);
             this.groupBox1.Controls.Add(this.rbtnClm);
@@ -171,6 +171,7 @@
             this.chkEnableDeleteByKeyword.TabIndex = 7;
             this.chkEnableDeleteByKeyword.Text = "有効/無効";
             this.chkEnableDeleteByKeyword.UseVisualStyleBackColor = true;
+            this.chkEnableDeleteByKeyword.CheckedChanged += new System.EventHandler(this.ChkEnableDeleteByKeyword_CheckedChanged);
             // 
             // rbtnRow
             // 
@@ -203,6 +204,7 @@
             this.chkAll.TabIndex = 10;
             this.chkAll.Text = "全て";
             this.chkAll.UseVisualStyleBackColor = true;
+            this.chkAll.CheckedChanged += new System.EventHandler(this.ChkAll_CheckedChanged);
             // 
             // chkFullMatch
             // 
@@ -214,25 +216,25 @@
             this.chkFullMatch.Text = "完全一致";
             this.chkFullMatch.UseVisualStyleBackColor = true;
             // 
-            // checkBox1
+            // chkCaseSensitive
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(156, 116);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(72, 16);
-            this.checkBox1.TabIndex = 12;
-            this.checkBox1.Text = "大小区別";
-            this.checkBox1.UseVisualStyleBackColor = true;
+            this.chkCaseSensitive.AutoSize = true;
+            this.chkCaseSensitive.Location = new System.Drawing.Point(156, 116);
+            this.chkCaseSensitive.Name = "chkCaseSensitive";
+            this.chkCaseSensitive.Size = new System.Drawing.Size(72, 16);
+            this.chkCaseSensitive.TabIndex = 12;
+            this.chkCaseSensitive.Text = "大小区別";
+            this.chkCaseSensitive.UseVisualStyleBackColor = true;
             // 
-            // checkBox2
+            // chkWidthSensitive
             // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.Location = new System.Drawing.Point(234, 116);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(84, 16);
-            this.checkBox2.TabIndex = 13;
-            this.checkBox2.Text = "全半角区別";
-            this.checkBox2.UseVisualStyleBackColor = true;
+            this.chkWidthSensitive.AutoSize = true;
+            this.chkWidthSensitive.Location = new System.Drawing.Point(234, 116);
+            this.chkWidthSensitive.Name = "chkWidthSensitive";
+            this.chkWidthSensitive.Size = new System.Drawing.Size(84, 16);
+            this.chkWidthSensitive.TabIndex = 13;
+            this.chkWidthSensitive.Text = "全半角区別";
+            this.chkWidthSensitive.UseVisualStyleBackColor = true;
             // 
             // OtherForm
             // 
@@ -276,7 +278,7 @@
         private System.Windows.Forms.RadioButton rbtnClm;
         private System.Windows.Forms.CheckBox chkAll;
         private System.Windows.Forms.CheckBox chkFullMatch;
-        private System.Windows.Forms.CheckBox checkBox2;
-        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.CheckBox chkWidthSensitive;
+        private System.Windows.Forms.CheckBox chkCaseSensitive;
     }
 }

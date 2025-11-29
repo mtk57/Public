@@ -79,3 +79,378 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
 ちなみに文字列のフォントはConsolasで、使用している文字種はBase32 + ハイフンのみです。（全て半角文字）
 
 
+--------------
+基本
+													
+													
+	BAS												
+	クラウド上のLinux（Ubuntu）で動くVSCode（のようなもの）												
+	Linuxなので、コマンドがいろいろ使える												
+													
+													
+	MTA												
+	マルチターゲットアプリケーション												
+													
+													
+	MTARデプロイ												
+	SAP BTPでマルチターゲットアプリケーション（MTA）を本番環境にデプロイする標準的な方法												
+	「mta.yaml に書いた設計図通りに、DB・Java/Node.js・HTML5/UI5・サービス全部を一発でBTPに展開する												
+													
+													
+	Maven		メイブン										
+	Javaプロジェクトの「全部自動化ツール」												
+	「pom.xml」ファイル書くだけで、依存ライブラリ自動ダウンロード → コンパイル → テスト → パッケージング → デプロイまで全部やってくれる												
+													
+	pom.xmlのイメージ（超重要部分だけ）												
+	<dependencies>												
+	    <dependency>							<!-- ここに書くと自動でダウンロード -->					
+	        <groupId>org.springframework.boot</groupId>												
+	        <artifactId>spring-boot-starter-web</artifactId>												
+	    </dependency>												
+	</dependencies>												
+													
+	<build>												
+	    <plugins>												
+	        <plugin>							<!-- これでcf pushできるwarを作る -->					
+	            <groupId>org.cloudfoundry</groupId>												
+	            <artifactId>cloudfoundry-maven-plugin</artifactId>												
+	        </plugin>												
+	    </plugins>												
+	</build>												
+													
+													
+													
+	Spring Boot												
+	JavaでWebアプリを作るのがめちゃくちゃ簡単になるフレームワーク												
+	Tomcatも腹持ちしている												
+													
+													
+	Spring Batch												
+	大量のデータをまとめて処理するための Java 用フレームワークです。												
+	「夜間バッチ」や「定期バッチ処理」を作るときによく使われます。												
+													
+													
+	JSS	Job Scheduling Service											
+	SAP BTP 上で、「いつ」「どの処理を」実行するかを時間ベースで管理するためのジョブスケジューラサービス												
+	要は、Linux の cron のクラウド版 + BTP サービス連携が強いものみたいなイメージ												
+													
+	主な特徴		Job Scheduling Service を使うと、例えばこんなことができます：										
+													
+	・1回だけ／定期実行のジョブ を定義												
+	「今から10分後に1回だけ実行」												
+	「毎日 3:00 に実行」												
+	cron 形式のような複雑なスケジュールも可												
+													
+	・アプリの HTTP エンドポイント（REST API）を叩く												
+	CAP / Node.js / Java などで作ったアプリのエンドポイントを呼び出せる												
+													
+	・Cloud Foundry タスクの起動												
+	長時間かかる処理をタスクとして非同期実行												
+													
+	・REST API から操作												
+	ジョブの作成・変更・削除・実行ログ取得などを API で行える 												
+													
+	・Web ダッシュボードで管理												
+	BTP Cockpit から、ジョブ・スケジュール・実行結果を GUI で確認・操作できる												
+													
+													
+	Tasklet												
+	1つの大きな処理をガッとまとめてやる」スタイル（スクリプトっぽい）												
+													
+	Step の中身を Tasklet クラス 1つにまとめるやり方												
+	Tasklet インターフェースの execute メソッドの中に処理を書く 												
+													
+	代表的な使いどころ：												
+	・一時ファイルの削除												
+	・1回きりの SQL 実行（テーブル初期化など）												
+	・バッチの前後処理（開始ログ出力・終了ログ出力 など）												
+													
+													
+	Chunk												
+	データを少しずつ読み込んで、まとめて処理・書き込み」するスタイル（大量データ向き）												
+													
+	Step の中身を												
+	・ItemReader（読む）												
+	・ItemProcessor（加工する・任意）												
+	・ItemWriter（書く）												
+	という3つに分けて、「一定件数ごと（チャンク単位）」に処理するやり方 												
+													
+	典型的な流れ：												
+	1.Reader で1件ずつ読む												
+	2.指定件数たまったら（例：100件）、Processor → Writer												
+	3.そのチャンク単位でトランザクションをコミット												
+													
+	代表的な使いどころ：												
+	・大量の DB レコードを読み取り → 加工 → 別DBに書き込み												
+	・CSV などの大量ファイル読み込み → DBに登録												
+													
+	イメージ：												
+	「データを100件ごとの箱（チャンク）に分けて、読む → 加工 → 書く を何回も繰り返す」												
+	→ 大量データ・トランザクション管理向き 												
+													
+													
+	MyBatis												
+	Java で DB を扱うためのフレームワーク												
+													
+													
+	Workspace												
+	ワークスペース												
+	→ 「今BASで開いているフォルダ or .code-workspace」のこと							→File → Open Folder... でそのフォルダを開く					→この操作重要！
+													
+	プロジェクト												
+	→ ふつうは「/home/user/projects/xxx みたいな1フォルダ」をそう呼ぶことが多い												
+													
+	Gitリポジトリ												
+	→ そのフォルダの直下に .git フォルダ があるかどうかで決まる												
+													
+	実務では、												
+	1プロジェクトフォルダ = 1 Gitリポジトリ												
+	BASではそのフォルダをワークスペースとして開く												
+	という運用が一番多いです。												
+-----
+サイドメニュー一覧
+			
+	サイドメニュー一覧		
+	メニュー名	説明（一言で）	使う頻度
+	Explorer	ファイル・フォルダ一覧（いつも見てるやつ）	★★★★★
+	Search	プロジェクト全体検索・置換	★★★★★
+	Source Control	Git操作パネル	★★★★★
+	Run and Debug	アプリ起動・ブレークポイント・デバッグ	★★★★★
+	Extensions	拡張機能のインストール・管理（最初に開く）	★★★★
+	Run Configurations	launch.jsonの管理（起動設定のカスタマイズ）	★★★
+	Cloud Foundry	CF CLIでdeploy/target/org/space操作ができる	★★★
+	SQLTools	DB接続して直接SQL実行・テーブル閲覧	★★
+	Project Overview	現在のプロジェクトのBTP関連情報がまとめて見える	★★
+	Simplified Git	簡略Git	★★
+	Configure Keybinding	ショートカットキーの変更	ほぼ使わない
+	Hide 'Explorer' / Hide Badge	そのビューを隠す	ほぼ使わない
+	Move To / Menu	サイドバーの並び替えメニュー	ほぼ使わない
+	Testing	単体テスト（ほぼ誰も使ってない）	ほぼ使わない
+	CI/CD	Tektonパイプライン（まだプレビュー）	ほぼ使わない
+	GitLens / GitLens Inspect	Gitの詳細履歴（重いので最初はオフ推奨）	ほぼ使わない
+	Guide Center / Joule	AIアシスタント。ジュールと発音。	ほぼ使わない？気になる
+	Service Center	Service Marketplaceのショートカット	ほぼ使わない
+	Mobile Services / MDK	モバイルアプリ開発用（今は関係なし）	ほぼ使わない
+	SAP Fiori	Fiori tools（Fioriアプリ作るときだけ）	ほぼ使わない
+	Task Explorer	tasks.json管理	ほぼ使わない
+	Accounts	SAPアカウント切り替え	ほぼ使わない
+	Activity Bar Position	サイドバー左⇔右移動	ほぼ使わない
+	Move Primary Side Bar Right	同上	ほぼ使わない
+-----
+GitHub
+																						
+																						
+																						
+	Simplified Git																					
+	①GitHubからURLをコピー																					
+		例：	https://github.com/mtk57/SpringBatchChunkTest.git																			
+																						
+	②BASの三本線から、Help → Get Started																					
+																						
+	③Clone from Git																					
+																						
+	④URLを入力してEnter																					
+																						
+	⑤ポップアップが出るので「Add to Workspace」																					
+		クローンしたリポジトリを開きますか？ それとも現在のワークスペースに追加しますか？																				
+																						
+	⑥Cloneされる（/user/projects の下にリポジトリが出来る）																					
+																						
+	⑦Simplified Git																					
+																						
+	⑧RepositoryにCloneしたリポジトリが表示される																					
+																						
+																						
+																						
+																						
+																						
+																						
+																						
+	SOURCE CONTROL			★こっちのがTortoiseGitに近いかも。																		
+	REPOSITORIES			今このBASで扱っているGitリポジトリの一覧																		
+	CHANGES			まだコミットしていない変更ファイルの一覧																		
+				ステージ（Gitの追跡対象）にすら追加されていないファイルは、Changesに表示される。（ファイルのツールチップにも「Untracked」と出る）→「＋」ボタンでステージに追加できる。																		→重要
+				ステージされているが、コミットされていないファイルも、Changesに表示される。このファイルの変更を取り消すには「Discard Changes」を使う。（アンドゥみたいなアイコン）																		→重要
+	GRAPH			コミット履歴を線でつないで見せてくれるビュー																		
+				右クリックのメニューにチェリーピックもある																		
+	REPOSITORIES			GitLens拡張が追加しているリポジトリビュー																		
+	GITLENS			VS Code（やBAS）のGit機能を超強化する拡張機能																		
+				「このコード、誰が・いつ・どんなコミットで 変えたの？」																		
+				「このファイル、どんな履歴 をたどって今の状態になったの？」																		
+				みたいなことを、エディタの中でパッと見えるようにしてくれます。																		
+																						
+																						
+	Pull					GitHub（リモート）側の変更を、手元（ローカル）に取り込む																
+	Push					手元のコミットを GitHub に送る																
+	Clone					GitHub 上のリポジトリを丸ごとコピーして、手元に作る																
+	Checkout to...					別のブランチや、過去のコミットに切り替える									→重要							
+	Fetch					GitHub 側の最新履歴だけをダウンロードするが、作業中のブランチにはまだ反映しない																
+	Commit					ステージした変更を「1つの履歴（スナップショット）」として保存する																
+	Changes					まだコミットしていない変更の一覧／差分ビューを開く									→重要							
+	Pull, Push					Pull／Push 周りのちょっと細かい操作のサブメニュー																
+	Branch					ブランチに関する操作（作成・削除・リネームなど）																
+	Remote					GitHub などの「リモートリポジトリ」の設定を扱う																
+	Stash					作業中の変更を一時的にしまって、作業ツリーをキレイな状態に戻す																
+	Tags					特定のコミットに「名前（タグ）」を付ける																
+	Worktrees					1つのリポジトリから、複数の作業用フォルダ（ワークツリー）を作る機能																
+	Reset					現在のブランチや作業状態を、指定した過去のコミットに戻す									→重要							
+	Add Co-authors...					コミットに「共同作者（Co-authored-by）」を追加する																
+	Copy Changes (Patch)					そのコミットや変更の差分（パッチ）をテキストとしてコピーする																
+	Share as Cloud Patch...					今の変更やコミットを「Cloud Patch」としてクラウドにアップし、URLで共有する機能																
+	Generate Commit Message with GitLens...					GitLens のAIに、コミットメッセージを自動で考えてもらう機能																
+	Show Git Output					Git が内部で実行しているコマンドと、その結果ログを表示する																
+-----
+重要ファイル
+					
+	重要ファイル				
+	優先度	ファイル名	場所（通常）	用途	触る頻度
+	1	pom.xml	プロジェクトルート	Mavenの依存関係・プラグイン・ビルド設定全部ここ！	★★★★★
+	2	package.json	Node.js / CAP / Fiori プロジェクト	npm依存関係・スクリプト（dev/start/build）定義	★★★★★
+	3	mta.yaml	プロジェクトルート	MTARデプロイの設計図（モジュール・リソース全部書いてる）	★★★★★
+	4	xs-app.json	uiアプリのルート（例：app/router）	UI5アプリのルーティング・目的地設定	★★★★
+	5	manifest.yml	Cloud Foundryアプリのルート	CF push時のアプリ名・メモリ・サービスバインド設定	★★★★
+					
+	補足：次点でよく開くファイル				
+		ファイル名		用途	
+		.env		環境変数（ローカル実行用）	
+		ui5.yaml		UI5アプリの設定・依存関係	
+		xs-security.json		権限・ロール定義（XSAA）	
+		.cdsrс.json / .cdsrc-private.json		CAPサーバーの起動オプション	
+		launch.json		.vscode/ の中 → Run and Debugの設定	
+		tasks.json		.vscode/ の中 → ビルドタスクのカスタマイズ	
+-----
+Maven
+			
+			
+	やること	手動でやると	 Mavenに任せると（pom.xmlに書くだけ）
+	依存ライブラリ取得	1つずつjar探して手動ダウンロード	 mvn dependency:resolve で完全自動
+	コンパイル	javacを手動で叩く	 mvn compile で自動
+	テスト実行	JUnitを手動実行	 mvn test で自動
+	jar/war作成	手動で固める	 mvn package で自動
+	BTPにデプロイ	めちゃめちゃめんどくさい	 mvn clean package → cf push でOK
+			
+	Maven基本コマンド		
+	コマンド	意味	使う頻度
+	mvn clean	古いビルド結果全部削除	★★★★★
+	mvn compile	ソースをコンパイル	★★★★★
+	mvn test	テスト実行	★★★★★
+	mvn package	実行可能jar/war作成	★★★★★
+	mvn install	ローカルリポジトリに登録	★★★★
+	mvn dependency:tree	依存関係をツリー表示（衝突チェック）	★★★★★
+	mvn spring-boot:run	Spring Bootアプリをローカル起動（超便利）	★★★★
+			
+	pom.xmlの超重要タグ		
+	タグ	役割	例
+	<dependencies>	外部ライブラリ全部ここに書く	 spring-boot-starter-web など
+	<dependency>	1つのライブラリ定義	
+	<groupId>	組織名（会社名）	 org.springframework.boot
+	<artifactId>	ライブラリ名	 spring-boot-starter-web
+	<version>	バージョン	 3.2.0
+	<build><plugins>	ビルド時に使うプラグイン	 cloudfoundry-maven-plugin など
+	<properties>	バージョン統一管理	 <java.version>17</java.version>
+------
+SpringBoot
+			
+	項目	昔のJava Webアプリ（地獄）	Spring Bootでやると（天国）
+	設定ファイル	30個くらいXML設定ファイル書く	ほぼゼロ（自動設定）
+	Tomcat	自分でインストール・起動	内蔵Tomcatが勝手に起動
+	依存ライブラリ	1つずつ探して手動追加	1行書くだけで全部自動取得
+	起動方法	mainメソッドすら書かない	1つのmainクラスだけでアプリ起動
+			
+			
+			
+	BTPでSpring Bootが超重要な理由		
+	やりたいこと	Spring Bootがやってくれること	
+	REST API作りたい	5行で完成	
+	データベース接続したい	application.ymlに4行書くだけで自動接続	
+	BTPにデプロイしたい	mvn package → cf push で即本番	
+	ローカルですぐ試したい	mvn spring-boot:run で0.5秒で起動	
+------
+Command
+				
+				
+	優先度	コマンド	意味・使いどころ	覚えると死ぬほど楽になる度
+	1	cds watch	CAPプロジェクト最強！変更→即自動リロード	★★★★★
+	2	mvn spring-boot:run	Spring Bootアプリを爆速ローカル起動	★★★★★
+	3	npm run start / npm start	UI5/Fioriアプリをローカルでプレビュー	★★★★★
+	4	cf login → cf target	BTPのorg/spaceにログイン＆切り替え	★★★★★
+	5	cf push	1ファイルでBTPに即デプロイ（最速）	★★★★★
+	6	mbt build	mta.yaml → .mtar 作成（MTARデプロイ第1歩）	★★★★
+	7	cf deploy xxx.mtar	本番同等環境を一発デプロイ	★★★★
+	8	cds add hana	HANA DB用の設定を自動追加	★★★★
+	9	git pull / git add . / git commit -m "msg" / git push	Gitの4大基本	★★★★
+	10	code .	今いるフォルダをBASで開く（超便利）	★★★
+	11	tree -L 2	フォルダ構成を綺麗に表示	★★★
+	12	find . -name "*.java" | grep "文字列"	プロジェクト全体から文字列検索	★★★
+	13	cf logs app-name --recent	アプリのログを一発で見る	★★★
+	14	cf marketplace → cf create-service	サービス（HANA,XSUAA等）作成	★★★
+	15	Ctrl+R → キーワード	過去コマンドを爆速検索（神ショートカット）	★★★★★
+				
+	最強の覚え方（これだけ完璧に覚えれば一生困らない）			
+	順位	コマンド	コメント	
+	1	cds watch	CAP開発の命	
+	2	mvn spring-boot:run	Java開発の命	
+	3	cf push	デプロイの命	
+				
+				
+	cds watchの動作			
+	①cds watch		Node.js で動く OData REST API サーバー が立ち上がる	
+			1. CDS で書いたデータモデルを自動でテーブル化	
+			2. 自動で /odata/v4/xxx という REST API を生成	
+			3. ブラウザや Fiori アプリから呼び出せるエンドポイントになる	
+				
+		<イメージ>		
+		あなたのPC（BASのターミナル）		
+		      │		
+		      ├─→ cds watch  ← これを打つ		
+		      ↓		
+		【CAPサーバー（Node.js）】 ← ここが「サーバー」		
+		   ポート 4004 で待機		
+		      ↓		
+		ブラウザ → http://localhost:4004 → 「Welcome to CAP!」画面が見える　※１		
+		      ↓		
+		FioriアプリやPostmanからも同じURLでデータが取れる		
+				
+		※１　補足		
+		ポート4004は、クラウドのCAPサーバがcds watchをすると開いてくれる。この状態で「 http://localhost:4004」すると、ポートフォワーディングされて繋がる。		
+-----
+CAP
+					
+					
+					
+					
+	■Hello world				
+	cd /home/user/projects				
+	mkdir my-first-cap && cd my-first-cap				
+	cds init				my-first-capフォルダにファイル一式が作られる（package.jsonなど）
+	npm install				cds initで作られた「package.json」に書かれている必要なライブラリをまとめてダウンロード＆インストールするコマンドです。
+	cds add sample				既存の CAP プロジェクトに機能やサンプルを追加する
+	cds add ui5				CAP プロジェクトで UI5（Fiori など）の画面を扱いやすくするための設定を追加する
+	cds watch				開発用サーバーを立ち上げて、ファイルの変更を自動で反映してくれる“見張り役”
+					ビルドされた後に、CAPサーバが起動する。最後のほうにlocalhostのURLが出力されるのでクリックすると新しいタブが開いてページが表示される。
+					変更を監視しているので、CAPサーバを起動したままファイルを変更すると即座に反映される。
+-----
+Java(SpringBatch)
+									
+									
+									
+									
+									
+	■Hello world								
+	cd /home/user/projects								
+	git clone https://github.com/devsuperior/hello-world-spring-batch.git								
+	cd hello-world-spring-batch								
+	mvn clean package -DskipTests								この Spring Batch プロジェクトのソースコードをコンパイルして、実行できる形（jar）にまとめる。ただしテストは省略
+	mvn spring-boot:run								この Spring Batch のアプリを、Spring Boot として実行する
+									-e を付けると例外情報も出る
+									
+									
+									
+	application.properties								
+	Spring Boot の設定ファイルで、キー=値形式でアプリの各種設定を書く場所です。環境に応じて外部化でき、起動時に自動で読み込まれます。								
+	このプロジェクトでは H2 の接続情報、Batchスキーマ初期化、MyBatisマッパー位置、H2コンソール有効化などをここで指定しています。								
+
+
+
+
+

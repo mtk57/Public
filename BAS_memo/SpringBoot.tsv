@@ -1,0 +1,35 @@
+項目	昔のJava Webアプリ（地獄）	Spring Bootでやると（天国）
+設定ファイル	30個くらいXML設定ファイル書く	ほぼゼロ（自動設定）
+Tomcat	自分でインストール・起動	内蔵Tomcatが勝手に起動
+依存ライブラリ	1つずつ探して手動追加	1行書くだけで全部自動取得
+起動方法	mainメソッドすら書かない	1つのmainクラスだけでアプリ起動
+		
+		
+		
+BTPでSpring Bootが超重要な理由		
+やりたいこと	Spring Bootがやってくれること	
+REST API作りたい	5行で完成	
+データベース接続したい	application.ymlに4行書くだけで自動接続	
+BTPにデプロイしたい	mvn package → cf push で即本番	
+ローカルですぐ試したい	mvn spring-boot:run で0.5秒で起動	
+		
+		
+		
+		
+アノテーション		
+@Configuration	「このクラスは設定を書くクラスですよ」と Spring に教えるためのマーク	
+	@Configuration が付いたクラスの中の	
+	@Bean が付いたメソッドを読んで、	
+	その戻り値を Spring が管理するオブジェクト（Bean）として登録 します。	
+		
+@Bean	このメソッドが返したオブジェクトを、Spring の“部品（Bean）”として登録するためのマーク	
+	@Bean	
+	public Job job(JobRepository jobRepository, Step personImportStep) {	
+	    return new JobBuilder("personImportJob", jobRepository)	
+	            .start(personImportStep)	
+	            .incrementer(new RunIdIncrementer())	
+	            .build();	
+	}	
+	このメソッドを実行してできた Job オブジェクトを	
+	Spring コンテナに 1個だけ作って保管しておいて	
+	他のクラスから @Autowired Job job; などで 使えるようにする	

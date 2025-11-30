@@ -1,0 +1,26 @@
+やること	手動でやると	 Mavenに任せると（pom.xmlに書くだけ）
+依存ライブラリ取得	1つずつjar探して手動ダウンロード	 mvn dependency:resolve で完全自動
+コンパイル	javacを手動で叩く	 mvn compile で自動
+テスト実行	JUnitを手動実行	 mvn test で自動
+jar/war作成	手動で固める	 mvn package で自動
+BTPにデプロイ	めちゃめちゃめんどくさい	 mvn clean package → cf push でOK
+		
+Maven基本コマンド		
+コマンド	意味	使う頻度
+mvn clean	古いビルド結果全部削除	★★★★★
+mvn compile	ソースをコンパイル	★★★★★
+mvn test	テスト実行	★★★★★
+mvn package	実行可能jar/war作成	★★★★★
+mvn install	ローカルリポジトリに登録	★★★★
+mvn dependency:tree	依存関係をツリー表示（衝突チェック）	★★★★★
+mvn spring-boot:run	Spring Bootアプリをローカル起動（超便利）	★★★★
+		
+pom.xmlの超重要タグ		
+タグ	役割	例
+<dependencies>	外部ライブラリ全部ここに書く	 spring-boot-starter-web など
+<dependency>	1つのライブラリ定義	
+<groupId>	組織名（会社名）	 org.springframework.boot
+<artifactId>	ライブラリ名	 spring-boot-starter-web
+<version>	バージョン	 3.2.0
+<build><plugins>	ビルド時に使うプラグイン	 cloudfoundry-maven-plugin など
+<properties>	バージョン統一管理	 <java.version>17</java.version>

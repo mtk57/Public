@@ -1,0 +1,127 @@
+BAS												
+クラウド上のLinux（Ubuntu）で動くVSCode（のようなもの）												
+Linuxなので、コマンドがいろいろ使える												
+												
+												
+MTA												
+マルチターゲットアプリケーション												
+												
+												
+MTARデプロイ												
+SAP BTPでマルチターゲットアプリケーション（MTA）を本番環境にデプロイする標準的な方法												
+「mta.yaml に書いた設計図通りに、DB・Java/Node.js・HTML5/UI5・サービス全部を一発でBTPに展開する												
+												
+												
+Maven		メイブン										
+Javaプロジェクトの「全部自動化ツール」												
+「pom.xml」ファイル書くだけで、依存ライブラリ自動ダウンロード → コンパイル → テスト → パッケージング → デプロイまで全部やってくれる												
+												
+pom.xmlのイメージ（超重要部分だけ）												
+<dependencies>												
+    <dependency>							<!-- ここに書くと自動でダウンロード -->					
+        <groupId>org.springframework.boot</groupId>												
+        <artifactId>spring-boot-starter-web</artifactId>												
+    </dependency>												
+</dependencies>												
+												
+<build>												
+    <plugins>												
+        <plugin>							<!-- これでcf pushできるwarを作る -->					
+            <groupId>org.cloudfoundry</groupId>												
+            <artifactId>cloudfoundry-maven-plugin</artifactId>												
+        </plugin>												
+    </plugins>												
+</build>												
+												
+												
+												
+Spring Boot												
+JavaでWebアプリを作るのがめちゃくちゃ簡単になるフレームワーク												
+Tomcatも腹持ちしている												
+												
+												
+Spring Batch												
+大量のデータをまとめて処理するための Java 用フレームワークです。												
+「夜間バッチ」や「定期バッチ処理」を作るときによく使われます。												
+												
+												
+JSS	Job Scheduling Service											
+SAP BTP 上で、「いつ」「どの処理を」実行するかを時間ベースで管理するためのジョブスケジューラサービス												
+要は、Linux の cron のクラウド版 + BTP サービス連携が強いものみたいなイメージ												
+												
+主な特徴		Job Scheduling Service を使うと、例えばこんなことができます：										
+												
+・1回だけ／定期実行のジョブ を定義												
+「今から10分後に1回だけ実行」												
+「毎日 3:00 に実行」												
+cron 形式のような複雑なスケジュールも可												
+												
+・アプリの HTTP エンドポイント（REST API）を叩く												
+CAP / Node.js / Java などで作ったアプリのエンドポイントを呼び出せる												
+												
+・Cloud Foundry タスクの起動												
+長時間かかる処理をタスクとして非同期実行												
+												
+・REST API から操作												
+ジョブの作成・変更・削除・実行ログ取得などを API で行える 												
+												
+・Web ダッシュボードで管理												
+BTP Cockpit から、ジョブ・スケジュール・実行結果を GUI で確認・操作できる												
+												
+												
+Tasklet												
+1つの大きな処理をガッとまとめてやる」スタイル（スクリプトっぽい）												
+												
+Step の中身を Tasklet クラス 1つにまとめるやり方												
+Tasklet インターフェースの execute メソッドの中に処理を書く 												
+												
+代表的な使いどころ：												
+・一時ファイルの削除												
+・1回きりの SQL 実行（テーブル初期化など）												
+・バッチの前後処理（開始ログ出力・終了ログ出力 など）												
+												
+												
+Chunk												
+データを少しずつ読み込んで、まとめて処理・書き込み」するスタイル（大量データ向き）												
+												
+Step の中身を												
+・ItemReader（読む）												
+・ItemProcessor（加工する・任意）												
+・ItemWriter（書く）												
+という3つに分けて、「一定件数ごと（チャンク単位）」に処理するやり方 												
+												
+典型的な流れ：												
+1.Reader で1件ずつ読む												
+2.指定件数たまったら（例：100件）、Processor → Writer												
+3.そのチャンク単位でトランザクションをコミット												
+												
+代表的な使いどころ：												
+・大量の DB レコードを読み取り → 加工 → 別DBに書き込み												
+・CSV などの大量ファイル読み込み → DBに登録												
+												
+イメージ：												
+「データを100件ごとの箱（チャンク）に分けて、読む → 加工 → 書く を何回も繰り返す」												
+→ 大量データ・トランザクション管理向き 												
+												
+												
+MyBatis												
+Java で DB を扱うためのフレームワーク												
+												
+												
+Workspace												
+ワークスペース												
+→ 「今BASで開いているフォルダ or .code-workspace」のこと							→File → Open Folder... でそのフォルダを開く					→この操作重要！
+												
+プロジェクト												
+→ ふつうは「/home/user/projects/xxx みたいな1フォルダ」をそう呼ぶことが多い												
+												
+Gitリポジトリ												
+→ そのフォルダの直下に .git フォルダ があるかどうかで決まる												
+												
+実務では、												
+1プロジェクトフォルダ = 1 Gitリポジトリ												
+BASではそのフォルダをワークスペースとして開く												
+という運用が一番多いです。												
+												
+												
+												

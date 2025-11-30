@@ -1,0 +1,66 @@
+DI	Dependency Injection							
+								
+	 1. まず前提：「依存」ってなに？							
+		クラスAが、クラスBを使っている状態を「AはBに依存している」 と言います。						
+		class Service {						
+		    private Repository repo = new Repository(); // 自分で new している						
+		}						
+		Service は Repository がないと動けない						
+		  → Service は Repository に「依存」している。						
+								
+	2. 依存性注入（DI）とは？							
+		一言でいうと：						
+		「自分で new しないで、外から入れてもらう」しくみ						
+		です。						
+								
+		さっきの例を DI にすると：						
+		class Service {						
+		    private Repository repo;						
+								
+		    // コンストラクタで「外から」入れてもらう						
+		    public Service(Repository repo) {						
+		        this.repo = repo;						
+		    }						
+		}						
+								
+		Spring の世界だとイメージはこう：						
+		・Spring が裏で `new Repository()` する						
+		・Spring が裏で `new Service(repository)` する						
+		・なので、自分のコードでは `new` をほとんど書かない						
+								
+		これが「依存性（Repository）を、外から注入（Injection）している」＝ Dependency Injection。						
+								
+	3. なんでそんなことするの？							
+		メリットだけ超ざっくり：						
+		1. テストしやすい						
+			本物の Repository の代わりに、テスト用のダミーを渡せる。					
+		2. 差し替えやすい						
+			DB版Repository → メモリ版Repository など、実装を切り替えやすい。					
+		3. クラス同士のベタ結合を減らせる						
+			`new` をあちこちに書かないので、コードがスッキリ。					
+								
+	4. Spring での DI の見え方							
+		Spring では：						
+		* `@Component`, `@Service`, `@Repository`, `@Mapper` などを付ける						
+		  → Spring が勝手に `new` して管理対象にする						
+								
+		* それを使いたい側で						
+		  @Autowired						
+		  PersonMapper mapper;						
+		  と書く						
+		  → Spring が そのフィールドに、用意しておいたインスタンスを入れてくれる						
+								
+		つまり、						
+		「どのクラスを new するか」は Spring が管理し、「使う側は @Autowired で受け取るだけ」						
+		というのが DI の具体的な姿です。						
+								
+	5. ざっくりイメージまとめ							
+		昔：						
+		「使いたいものは自分で `new` する」						
+								
+		DI：						
+		「使いたいものは外（Spring）からもらう。						
+		どれを new するかはフレームワーク側の仕事」						
+								
+		こんなイメージを持っておくとOKです。						
+		Spring Batch / MyBatis の話も、この「外から入れてもらう」流れの一部だと思って見ると整理しやすくなります。						

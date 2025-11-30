@@ -1,0 +1,58 @@
+Simplified Git																					
+①GitHubからURLをコピー																					
+	例：	https://github.com/mtk57/SpringBatchChunkTest.git																			
+																					
+②BASの三本線から、Help → Get Started																					
+																					
+③Clone from Git																					
+																					
+④URLを入力してEnter																					
+																					
+⑤ポップアップが出るので「Add to Workspace」																					
+	クローンしたリポジトリを開きますか？ それとも現在のワークスペースに追加しますか？																				
+																					
+⑥Cloneされる（/user/projects の下にリポジトリが出来る）																					
+																					
+⑦Simplified Git																					
+																					
+⑧RepositoryにCloneしたリポジトリが表示される																					
+																					
+																					
+																					
+																					
+																					
+																					
+																					
+SOURCE CONTROL			★こっちのがTortoiseGitに近いかも。																		
+REPOSITORIES			今このBASで扱っているGitリポジトリの一覧																		
+CHANGES			まだコミットしていない変更ファイルの一覧																		
+			ステージ（Gitの追跡対象）にすら追加されていないファイルは、Changesに表示される。（ファイルのツールチップにも「Untracked」と出る）→「＋」ボタンでステージに追加できる。																		→重要
+			ステージされているが、コミットされていないファイルも、Changesに表示される。このファイルの変更を取り消すには「Discard Changes」を使う。（アンドゥみたいなアイコン）																		→重要
+GRAPH			コミット履歴を線でつないで見せてくれるビュー																		
+			右クリックのメニューにチェリーピックもある																		
+REPOSITORIES			GitLens拡張が追加しているリポジトリビュー																		
+GITLENS			VS Code（やBAS）のGit機能を超強化する拡張機能																		
+			「このコード、誰が・いつ・どんなコミットで 変えたの？」																		
+			「このファイル、どんな履歴 をたどって今の状態になったの？」																		
+			みたいなことを、エディタの中でパッと見えるようにしてくれます。																		
+																					
+																					
+Pull					GitHub（リモート）側の変更を、手元（ローカル）に取り込む																
+Push					手元のコミットを GitHub に送る																
+Clone					GitHub 上のリポジトリを丸ごとコピーして、手元に作る																
+Checkout to...					別のブランチや、過去のコミットに切り替える									→重要							
+Fetch					GitHub 側の最新履歴だけをダウンロードするが、作業中のブランチにはまだ反映しない																
+Commit					ステージした変更を「1つの履歴（スナップショット）」として保存する																
+Changes					まだコミットしていない変更の一覧／差分ビューを開く									→重要							
+Pull, Push					Pull／Push 周りのちょっと細かい操作のサブメニュー																
+Branch					ブランチに関する操作（作成・削除・リネームなど）																
+Remote					GitHub などの「リモートリポジトリ」の設定を扱う																
+Stash					作業中の変更を一時的にしまって、作業ツリーをキレイな状態に戻す																
+Tags					特定のコミットに「名前（タグ）」を付ける																
+Worktrees					1つのリポジトリから、複数の作業用フォルダ（ワークツリー）を作る機能																
+Reset					現在のブランチや作業状態を、指定した過去のコミットに戻す									→重要							
+Add Co-authors...					コミットに「共同作者（Co-authored-by）」を追加する																
+Copy Changes (Patch)					そのコミットや変更の差分（パッチ）をテキストとしてコピーする																
+Share as Cloud Patch...					今の変更やコミットを「Cloud Patch」としてクラウドにアップし、URLで共有する機能																
+Generate Commit Message with GitLens...					GitLens のAIに、コミットメッセージを自動で考えてもらう機能																
+Show Git Output					Git が内部で実行しているコマンドと、その結果ログを表示する																

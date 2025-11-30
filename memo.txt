@@ -495,7 +495,7 @@ Java(SpringBatch)
 		personImportStep は							
 		「チャンク式で CSV→DB へ書き込むステップ」です。							
 									
-	Processor	入力を読む係							
+	Reader	入力を読む係							
 									
 		どこから読むかは実装次第：							
 		CSVファイル							

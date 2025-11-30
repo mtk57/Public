@@ -365,6 +365,27 @@ SpringBoot
 	データベース接続したい	application.ymlに4行書くだけで自動接続	
 	BTPにデプロイしたい	mvn package → cf push で即本番	
 	ローカルですぐ試したい	mvn spring-boot:run で0.5秒で起動	
+			
+			
+			
+			
+	アノテーション		
+	@Configuration	「このクラスは設定を書くクラスですよ」と Spring に教えるためのマーク	
+		@Configuration が付いたクラスの中の	
+		@Bean が付いたメソッドを読んで、	
+		その戻り値を Spring が管理するオブジェクト（Bean）として登録 します。	
+			
+	@Bean	このメソッドが返したオブジェクトを、Spring の“部品（Bean）”として登録するためのマーク	
+		@Bean	
+		public Job job(JobRepository jobRepository, Step personImportStep) {	
+		    return new JobBuilder("personImportJob", jobRepository)	
+		            .start(personImportStep)	
+		            .incrementer(new RunIdIncrementer())	
+		            .build();	
+		}	
+		このメソッドを実行してできた Job オブジェクトを	
+		Spring コンテナに 1個だけ作って保管しておいて	
+		他のクラスから @Autowired Job job; などで 使えるようにする	
 ------
 Command
 				
@@ -449,6 +470,193 @@ Java(SpringBatch)
 	application.properties								
 	Spring Boot の設定ファイルで、キー=値形式でアプリの各種設定を書く場所です。環境に応じて外部化でき、起動時に自動で読み込まれます。								
 	このプロジェクトでは H2 の接続情報、Batchスキーマ初期化、MyBatisマッパー位置、H2コンソール有効化などをここで指定しています。								
+	 								
+									
+	Job	バッチ全体の「シナリオ」							
+									
+		例：							
+		CSV取込ステップ							
+		→ 集計ステップ							
+		→ 結果メール送信ステップ							
+									
+		こういう「一連の流れ」を 1つにまとめたものが Job							
+									
+		あなたのプロジェクトの personImportJob は							
+		「personImportStep を1回実行するだけのジョブ」です。							
+									
+	Step	Job を構成する1つ1つの「作業単位」							
+									
+		1つの Job の中に複数 Step を並べられる。							
+									
+		種類はざっくり2つ：							
+		Tasklet ステップ（1回きりの処理）							
+		チャンクステップ（Reader/Processor/Writer の繰り返し）							
+									
+		personImportStep は							
+		「チャンク式で CSV→DB へ書き込むステップ」です。							
+									
+	Processor	入力を読む係							
+									
+		どこから読むかは実装次第：							
+		CSVファイル							
+		DB							
+		キュー　など							
+									
+		あなたのプロジェクトでは							
+		FlatFileItemReader<PersonCsv> が							
+		「CSVファイルを1行ずつ PersonCsv にして返す」Reader です。							
+									
+	Processor	読んだデータを「加工・変換」する係							
+									
+		例：							
+		型変換（文字列 → 日付/数値）							
+		不正データの判定＆スキップ							
+		複数項目から新しい値を計算（年齢など）							
+									
+		PersonProcessor は							
+		生年月日文字列を LocalDate に変換							
+		年齢を計算							
+		PersonEntity に詰め替え							
+		無効な日付なら null を返してスキップ							
+		というロジックを担当しています。							
+									
+	Writer	加工済みデータを書き出す係							
+									
+		出力先の例：							
+		DB（INSERT/UPDATE）							
+		ファイル							
+		メッセージキュー　など							
+									
+		チャンク単位（例：5件ずつ）でまとめて書くのが特徴。							
+									
+		あなたのプロジェクトでは							
+		MyBatisBatchItemWriter<PersonEntity> が							
+		PersonMapper.insert() を呼んで							
+		persons テーブルに INSERT する Writer							
+		になっています。							
+									
+									
+									
+									
+	このプロジェクトに限った「クラスが動く順番」を、できるだけシンプルに書きます。								
+									
+	## アプリ起動時（1回だけ）								
+									
+		1. **`SpringBatchChunkTestApplication.main()` が呼ばれる**							
+		   * `SpringApplication.run(...)` を実行。							
+									
+		2. **Spring が各クラスを準備**							
+		   * `@SpringBootApplication` によりコンポーネントスキャン。							
+		   * `@Configuration` な							
+		     * `BatchConfig`							
+		     * `PersonImportStepConfig`							
+		       などが読み込まれ、							
+		   * その中の `@Bean` メソッドが呼ばれて							
+		     * `Job`（`personImportJob`）							
+		     * `Step`（`personImportStep`）							
+		     * `ItemReader`							
+		     * `PersonProcessor`							
+		     * `ItemWriter`（MyBatisBatchItemWriter）							
+		       などが **1個ずつ作られて登録** される。							
+		   * `@MapperScan` によって `PersonMapper` も生成される。							
+									
+		ここまでは「設定を読むフェーズ」で、**まだCSV処理は走っていない**イメージです。							
+									
+	## ジョブ実行時（データ件数に応じて繰り返し）								
+									
+		ジョブとして動き出してからの「1件のデータが通る流れ」はこうです。							
+									
+		### ① Step実行開始							
+									
+			* `personImportJob` の中で						
+			  → **`personImportStep` がスタート**。						
+									
+		### ② Reader → Processor → Writer の順							
+									
+			チャンク処理の「1レコードあたり」の流れは：						
+									
+			1. **ItemReader（`FlatFileItemReader<PersonCsv>`）**						
+				   * CSVファイルから1行読み込む					
+				     → `PersonCsv` オブジェクト生成。					
+									
+			2. **ItemProcessor（`PersonProcessor`）**						
+				   * `PersonCsv` を受け取る。					
+				   * 生年月日文字列を `LocalDate` にパース。					
+				   * 年齢を計算。					
+				   * `PersonEntity` を作って返す。					
+				   * パースに失敗したら `null` を返し、そのレコードはスキップ。					
+									
+			3. **ItemWriter（MyBatisBatchItemWriter + `PersonMapper`）**						
+				   * `PersonProcessor` が返した `PersonEntity` をまとめて受け取る。					
+				   * 内部で **`PersonMapper.insert(personEntity)` を繰り返し呼び出す**。					
+				   * DB（`persons` テーブル）に INSERT。					
+									
+		### ③ チャンク単位のコミット							
+			* 上の **②（Reader→Processor→Writer）を「最大5件」分まとめて1セット** として処理。						
+			* 5件終わると、トランザクションを **コミット**。						
+			* まだCSVに行が残っていれば、また						
+			  > Reader → Processor → Writer（最大5件） → コミット						
+			  > を繰り返す。						
+									
+									
+	---								
+									
+	## クラス名でざっくり順番を書くと…								
+									
+	1. **起動時**								
+		   * `SpringBatchChunkTestApplication`（`main`）							
+		   * → `BatchConfig` / `PersonImportStepConfig` などの設定クラスが読まれる							
+		   * → その中の `@Bean` メソッドで							
+		     `Job`, `Step`, `Reader`, `Processor`, `Writer` などが作成							
+		   * → `PersonMapper` も `@MapperScan` で登録							
+									
+	2. **ジョブ実行時（1レコードごと）**								
+		   1. `FlatFileItemReader<PersonCsv>` が CSV から読む							
+		   2. `PersonProcessor` が `PersonCsv` → `PersonEntity` に変換							
+		   3. `MyBatisBatchItemWriter` が `PersonMapper.insert(...)` を呼んで DB に書く							
+									
+		この **①→②→③ の流れを、CSV の行数分だけ繰り返す**、というシーケンスです。							
+									
+									
+									
+	------								
+	> **ジョブをキックしているのは								
+	「Spring Boot（Spring Batch）」で、タイミングは「アプリ起動直後」**								
+	です。								
+									
+	もう少し具体的にいうと：								
+									
+	* あなたがやっていること								
+	  → `main()` で								
+									
+	  ```java								
+	  SpringApplication.run(SpringBatchChunkTestApplication.class, args);								
+	  ```								
+									
+	  を呼んでいるだけ。								
+									
+	* その中で Spring Boot が内部的に								
+									
+	  1. `@Configuration` や `@Bean` から								
+	     `personImportJob` を見つける								
+	  2. `JobLauncherApplicationRunner`（Spring Boot が用意しているクラス）が								
+	     「登録されているジョブある？ → じゃあ実行するね」と自動で起動する								
+									
+	なので、								
+									
+	* **誰が**：`JobLauncherApplicationRunner`（Spring Boot の内部部品）								
+	* **いつ**：`SpringApplication.run(...)` でアプリが立ち上がった直後								
+									
+	という順番で、ジョブが「勝手に」実行されます。								
+									
+	もしこれを止めたければ、`application.properties` などで								
+									
+	```properties								
+	spring.batch.job.enabled=false								
+	```								
+									
+	とすると、「起動時に自動でジョブをキックしない」ようにできます。								
+
 -----
 DI
 									

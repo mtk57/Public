@@ -24,3 +24,21 @@ pom.xmlの超重要タグ
 <version>	バージョン	 3.2.0
 <build><plugins>	ビルド時に使うプラグイン	 cloudfoundry-maven-plugin など
 <properties>	バージョン統一管理	 <java.version>17</java.version>
+		
+		
+pom.xml / dependency / artifactId		
+spring-boot-starter-jdbc	DBアクセス用。JDBC	
+spring-boot-starter-data-jpa	DBアクセス用。JPA	
+spring-boot-starter-test	テスト用	
+spring-batch-test	テスト用	
+ngdbc	SAP HANA に接続するための JDBC ドライバ	
+commons-csv	CSVファイルを読み書きするためのライブラリ	
+httpclient	HTTP通信（外部Web API呼び出しなど）を行うためのクライアント	
+h2	組み込みDB。ローカル実行やテストで使う想定	
+lombok	Getter/Setter などを自動生成してコードを簡潔にするライブラリ	
+junit-jupiter	テスト用	
+spring-boot-starter-actuator	ヘルスチェックやメトリクスなど、運用監視用のエンドポイントを提供	
+cds-starter-cloudfoundry	Cloud Foundry 上で動かすための SAP 用スターター	
+jackson-databind	JSON の変換（オブジェクト⇔JSON）用	
+HikariCP	DB接続プールの実装。高速・安定したコネクション管理用	
+spring-boot-maven-plugin	mvn package したときに、Spring Boot の実行可能 JAR を作るプラグイン	

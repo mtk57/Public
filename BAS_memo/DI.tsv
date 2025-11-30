@@ -64,3 +64,37 @@ DI	Dependency Injection
 								
 		こんなイメージを持っておくとOKです。						
 		Spring Batch / MyBatis の話も、この「外から入れてもらう」流れの一部だと思って見ると整理しやすくなります。						
+								
+								
+								
+								
+メソッドの引数のDIについて								
+	@Bean が付いたメソッドを呼び出すとき、Springはメソッド引数にも自動で依存性注入（DI）を行う							
+								
+	@Bean							
+	public Job sampleJob(JobRepository jobRepository,							→3つの引数は全てBean
+	                     Step sampleStep,							
+	                     SampleJobListener listener) {							
+	    ...							
+	}							
+								
+								
+	// 疑似コードイメージ							
+	Job sampleJob = batchConfig.sampleJob(							
+	    applicationContext.getBean(JobRepository.class),							
+	    applicationContext.getBean(Step.class),							
+	    applicationContext.getBean(SampleJobListener.class)							
+	);							
+	みたいなことを、Spring が裏側でやってくれている感じです。							
+								
+								
+								
+メソッドの引数以外のDIについて								
+以下の場合は@Autowiredが必要。								
+・フィールド								
+・コンストラクタ								
+・Setterメソッド								
+								
+以下の場合はアノテーションなしでDIしてくれる								
+・@Bean メソッドの 引数								
+・@Configuration クラスの コンストラクタ								

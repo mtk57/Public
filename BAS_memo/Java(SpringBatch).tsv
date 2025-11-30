@@ -197,3 +197,115 @@ spring.batch.job.enabled=false
 ```								
 								
 とすると、「起動時に自動でジョブをキックしない」ようにできます。								
+								
+								
+								
+								
+ChunkContext								
+Stepが今どんな状態か」を持つオブジェクトであって、「Tasklet方式かChunk方式か」を選ぶ話とは 別もの です。								
+								
+Stepの方式（Tasklet / Chunk）								
+→ 「処理の書き方」の違い								
+								
+ChunkContext								
+→ 「今のチャンク／ステップの情報（パラメータ・実行IDなど）」を持っている入れ物								
+→ Tasklet の execute や、ChunkListener から使える								
+								
+なので、								
+「Tasklet 方式だから ChunkContext を使う」、「Chunk 方式だから ChunkContext を使う」という“どちらか”の話ではなくて、								
+「Step が動いているときの状態にアクセスしたいときに使う道具が ChunkContext」								
+								
+								
+リスナー								
+イベントが起きたときに呼び出される“待ち受け役”のクラス／メソッド								
+								
+ジョブの開始・終了をフックしたい → JobExecutionListener								
+ステップの開始・終了をフックしたい → StepExecutionListener								
+チャンクの前後をフックしたい → ChunkListener								
+Item 読み込み前後・エラー時をフックしたい → ItemReadListener など								
+								
+何が嬉しいのか								
+・メインの処理（ビジネスロジック）と								
+・付随する処理（ログ、監視、リトライ、通知など）								
+を分離できるので、コードが見やすく・テストしやすくなります。								
+								
+＜超シンプルなコード例＞								
+1. メイン処理（Tasklet）								
+	// メインのバッチ処理（仕事本体）							
+	@Component							
+	public class SampleTasklet implements Tasklet {							
+								
+	    @Override							
+	    public RepeatStatus execute(StepContribution contribution,							
+	                                ChunkContext chunkContext) {							
+	        System.out.println("メイン処理：実際のバッチ処理をここに書く");							
+	        return RepeatStatus.FINISHED;							
+	    }							
+	}							
+								
+2. リスナー（ジョブ開始／終了のログだけ担当）								
+	// ジョブ開始・終了だけを担当するリスナー							
+	@Component							
+	public class SampleJobListener implements JobExecutionListener {							
+								
+	    @Override							
+	    public void beforeJob(JobExecution jobExecution) {							
+	        System.out.println("リスナー：ジョブ開始");							
+	    }							
+								
+	    @Override							
+	    public void afterJob(JobExecution jobExecution) {							
+	        System.out.println("リスナー：ジョブ終了");							
+	    }							
+	}							
+								
+3. Job 定義で「メイン」と「リスナー」を組み合わせる								
+	@Configuration							
+	public class BatchConfig {							
+								
+	    @Bean							
+	    public Step sampleStep(JobRepository jobRepository,							
+	                           PlatformTransactionManager transactionManager,							
+	                           SampleTasklet tasklet) {							
+	        return new StepBuilder("sampleStep", jobRepository)							
+	                .tasklet(tasklet, transactionManager)							
+	                .build();							
+	    }							
+								
+	    @Bean							
+	    public Job sampleJob(JobRepository jobRepository,							
+	                         Step sampleStep,							
+	                         SampleJobListener listener) {							
+	        return new JobBuilder("sampleJob", jobRepository)							
+	                .start(sampleStep)      // メイン処理							
+	                .listener(listener)     // リスナーをここで「後付け」							
+	                .build();							
+	    }							
+	}							
+								
+								
+								
+ベストプラクティス								
+1 Step = 1つの意味のある処理単位								
+例：掃除、コピー、集計、通知 など								
+								
+1 Tasklet = その Step の責務を果たすための実装								
+同じ責務の範囲なら、内部で複数の小さい処理があってもOK								
+								
+性質の違う処理・後から別々に制御したくなる処理								
+→ Step を分ける（＝Tasklet も分ける）								
+								
+								
+バッドプラクティス								
+1つの Tasklet に、								
+・テーブルA→Bにコピー								
+・集計結果のINSERT								
+・バックアップ								
+・掃除								
+・メール送信								
+								
+…みたいに、性質の違う処理を全部詰め込むと：								
+・何の Step なのか分かりづらい								
+・エラーの時にどこまで終わったか分かりづらい								
+・後から一部だけリトライ／スキップしたいときに困る								
+ので、これは Stepを分割したほうがいい です。（1step / 1tasklet）								

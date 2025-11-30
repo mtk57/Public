@@ -14,3 +14,6 @@
 	.cdsrс.json / .cdsrc-private.json		CAPサーバーの起動オプション	
 	launch.json		.vscode/ の中 → Run and Debugの設定	
 	tasks.json		.vscode/ の中 → ビルドタスクのカスタマイズ	
+				
+				
+				

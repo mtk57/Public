@@ -1,0 +1,9 @@
+Simple Sheet To Tsv	
+ver1.0.0	
+	
+	
+	
+	
+Excelファイルパス	C:\_git\Public\VBA\SimpleSheet2Tsv\testdata\test.xlsx
+TSV出力フォルダパス	C:\_git\Public\VBA\SimpleSheet2Tsv\testdata\out
+非表示シートも対象	YES

@@ -83,6 +83,28 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
 ちなみに文字列のフォントはConsolasで、使用している文字種はBase32 + ハイフンのみです。（全て半角文字）
 
 
+
+■Maven
+
+mvn clean package
+
+mvn spring-boot:run 
+
+
+■Linux
+
+ss -ltnp | grep 8080  # 8080ポートを誰がListenしているか?
+
+■Git
+
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/mtk57/SoapServerTest2.git
+git branch -M main        # GitHub側が main ブランチの場合
+git push -u origin main
+
+
 ----------
 SW6K 3SN3 QM5N VTMY ECPV TRK2 OEAD USIQ-W3
 OXHY EDEP T5AR F7OZ QC7C LUMQ ARED XNUL-M2

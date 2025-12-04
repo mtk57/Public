@@ -28,12 +28,18 @@
         /// </summary>
         private void InitializeComponent ()
         {
+            this.components = new System.ComponentModel.Container();
             this.txtDirPath = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnRefDirPath = new System.Windows.Forms.Button();
             this.txtOutput = new System.Windows.Forms.TextBox();
             this.btnRun = new System.Windows.Forms.Button();
             this.btnExtract = new System.Windows.Forms.Button();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtIgnoreDirs = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.txtIgnoreFiles = new System.Windows.Forms.TextBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.SuspendLayout();
             // 
             // txtDirPath
@@ -66,17 +72,17 @@
             this.txtOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtOutput.Location = new System.Drawing.Point(22, 90);
+            this.txtOutput.Location = new System.Drawing.Point(12, 205);
             this.txtOutput.MaxLength = 0;
             this.txtOutput.Multiline = true;
             this.txtOutput.Name = "txtOutput";
             this.txtOutput.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtOutput.Size = new System.Drawing.Size(474, 233);
+            this.txtOutput.Size = new System.Drawing.Size(474, 269);
             this.txtOutput.TabIndex = 3;
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(216, 53);
+            this.btnRun.Location = new System.Drawing.Point(22, 176);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(44, 23);
             this.btnRun.TabIndex = 4;
@@ -85,18 +91,56 @@
             // 
             // btnExtract
             // 
-            this.btnExtract.Location = new System.Drawing.Point(311, 53);
+            this.btnExtract.Location = new System.Drawing.Point(429, 176);
             this.btnExtract.Name = "btnExtract";
             this.btnExtract.Size = new System.Drawing.Size(44, 23);
             this.btnExtract.TabIndex = 5;
             this.btnExtract.Text = "復元";
             this.btnExtract.UseVisualStyleBackColor = true;
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(20, 53);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(64, 12);
+            this.label2.TabIndex = 7;
+            this.label2.Text = "除外フォルダ";
+            // 
+            // txtIgnoreDirs
+            // 
+            this.txtIgnoreDirs.Location = new System.Drawing.Point(22, 68);
+            this.txtIgnoreDirs.Name = "txtIgnoreDirs";
+            this.txtIgnoreDirs.Size = new System.Drawing.Size(471, 19);
+            this.txtIgnoreDirs.TabIndex = 6;
+            this.toolTip1.SetToolTip(this.txtIgnoreDirs, "複数指定時は\"/\"で区切る");
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(20, 94);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(63, 12);
+            this.label3.TabIndex = 9;
+            this.label3.Text = "除外ファイル";
+            // 
+            // txtIgnoreFiles
+            // 
+            this.txtIgnoreFiles.Location = new System.Drawing.Point(22, 109);
+            this.txtIgnoreFiles.Name = "txtIgnoreFiles";
+            this.txtIgnoreFiles.Size = new System.Drawing.Size(471, 19);
+            this.txtIgnoreFiles.TabIndex = 8;
+            this.toolTip1.SetToolTip(this.txtIgnoreFiles, "複数指定時は\"/\"で区切る");
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(522, 350);
+            this.ClientSize = new System.Drawing.Size(522, 486);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.txtIgnoreFiles);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.txtIgnoreDirs);
             this.Controls.Add(this.btnExtract);
             this.Controls.Add(this.btnRun);
             this.Controls.Add(this.txtOutput);
@@ -118,6 +162,11 @@
         private System.Windows.Forms.TextBox txtOutput;
         private System.Windows.Forms.Button btnRun;
         private System.Windows.Forms.Button btnExtract;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox txtIgnoreDirs;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox txtIgnoreFiles;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
 

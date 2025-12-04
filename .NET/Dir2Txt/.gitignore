@@ -1,0 +1,45 @@
+# ユーザーごとの設定ファイル
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ビルド成果物
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio 用キャッシュ
+.vs/
+Generated Files/
+
+# 一時ファイル・中間ファイル
+*.obj
+*.pch
+*.pdb
+*.tlb
+*.tmp
+*.log
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+!**/[Pp]ackages/repositories.config
+
+# その他
+*.cache
+*.bak
+*.exe

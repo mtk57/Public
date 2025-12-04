@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.IO;
 
 namespace Dir2Txt
 {
@@ -22,6 +25,8 @@ namespace Dir2Txt
             btnRefDirPath.Click += BtnRefDirPath_Click;
             btnRun.Click += BtnRun_Click;
             btnExtract.Click += BtnExtract_Click;
+            Load += MainForm_Load;
+            FormClosed += MainForm_FormClosed;
         }
 
         private void BtnExtract_Click ( object sender, EventArgs e )
@@ -49,7 +54,9 @@ namespace Dir2Txt
 
             try
             {
-                txtOutput.Text = BuildDirectoryText( dirPath );
+                var ignoreDirs = ParseIgnoreList( txtIgnoreDirs.Text );
+                var ignoreFiles = ParseIgnoreList( txtIgnoreFiles.Text );
+                txtOutput.Text = BuildDirectoryText( dirPath, ignoreDirs, ignoreFiles );
             }
             catch ( Exception ex )
             {
@@ -69,10 +76,14 @@ namespace Dir2Txt
             }
         }
 
-        private string BuildDirectoryText ( string rootPath )
+        private string BuildDirectoryText ( string rootPath, IEnumerable<string> ignoreDirs, IEnumerable<string> ignoreFiles )
         {
+            var ignoreDirSet = new HashSet<string>( ignoreDirs, StringComparer.OrdinalIgnoreCase );
+            var ignoreFileSet = new HashSet<string>( ignoreFiles, StringComparer.OrdinalIgnoreCase );
+
             var allFiles = Directory.GetFiles( rootPath, "*", SearchOption.AllDirectories )
                                     .OrderBy( x => x )
+                                    .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet ) )
                                     .ToList();
 
             var builder = new StringBuilder();
@@ -94,6 +105,46 @@ namespace Dir2Txt
             }
 
             return builder.ToString();
+        }
+
+        private IEnumerable<string> ParseIgnoreList ( string text )
+        {
+            if ( string.IsNullOrWhiteSpace( text ) )
+            {
+                yield break;
+            }
+
+            var parts = text.Split( new[] { '/' }, StringSplitOptions.RemoveEmptyEntries );
+            foreach ( var part in parts )
+            {
+                var trimmed = part.Trim();
+                if ( !string.IsNullOrEmpty( trimmed ) )
+                {
+                    yield return trimmed;
+                }
+            }
+        }
+
+        private bool ShouldIgnoreFile ( string filePath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles )
+        {
+            if ( ignoreFiles.Contains( Path.GetFileName( filePath ) ) )
+            {
+                return true;
+            }
+
+            if ( ignoreDirs.Count == 0 )
+            {
+                return false;
+            }
+
+            var directory = Path.GetDirectoryName( filePath );
+            if ( string.IsNullOrEmpty( directory ) )
+            {
+                return false;
+            }
+
+            var parts = directory.Split( Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar );
+            return parts.Any( part => ignoreDirs.Contains( part ) );
         }
 
         private (string Content, Encoding Encoding) ReadFileWithEncoding ( string path )
@@ -205,5 +256,86 @@ namespace Dir2Txt
 
             return false;
         }
+
+        private void MainForm_Load ( object sender, EventArgs e )
+        {
+            try
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version;
+                this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
+
+                var settings = LoadSettings();
+                if ( settings != null )
+                {
+                    txtDirPath.Text = settings.DirPath;
+                    txtIgnoreDirs.Text = settings.IgnoreDirs;
+                    txtIgnoreFiles.Text = settings.IgnoreFiles;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private void MainForm_FormClosed ( object sender, FormClosedEventArgs e )
+        {
+            try
+            {
+                SaveSettings( new MainFormSettings
+                {
+                    DirPath = txtDirPath.Text ?? string.Empty,
+                    IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty,
+                    IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty
+                } );
+            }
+            catch
+            {
+            }
+        }
+
+        private string GetSettingsPath ()
+        {
+            return Path.Combine( AppDomain.CurrentDomain.BaseDirectory, "Dir2Txt.settings.json" );
+        }
+
+        private MainFormSettings LoadSettings ()
+        {
+            var path = GetSettingsPath();
+            if ( !File.Exists( path ) )
+            {
+                return null;
+            }
+
+            using ( var stream = File.OpenRead( path ) )
+            {
+                var serializer = new DataContractJsonSerializer( typeof( MainFormSettings ) );
+                return serializer.ReadObject( stream ) as MainFormSettings;
+            }
+        }
+
+        private void SaveSettings ( MainFormSettings settings )
+        {
+            var path = GetSettingsPath();
+            using ( var stream = File.Create( path ) )
+            {
+                var serializer = new DataContractJsonSerializer( typeof( MainFormSettings ) );
+                serializer.WriteObject( stream, settings );
+            }
+        }
+
+        [DataContract]
+        private class MainFormSettings
+        {
+            [DataMember]
+            public string DirPath { get; set; }
+
+            [DataMember]
+            public string IgnoreDirs { get; set; }
+
+            [DataMember]
+            public string IgnoreFiles { get; set; }
+        }
+
+
     }
 }

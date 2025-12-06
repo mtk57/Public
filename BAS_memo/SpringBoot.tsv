@@ -86,3 +86,10 @@ Spring Batch 関連
 		
 Java 標準		
 @Override	親クラスやインタフェースのメソッドを正しくオーバーライドしていることをコンパイラにチェックしてもらう	
+		
+		
+		
+Spring Boot は		
+スキーマ用: classpath:schema.sql		
+データ用: classpath:data.sql		
+という「デフォルトの場所」を自動で探しに行きます		

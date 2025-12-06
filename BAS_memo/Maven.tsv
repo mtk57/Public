@@ -42,3 +42,28 @@ cds-starter-cloudfoundry	Cloud Foundry 上で動かすための SAP 用スターター
 jackson-databind	JSON の変換（オブジェクト⇔JSON）用	
 HikariCP	DB接続プールの実装。高速・安定したコネクション管理用	
 spring-boot-maven-plugin	mvn package したときに、Spring Boot の実行可能 JAR を作るプラグイン	
+		
+		
+		
+		
+Maven の標準レイアウト		
+Java ソース		
+　→{プロジェクト}/src/main/java		
+リソース（application.properties, schema.sql など）		
+　→{プロジェクト}/src/main/resources		
+		
+Spring Boot や IDE（IntelliJ, VS Code の拡張など）は		
+この前提でいろいろ自動化されています。		
+		
+これを変えるにはpom.xmlを変える必要がある		
+<build>		
+    <!-- Javaソース -->		
+    <sourceDirectory>src/my-java</sourceDirectory>		
+		
+    <!-- リソース -->		
+    <resources>		
+        <resource>		
+            <directory>src/my-resources</directory>		
+        </resource>		
+    </resources>		
+</build>		

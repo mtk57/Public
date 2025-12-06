@@ -106,6 +106,7 @@
             this.label2.Size = new System.Drawing.Size(64, 12);
             this.label2.TabIndex = 7;
             this.label2.Text = "除外フォルダ";
+            this.toolTip1.SetToolTip(this.label2, "複数指定時は\"/\"で区切る");
             // 
             // txtIgnoreDirs
             // 
@@ -123,6 +124,7 @@
             this.label3.Size = new System.Drawing.Size(63, 12);
             this.label3.TabIndex = 9;
             this.label3.Text = "除外ファイル";
+            this.toolTip1.SetToolTip(this.label3, "複数指定時は\"/\"で区切る");
             // 
             // txtIgnoreFiles
             // 

@@ -122,8 +122,9 @@ HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=SA
 # 8080ポートを誰がListenしているか?
 ss -ltnp | grep 8080
 
+# 全ファイル/フォルダを表示
+ls -a
 
-Consolas, 'Courier New', monospace
 
 
 ■VS Code
@@ -153,12 +154,22 @@ Ctrl + Shift + P → "Developer: Reload Window"
 
 ■Git
 
+rm -rf .git
 git init
 git add .
 git commit -m "first commit"
 git remote add origin https://github.com/mtk57/SoapServerTest2.git
 git branch -M main        # GitHub側が main ブランチの場合
 git push -u origin main
+
+# clone
+1.左のSource ControlのCHANGESの...からclone
+2.githubのURLを入れる
+
+# git管理対象をツリー表示
+git ls-tree -r --name-only HEAD | tree --fromfile .
+
+
 
 
 ----------

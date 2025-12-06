@@ -91,6 +91,9 @@ mvn spring-boot:run
 # テストはスキップ、ログ少なめ（-q）でSpringを起動
 mvn -q -DskipTests spring-boot:run
 
+# ライブラリのバージョン確認。以下はSpring Batchの例
+mvn dependency:tree | grep spring-batch-core
+
 # ターミナルのエンコードをUTF-8にする（pom.xmlを修正）
 <build>
     <plugins>

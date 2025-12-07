@@ -1467,9 +1467,10 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         scaleText = Trim$(CStr(targetWs.Cells(currentRow, scaleCell.Column).value))
         Dim isIntegerNumeric As Boolean
         isIntegerNumeric = (category = CATEGORY_NUMERIC And IsIntegerLikeType(typeKey))
+        Dim parsedPrecision As Long
+        Dim parsedScale As Long
 
         If category = CATEGORY_STRING Then
-            Dim parsedPrecision As Long
             If Not TryParsePositiveInteger(precisionText, parsedPrecision) Then
                 AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
             Else
@@ -1477,7 +1478,6 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
                 definition.HasPrecision = True
             End If
         ElseIf category = CATEGORY_NUMERIC Then
-            Dim parsedPrecision As Long
             If LenB(precisionText) > 0 Then
                 If Not TryParsePositiveInteger(precisionText, parsedPrecision) Then
                     AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
@@ -1489,7 +1489,6 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
                 AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
             End If
 
-            Dim parsedScale As Long
             If LenB(scaleText) > 0 Then
                 If Not TryParseNonNegativeInteger(scaleText, parsedScale) Then
                     AddError errors, "小数桁が不正です: " & targetWs.Cells(currentRow, scaleCell.Column).address(False, False)

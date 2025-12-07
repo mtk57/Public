@@ -1465,8 +1465,10 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
         precisionText = Trim$(CStr(targetWs.Cells(currentRow, precisionCell.Column).value))
         Dim scaleText As String
         scaleText = Trim$(CStr(targetWs.Cells(currentRow, scaleCell.Column).value))
+        Dim isIntegerNumeric As Boolean
+        isIntegerNumeric = (category = CATEGORY_NUMERIC And IsIntegerLikeType(typeKey))
 
-        If category = CATEGORY_NUMERIC Or category = CATEGORY_STRING Then
+        If category = CATEGORY_STRING Then
             Dim parsedPrecision As Long
             If Not TryParsePositiveInteger(precisionText, parsedPrecision) Then
                 AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
@@ -1474,15 +1476,29 @@ Private Function ReadColumnDefinitions(ByVal targetWs As Worksheet, ByVal nameAd
                 definition.Precision = parsedPrecision
                 definition.HasPrecision = True
             End If
-        End If
+        ElseIf category = CATEGORY_NUMERIC Then
+            Dim parsedPrecision As Long
+            If LenB(precisionText) > 0 Then
+                If Not TryParsePositiveInteger(precisionText, parsedPrecision) Then
+                    AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
+                Else
+                    definition.Precision = parsedPrecision
+                    definition.HasPrecision = True
+                End If
+            ElseIf Not isIntegerNumeric Then
+                AddError errors, "整数桁が不正です: " & targetWs.Cells(currentRow, precisionCell.Column).address(False, False)
+            End If
 
-        If category = CATEGORY_NUMERIC Then
             Dim parsedScale As Long
-            If Not TryParseNonNegativeInteger(scaleText, parsedScale) Then
+            If LenB(scaleText) > 0 Then
+                If Not TryParseNonNegativeInteger(scaleText, parsedScale) Then
+                    AddError errors, "小数桁が不正です: " & targetWs.Cells(currentRow, scaleCell.Column).address(False, False)
+                Else
+                    definition.ScaleDigits = parsedScale
+                    definition.HasScale = True
+                End If
+            ElseIf Not isIntegerNumeric Then
                 AddError errors, "小数桁が不正です: " & targetWs.Cells(currentRow, scaleCell.Column).address(False, False)
-            Else
-                definition.ScaleDigits = parsedScale
-                definition.HasScale = True
             End If
         End If
 
@@ -1712,6 +1728,13 @@ Private Function GenerateCreateSqlText(ByVal tableName As String, ByVal columns 
     GenerateCreateSqlText = dropSql & vbCrLf & vbCrLf & createSql
 End Function
 
+Private Function IsIntegerLikeType(ByVal typeName As String) As Boolean
+    Select Case UCase$(Trim$(typeName))
+        Case "INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT"
+            IsIntegerLikeType = True
+    End Select
+End Function
+
 Private Function FormatDataType(ByVal definition As ColumnDefinition, ByVal dbms As String, ByVal errors As Collection) As String
     Dim baseType As String
     baseType = ResolveDbmsTypeName(definition.DataType, definition.category, dbms, errors)
@@ -1719,11 +1742,15 @@ Private Function FormatDataType(ByVal definition As ColumnDefinition, ByVal dbms
 
     Select Case definition.category
         Case CATEGORY_NUMERIC
-            If Not definition.HasPrecision Or Not definition.HasScale Then
-                AddError errors, "数値型の桁情報が不足しています: " & definition.Name
-                Exit Function
+            If IsIntegerLikeType(definition.DataType) Then
+                FormatDataType = baseType
+            Else
+                If Not definition.HasPrecision Or Not definition.HasScale Then
+                    AddError errors, "数値型の桁情報が不足しています: " & definition.Name
+                    Exit Function
+                End If
+                FormatDataType = baseType & "(" & CStr(definition.Precision) & "," & CStr(definition.ScaleDigits) & ")"
             End If
-            FormatDataType = baseType & "(" & CStr(definition.Precision) & "," & CStr(definition.ScaleDigits) & ")"
         Case CATEGORY_STRING
             If Not definition.HasPrecision Then
                 AddError errors, "文字列型の桁情報が不足しています: " & definition.Name

@@ -1631,6 +1631,9 @@ Private Function QuoteIdentifier(ByVal identifier As String, ByVal dbms As Strin
             cleaned = Replace(cleaned, "[", vbNullString)
             cleaned = Replace(cleaned, "]", vbNullString)
             QuoteIdentifier = "[" & cleaned & "]"
+        Case "H2"
+            cleaned = Replace(cleaned, """", vbNullString)
+            QuoteIdentifier = cleaned
         Case Else
             cleaned = Replace(cleaned, """", vbNullString)
             QuoteIdentifier = """" & cleaned & """"

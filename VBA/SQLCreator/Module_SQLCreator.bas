@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.5.0"
+Private Const VER As String = "2.5.1"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -1224,7 +1224,11 @@ Private Function ResolveSqlServerTypeName(ByVal normalized As String, ByVal cate
         Case Else
             Select Case category
                 Case CATEGORY_NUMERIC
-                    ResolveSqlServerTypeName = "DECIMAL"
+                    If IsIntegerLikeType(normalized) Then
+                        ResolveSqlServerTypeName = normalized
+                    Else
+                        ResolveSqlServerTypeName = "DECIMAL"
+                    End If
                 Case CATEGORY_STRING
                     ResolveSqlServerTypeName = "NVARCHAR"
                 Case CATEGORY_DATE
@@ -1262,7 +1266,11 @@ Private Function ResolveOracleTypeName(ByVal normalized As String, ByVal categor
         Case Else
             Select Case category
                 Case CATEGORY_NUMERIC
-                    ResolveOracleTypeName = "NUMBER"
+                    If IsIntegerLikeType(normalized) Then
+                        ResolveOracleTypeName = normalized
+                    Else
+                        ResolveOracleTypeName = "NUMBER"
+                    End If
                 Case CATEGORY_STRING
                     ResolveOracleTypeName = "VARCHAR2"
                 Case CATEGORY_DATE
@@ -1288,7 +1296,11 @@ Private Function ResolveSqliteTypeName(ByVal normalized As String, ByVal categor
         Case Else
             Select Case category
                 Case CATEGORY_NUMERIC
-                    ResolveSqliteTypeName = "NUMERIC"
+                    If IsIntegerLikeType(normalized) Then
+                        ResolveSqliteTypeName = normalized
+                    Else
+                        ResolveSqliteTypeName = "NUMERIC"
+                    End If
                 Case CATEGORY_STRING
                     ResolveSqliteTypeName = "TEXT"
                 Case CATEGORY_DATE, CATEGORY_TIME, CATEGORY_TIMESTAMP
@@ -1312,7 +1324,11 @@ Private Function ResolveAccessTypeName(ByVal normalized As String, ByVal categor
         Case Else
             Select Case category
                 Case CATEGORY_NUMERIC
-                    ResolveAccessTypeName = "DECIMAL"
+                    If IsIntegerLikeType(normalized) Then
+                        ResolveAccessTypeName = normalized
+                    Else
+                        ResolveAccessTypeName = "DECIMAL"
+                    End If
                 Case CATEGORY_STRING
                     ResolveAccessTypeName = "TEXT"
                 Case CATEGORY_DATE, CATEGORY_TIME, CATEGORY_TIMESTAMP
@@ -1342,7 +1358,11 @@ Private Function ResolveH2TypeName(ByVal normalized As String, ByVal category As
         Case Else
             Select Case category
                 Case CATEGORY_NUMERIC
-                    ResolveH2TypeName = "DECIMAL"
+                    If IsIntegerLikeType(normalized) Then
+                        ResolveH2TypeName = normalized
+                    Else
+                        ResolveH2TypeName = "DECIMAL"
+                    End If
                 Case CATEGORY_STRING
                     ResolveH2TypeName = "VARCHAR"
                 Case CATEGORY_DATE

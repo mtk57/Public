@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.4.0"
+Private Const VER As String = "2.5.0"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -37,7 +37,9 @@ Private Const MAIN_COL_DATA_FILE As Long = 15
 Private Const MAIN_COL_DATA_SHEET As Long = 16
 Private Const MAIN_COL_DATA_TABLE As Long = 17
 Private Const MAIN_COL_DATA_START As Long = 18
-Private Const MAIN_COL_MESSAGE As Long = 20
+Private Const MAIN_COL_DTO_LANG As Long = 19
+Private Const MAIN_COL_DTO_CLASS As Long = 20
+Private Const MAIN_COL_MESSAGE As Long = 25
 
 Private Const ORACLE_TIME_BASE_DATE As String = "1970-01-01"
 
@@ -363,6 +365,8 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim dataTableName As String
     Dim dataStartAddr As String
     Dim dbms As String
+    Dim dtoLanguage As String
+    Dim dtoClassName As String
     Dim definitionWb As Workbook
     Dim definitionWs As Worksheet
     Dim dataWb As Workbook
@@ -371,11 +375,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim dataRecords As Collection
     Dim createSql As String
     Dim insertSql As String
+    Dim dtoText As String
     Dim createOutputPath As String
     Dim insertOutputPath As String
+    Dim dtoOutputPath As String
     Dim timestampText As String
     Dim dataTargetMark As String
     Dim hasDataFile As Boolean
+    Dim shouldOutputDto As Boolean
     Dim logPrefix As String
     Dim currentStage As String
 
@@ -394,6 +401,8 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     pkAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_PK_ADDR).value))
     notNullAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_NOTNULL_ADDR).value))
     dbms = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DBMS).value))
+    dtoLanguage = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_LANG).value))
+    dtoClassName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_CLASS).value))
     dataTargetMark = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TARGET).value))
     dataFilePath = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_FILE).value))
     dataSheetName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_SHEET).value))
@@ -422,9 +431,10 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     hasDataFile = (dataTargetMark = "○")
+    shouldOutputDto = (LenB(dtoLanguage) > 0)
 
     If LOG_ENABLED Then
-        LogDebug logPrefix & "hasDataFile=" & CStr(hasDataFile)
+        LogDebug logPrefix & "hasDataFile=" & CStr(hasDataFile) & ", hasDto=" & CStr(shouldOutputDto)
     End If
 
     currentStage = "Validation"
@@ -437,6 +447,11 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     ValidateRequiredValue pkAddr, "PKカラム開始セル", errors
     ValidateRequiredValue notNullAddr, "NotNullカラム開始セル", errors
     ValidateDbms dbms, errors
+
+    If shouldOutputDto Then
+        ValidateDtoLanguage dtoLanguage, errors
+        ValidateRequiredValue dtoClassName, "DTOクラス名", errors
+    End If
 
     If hasDataFile Then
         ValidateRequiredValue dataFilePath, "データファイルパス", errors
@@ -610,6 +625,22 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         End If
     End If
 
+    If shouldOutputDto Then
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "DTO生成開始"
+        End If
+        currentStage = "GenerateDtoText"
+        dtoText = GenerateDtoText(dtoLanguage, dtoClassName, columns, errors)
+        If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "DTO生成", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "DTO生成完了。文字数=" & CStr(Len(dtoText))
+        End If
+    End If
+
     timestampText = Format$(Now, "yyyymmdd_hhnnss")
     If LOG_ENABLED Then
         LogDebug logPrefix & "CREATE SQLファイル出力開始"
@@ -641,11 +672,33 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         End If
     End If
 
+    If shouldOutputDto Then
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "DTOファイル出力開始"
+        End If
+        currentStage = "WriteDtoFile"
+        dtoOutputPath = WriteDtoFile(definitionFilePath, SanitizeForFile(dtoClassName) & GetDtoFileExtension(dtoLanguage), dtoText, errors)
+        If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "DTOファイル出力", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogInfo logPrefix & "DTO出力完了: " & dtoOutputPath
+        End If
+    End If
+
     Dim successMessage As String
     If hasDataFile Then
         successMessage = "SQL出力: " & createOutputPath & vbLf & insertOutputPath
     Else
         successMessage = "SQL出力: " & createOutputPath
+    End If
+    If shouldOutputDto Then
+        If LenB(successMessage) > 0 Then
+            successMessage = successMessage & vbLf
+        End If
+        successMessage = successMessage & "DTO出力: " & dtoOutputPath
     End If
     If hasUnsupportedCharReplacement Then
         successMessage = successMessage & vbLf & BuildUnsupportedCharNote()
@@ -653,8 +706,12 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     mainWs.Cells(rowIndex, MAIN_COL_MESSAGE).value = successMessage
 
     If LOG_ENABLED Then
-        If hasDataFile Then
+        If hasDataFile And shouldOutputDto Then
+            LogInfo logPrefix & "処理完了 (CREATE/INSERT/DTO)"
+        ElseIf hasDataFile Then
             LogInfo logPrefix & "処理完了 (CREATE/INSERT)"
+        ElseIf shouldOutputDto Then
+            LogInfo logPrefix & "処理完了 (CREATE/DTO)"
         Else
             LogInfo logPrefix & "処理完了 (CREATEのみ)"
         End If
@@ -797,6 +854,199 @@ Private Function GenerateInsertSqlText(ByVal tableName As String, ByVal columns 
     Next idx
 
     GenerateInsertSqlText = Join(statements, vbCrLf)
+End Function
+
+Private Function GenerateDtoText(ByVal dtoLanguage As String, ByVal className As String, ByVal columns As Collection, ByVal errors As Collection) As String
+    If columns Is Nothing Or columns.Count = 0 Then
+        AddError errors, "DTO生成対象のカラム定義が存在しません。"
+        Exit Function
+    End If
+
+    Select Case dtoLanguage
+        Case "Java"
+            GenerateDtoText = GenerateJavaDtoText(className, columns, errors)
+        Case Else
+            AddError errors, "DTO出力言語が未対応です: " & dtoLanguage
+    End Select
+End Function
+
+Private Function GenerateJavaDtoText(ByVal className As String, ByVal columns As Collection, ByVal errors As Collection) As String
+    If LenB(className) = 0 Then
+        AddError errors, "DTOクラス名が空です。"
+        Exit Function
+    End If
+
+    Dim imports As Object
+    Set imports = CreateObject("Scripting.Dictionary")
+
+    Dim propertyNames() As String
+    Dim propertyTypes() As String
+    Dim idx As Long
+
+    ReDim propertyNames(1 To columns.Count)
+    ReDim propertyTypes(1 To columns.Count)
+
+    For idx = 1 To columns.Count
+        Dim def As ColumnDefinition
+        Set def = columns(idx)
+        propertyNames(idx) = BuildJavaPropertyName(def.Name)
+        propertyTypes(idx) = ResolveJavaFieldType(def, imports, errors)
+        If errors.Count > 0 Then Exit Function
+    Next idx
+
+    Dim lines As New Collection
+
+    If imports.Count > 0 Then
+        If imports.Exists("java.math.BigDecimal") Then lines.Add "import java.math.BigDecimal;"
+        If imports.Exists("java.time.LocalDate") Then lines.Add "import java.time.LocalDate;"
+        If imports.Exists("java.time.LocalTime") Then lines.Add "import java.time.LocalTime;"
+        If imports.Exists("java.time.LocalDateTime") Then lines.Add "import java.time.LocalDateTime;"
+        lines.Add vbNullString
+    End If
+
+    lines.Add "public class " & className & " {"
+    lines.Add vbNullString
+
+    For idx = 1 To columns.Count
+        lines.Add "    private " & propertyTypes(idx) & " " & propertyNames(idx) & ";"
+    Next idx
+
+    lines.Add vbNullString
+    lines.Add "    public " & className & "() {"
+    lines.Add "    }"
+
+    lines.Add vbNullString
+
+    Dim paramParts() As String
+    ReDim paramParts(1 To columns.Count)
+    For idx = 1 To columns.Count
+        paramParts(idx) = propertyTypes(idx) & " " & propertyNames(idx)
+    Next idx
+    lines.Add "    public " & className & "(" & Join(paramParts, ", ") & ") {"
+    For idx = 1 To columns.Count
+        lines.Add "        this." & propertyNames(idx) & " = " & propertyNames(idx) & ";"
+    Next idx
+    lines.Add "    }"
+
+    lines.Add vbNullString
+
+    For idx = 1 To columns.Count
+        Dim pascalName As String
+        pascalName = UpperCaseFirst(propertyNames(idx))
+        lines.Add "    public " & propertyTypes(idx) & " get" & pascalName & "() {"
+        lines.Add "        return " & propertyNames(idx) & ";"
+        lines.Add "    }"
+        lines.Add vbNullString
+        lines.Add "    public void set" & pascalName & "(" & propertyTypes(idx) & " " & propertyNames(idx) & ") {"
+        lines.Add "        this." & propertyNames(idx) & " = " & propertyNames(idx) & ";"
+        lines.Add "    }"
+        lines.Add vbNullString
+    Next idx
+
+    lines.Add "    @Override"
+    lines.Add "    public String toString() {"
+    Dim quoteChar As String
+    quoteChar = Chr$(34)
+    Dim toStringLine As String
+    toStringLine = "        return " & quoteChar & className & "{" & quoteChar & " + "
+    For idx = 1 To columns.Count
+        If idx > 1 Then
+            toStringLine = toStringLine & quoteChar & ", " & quoteChar & " + "
+        End If
+        If propertyTypes(idx) = "String" Then
+            toStringLine = toStringLine & quoteChar & propertyNames(idx) & "='" & quoteChar & " + " & propertyNames(idx) & " + " & quoteChar & "'" & quoteChar & " + "
+        Else
+            toStringLine = toStringLine & quoteChar & propertyNames(idx) & "=" & quoteChar & " + " & propertyNames(idx) & " + "
+        End If
+    Next idx
+    toStringLine = toStringLine & quoteChar & "}" & quoteChar & ";"
+    lines.Add toStringLine
+    lines.Add "    }"
+
+    lines.Add "}"
+
+    GenerateJavaDtoText = JoinCollection(lines, vbCrLf)
+End Function
+
+Private Function BuildJavaPropertyName(ByVal sourceName As String) As String
+    Dim identifier As String
+    identifier = NormalizeJavaIdentifier(sourceName)
+    If LenB(identifier) = 0 Then
+        identifier = "field"
+    End If
+
+    BuildJavaPropertyName = LCase$(Left$(identifier, 1)) & Mid$(identifier, 2)
+End Function
+
+Private Function NormalizeJavaIdentifier(ByVal sourceName As String) As String
+    Dim cleaned As String
+    Dim idx As Long
+
+    For idx = 1 To Len(sourceName)
+        Dim ch As String
+        ch = Mid$(sourceName, idx, 1)
+        If (ch >= "A" And ch <= "Z") Or (ch >= "a" And ch <= "z") Or (ch >= "0" And ch <= "9") Or ch = "_" Then
+            cleaned = cleaned & ch
+        Else
+            cleaned = cleaned & "_"
+        End If
+    Next idx
+
+    If LenB(cleaned) > 0 Then
+        Dim firstChar As String
+        firstChar = Left$(cleaned, 1)
+        If firstChar >= "0" And firstChar <= "9" Then
+            cleaned = "_" & cleaned
+        End If
+    End If
+
+    NormalizeJavaIdentifier = cleaned
+End Function
+
+Private Function UpperCaseFirst(ByVal textValue As String) As String
+    If LenB(textValue) = 0 Then Exit Function
+    UpperCaseFirst = UCase$(Left$(textValue, 1)) & Mid$(textValue, 2)
+End Function
+
+Private Function ResolveJavaFieldType(ByVal definition As ColumnDefinition, ByVal imports As Object, ByVal errors As Collection) As String
+    Dim typeName As String
+    typeName = UCase$(Trim$(definition.DataType))
+
+    Select Case definition.category
+        Case CATEGORY_STRING
+            ResolveJavaFieldType = "String"
+        Case CATEGORY_DATE
+            imports("java.time.LocalDate") = True
+            ResolveJavaFieldType = "LocalDate"
+        Case CATEGORY_TIME
+            imports("java.time.LocalTime") = True
+            ResolveJavaFieldType = "LocalTime"
+        Case CATEGORY_TIMESTAMP
+            imports("java.time.LocalDateTime") = True
+            ResolveJavaFieldType = "LocalDateTime"
+        Case CATEGORY_NUMERIC
+            If definition.HasScale And definition.ScaleDigits > 0 Then
+                imports("java.math.BigDecimal") = True
+                ResolveJavaFieldType = "BigDecimal"
+            Else
+                Select Case typeName
+                    Case "BIGINT"
+                        ResolveJavaFieldType = "Long"
+                    Case "SMALLINT", "INT", "INTEGER", "TINYINT"
+                        ResolveJavaFieldType = "Integer"
+                    Case "DOUBLE", "FLOAT", "REAL"
+                        ResolveJavaFieldType = "Double"
+                    Case Else
+                        ResolveJavaFieldType = "Long"
+                End Select
+            End If
+        Case Else
+            ResolveJavaFieldType = "String"
+    End Select
+
+    If LenB(ResolveJavaFieldType) = 0 Then
+        AddError errors, "Javaの型へ変換できません: " & definition.DataType
+    End If
 End Function
 
 Private Function FormatValueLiteral(ByVal definition As ColumnDefinition, ByVal value As Variant, _
@@ -1508,6 +1758,17 @@ End Function
 
 Private Function WriteSqlFile(ByVal sourceFilePath As String, ByVal fileName As String, _
                               ByVal sqlText As String, ByVal errors As Collection) As String
+    WriteSqlFile = WriteTextFile(sourceFilePath, fileName, sqlText, errors, "SQLファイル")
+End Function
+
+Private Function WriteDtoFile(ByVal sourceFilePath As String, ByVal fileName As String, _
+                              ByVal dtoText As String, ByVal errors As Collection) As String
+    WriteDtoFile = WriteTextFile(sourceFilePath, fileName, dtoText, errors, "DTOファイル")
+End Function
+
+Private Function WriteTextFile(ByVal sourceFilePath As String, ByVal fileName As String, _
+                              ByVal content As String, ByVal errors As Collection, _
+                              ByVal label As String) As String
     Dim fso As Object
     Dim parentFolder As String
     Dim outputPath As String
@@ -1530,17 +1791,17 @@ Private Function WriteSqlFile(ByVal sourceFilePath As String, ByVal fileName As 
     On Error Resume Next
     Set ts = fso.CreateTextFile(outputPath, True, False)
     If Err.Number <> 0 Then
-        AddError errors, "SQLファイルを作成できません: " & outputPath & " (" & Err.Description & ")"
+        AddError errors, label & "を作成できません: " & outputPath & " (" & Err.Description & ")"
         Err.Clear
         On Error GoTo 0
         Exit Function
     End If
     On Error GoTo 0
 
-    ts.Write sqlText
+    ts.Write content
     ts.Close
 
-    WriteSqlFile = outputPath
+    WriteTextFile = outputPath
 End Function
 
 Private Function BuildTypeCatalog(ByVal typeWs As Worksheet) As Object
@@ -1598,6 +1859,31 @@ Private Sub ValidateDbms(ByRef dbms As String, ByVal errors As Collection)
         dbms = normalized
     End If
 End Sub
+
+Private Sub ValidateDtoLanguage(ByRef dtoLanguage As String, ByVal errors As Collection)
+    Dim normalized As String
+    normalized = NormalizeDtoLanguage(dtoLanguage)
+
+    If LenB(normalized) = 0 Then
+        AddError errors, "DTO出力言語が不正です: " & dtoLanguage
+    Else
+        dtoLanguage = normalized
+    End If
+End Sub
+
+Private Function NormalizeDtoLanguage(ByVal dtoLanguage As String) As String
+    Select Case UCase$(dtoLanguage)
+        Case "JAVA"
+            NormalizeDtoLanguage = "Java"
+    End Select
+End Function
+
+Private Function GetDtoFileExtension(ByVal dtoLanguage As String) As String
+    Select Case dtoLanguage
+        Case "Java"
+            GetDtoFileExtension = ".java"
+    End Select
+End Function
 
 Private Function ExtractSchemaName(ByVal tableName As String) As String
     Dim parts() As String

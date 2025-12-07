@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.3.0"
+Private Const VER As String = "2.4.0"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -686,6 +686,8 @@ Private Function NormalizeDbms(ByVal dbms As String) As String
             NormalizeDbms = "SQLite"
         Case "ACCESS"
             NormalizeDbms = "Access"
+        Case "H2"
+            NormalizeDbms = "H2"
     End Select
 End Function
 
@@ -891,6 +893,8 @@ Private Function FormatDateLiteral(ByVal value As Variant, ByVal address As Stri
             FormatDateLiteral = "CAST('" & dateText & "' AS DATETIME)"
         Case "Access"
             FormatDateLiteral = "#" & dateText & "#"
+        Case "H2"
+            FormatDateLiteral = "DATE '" & dateText & "'"
         Case Else
             FormatDateLiteral = "'" & dateText & "'"
     End Select
@@ -914,6 +918,8 @@ Private Function FormatTimeLiteral(ByVal value As Variant, ByVal address As Stri
             FormatTimeLiteral = "CAST('1900-01-01 " & timeText & "' AS DATETIME)"
         Case "Access"
             FormatTimeLiteral = "#" & timeText & "#"
+        Case "H2"
+            FormatTimeLiteral = "TIME '" & timeText & "'"
         Case Else
             FormatTimeLiteral = "'" & timeText & "'"
     End Select
@@ -934,6 +940,8 @@ Private Function ResolveDbmsTypeName(ByVal rawTypeName As String, ByVal category
             resolved = ResolveSqliteTypeName(normalized, category)
         Case "Access"
             resolved = ResolveAccessTypeName(normalized, category)
+        Case "H2"
+            resolved = ResolveH2TypeName(normalized, category)
         Case Else
             resolved = normalized
     End Select
@@ -1065,6 +1073,40 @@ Private Function ResolveAccessTypeName(ByVal normalized As String, ByVal categor
     End Select
 End Function
 
+Private Function ResolveH2TypeName(ByVal normalized As String, ByVal category As String) As String
+    Select Case normalized
+        Case "NUMBER", "DECIMAL"
+            ResolveH2TypeName = "DECIMAL"
+        Case "INTEGER", "INT"
+            ResolveH2TypeName = "INTEGER"
+        Case "VARCHAR", "VARCHAR2", "NVARCHAR"
+            ResolveH2TypeName = "VARCHAR"
+        Case "CHAR"
+            ResolveH2TypeName = "CHAR"
+        Case "DATE"
+            ResolveH2TypeName = "DATE"
+        Case "TIME"
+            ResolveH2TypeName = "TIME"
+        Case "TIMESTAMP", "DATETIME"
+            ResolveH2TypeName = "TIMESTAMP"
+        Case Else
+            Select Case category
+                Case CATEGORY_NUMERIC
+                    ResolveH2TypeName = "DECIMAL"
+                Case CATEGORY_STRING
+                    ResolveH2TypeName = "VARCHAR"
+                Case CATEGORY_DATE
+                    ResolveH2TypeName = "DATE"
+                Case CATEGORY_TIME
+                    ResolveH2TypeName = "TIME"
+                Case CATEGORY_TIMESTAMP
+                    ResolveH2TypeName = "TIMESTAMP"
+                Case Else
+                    ResolveH2TypeName = normalized
+            End Select
+    End Select
+End Function
+
 Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As String, _
                                         ByVal dbms As String, ByVal errors As Collection) As String
     Dim dt As Date
@@ -1083,6 +1125,8 @@ Private Function FormatTimestampLiteral(ByVal value As Variant, ByVal address As
             FormatTimestampLiteral = "CAST('" & timestampText & "' AS DATETIME)"
         Case "Access"
             FormatTimestampLiteral = "#" & timestampText & "#"
+        Case "H2"
+            FormatTimestampLiteral = "TIMESTAMP '" & timestampText & "'"
         Case Else
             FormatTimestampLiteral = "'" & timestampText & "'"
     End Select
@@ -1454,6 +1498,8 @@ Private Function BuildDropStatement(ByVal qualifiedName As String, ByVal dbms As
             BuildDropStatement = "IF OBJECT_ID(N'" & objectName & "', N'U') IS NOT NULL" & vbCrLf & _
                                "    DROP TABLE " & qualifiedName & ";"
         Case "SQLite"
+            BuildDropStatement = "DROP TABLE IF EXISTS " & qualifiedName & ";"
+        Case "H2"
             BuildDropStatement = "DROP TABLE IF EXISTS " & qualifiedName & ";"
         Case Else
             BuildDropStatement = "DROP TABLE " & qualifiedName & ";"

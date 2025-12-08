@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.6.0"
+Private Const VER As String = "2.6.1"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -39,8 +39,9 @@ Private Const MAIN_COL_DATA_TABLE As Long = 17
 Private Const MAIN_COL_DATA_START As Long = 18
 Private Const MAIN_COL_DTO_TARGET As Long = 19
 Private Const MAIN_COL_DTO_LANG As Long = 20
-Private Const MAIN_COL_DTO_CLASS As Long = 21
-Private Const MAIN_COL_MESSAGE As Long = 26
+Private Const MAIN_COL_ORM As Long = 21
+Private Const MAIN_COL_DTO_CLASS As Long = 22
+Private Const MAIN_COL_MESSAGE As Long = 27
 
 Private Const ORACLE_TIME_BASE_DATE As String = "1970-01-01"
 
@@ -309,7 +310,8 @@ Private Sub ProcessInstructionRows()
                           ", defFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DEF_FILE).value)) & "'" & _
                           ", dataTarget='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_TARGET).value)) & "'" & _
                           ", dataFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_FILE).value)) & "'" & _
-                          ", dtoTarget='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DTO_TARGET).value)) & "'"
+                          ", dtoTarget='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DTO_TARGET).value)) & "'" & _
+                          ", orm='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_ORM).value)) & "'"
             LogDebug rowSummary
         End If
         If targetMark = "○" Then
@@ -369,6 +371,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim dbms As String
     Dim dtoTargetMark As String
     Dim dtoLanguage As String
+    Dim ormType As String
     Dim dtoClassName As String
     Dim definitionWb As Workbook
     Dim definitionWs As Worksheet
@@ -414,6 +417,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     dataStartAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_START).value))
     dtoTargetMark = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_TARGET).value))
     dtoLanguage = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_LANG).value))
+    ormType = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_ORM).value))
     dtoClassName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_CLASS).value))
 
     logPrefix = "Row " & CStr(rowIndex) & ": "
@@ -428,7 +432,8 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
                 ", データシート=" & dataSheetName & _
                 ", データテーブル=" & dataTableName & _
                 ", データ開始セル=" & dataStartAddr & _
-                ", DTO対象=" & dtoTargetMark
+                ", DTO対象=" & dtoTargetMark & _
+                ", ORM=" & ormType
     End If
 
     If LenB(definitionFilePath) = 0 Then
@@ -458,6 +463,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
 
     If shouldOutputDto Then
         ValidateDtoLanguage dtoLanguage, errors
+        ValidateOrmType ormType, errors
         ValidateRequiredValue dtoClassName, "DTOクラス名", errors
     End If
 
@@ -651,8 +657,8 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogDebug logPrefix & "ORM XML生成開始"
         End If
-        currentStage = "GenerateOrmXml"
-        ormText = GenerateOrmXmlText(definitionTableName, dtoClassName, columns, errors)
+        currentStage = "GenerateOrm"
+        ormText = GenerateOrmText(definitionTableName, dtoClassName, columns, ormType, errors)
         If errors.Count > 0 Then
             LogErrorsWithStage logPrefix, "ORM XML生成", errors
             WriteErrors mainWs, rowIndex, errors
@@ -709,7 +715,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             LogInfo logPrefix & "DTO出力完了: " & dtoOutputPath
         End If
 
-        mapperFileName = BuildMapperFileName(dtoClassName)
+        mapperFileName = BuildMapperFileName(dtoClassName, ormType)
         If LenB(mapperFileName) = 0 Then
             AddError errors, "ORM出力ファイル名を生成できません。"
             LogErrorsWithStage logPrefix, "ORMファイル名生成", errors
@@ -914,7 +920,16 @@ Private Function GenerateDtoText(ByVal dtoLanguage As String, ByVal className As
     End Select
 End Function
 
-Private Function GenerateOrmXmlText(ByVal tableName As String, ByVal dtoClassName As String, ByVal columns As Collection, ByVal errors As Collection) As String
+Private Function GenerateOrmText(ByVal tableName As String, ByVal dtoClassName As String, ByVal columns As Collection, ByVal ormType As String, ByVal errors As Collection) As String
+    Select Case ormType
+        Case "MyBatis"
+            GenerateOrmText = GenerateMyBatisMapperXml(tableName, dtoClassName, columns, errors)
+        Case Else
+            AddError errors, "ORMが未対応です: " & ormType
+    End Select
+End Function
+
+Private Function GenerateMyBatisMapperXml(ByVal tableName As String, ByVal dtoClassName As String, ByVal columns As Collection, ByVal errors As Collection) As String
     If columns Is Nothing Or columns.Count = 0 Then
         AddError errors, "ORM生成対象のカラム定義が存在しません。"
         Exit Function
@@ -1030,7 +1045,7 @@ Private Function GenerateOrmXmlText(ByVal tableName As String, ByVal dtoClassNam
     lines.Add "    </update>"
     lines.Add "</mapper>"
 
-    GenerateOrmXmlText = JoinCollection(lines, vbCrLf)
+    GenerateMyBatisMapperXml = JoinCollection(lines, vbCrLf)
 End Function
 
 Private Function ExtractJavaSimpleClassName(ByVal className As String) As String
@@ -1072,12 +1087,14 @@ Private Function BuildMapperNamespace(ByVal dtoClassName As String) As String
     End If
 End Function
 
-Private Function BuildMapperFileName(ByVal dtoClassName As String) As String
-    Dim simpleName As String
-    simpleName = ExtractJavaSimpleClassName(dtoClassName)
-    If LenB(simpleName) = 0 Then Exit Function
-
-    BuildMapperFileName = SanitizeForFile(simpleName & "Mapper") & ".xml"
+Private Function BuildMapperFileName(ByVal dtoClassName As String, ByVal ormType As String) As String
+    Select Case ormType
+        Case "MyBatis"
+            Dim simpleName As String
+            simpleName = ExtractJavaSimpleClassName(dtoClassName)
+            If LenB(simpleName) = 0 Then Exit Function
+            BuildMapperFileName = SanitizeForFile(simpleName & "Mapper") & ".xml"
+    End Select
 End Function
 
 Private Function GenerateJavaDtoText(ByVal className As String, ByVal columns As Collection, ByVal errors As Collection) As String
@@ -2120,6 +2137,28 @@ Private Sub ValidateDbms(ByRef dbms As String, ByVal errors As Collection)
         dbms = normalized
     End If
 End Sub
+
+Private Sub ValidateOrmType(ByRef ormType As String, ByVal errors As Collection)
+    If LenB(ormType) = 0 Then
+        AddError errors, "ORMが指定されていません。"
+        Exit Sub
+    End If
+
+    Dim normalized As String
+    normalized = NormalizeOrmType(ormType)
+    If LenB(normalized) = 0 Then
+        AddError errors, "ORMが未対応です: " & ormType
+    Else
+        ormType = normalized
+    End If
+End Sub
+
+Private Function NormalizeOrmType(ByVal ormType As String) As String
+    Select Case UCase$(Trim$(ormType))
+        Case "MYBATIS"
+            NormalizeOrmType = "MyBatis"
+    End Select
+End Function
 
 Private Sub ValidateDtoLanguage(ByRef dtoLanguage As String, ByVal errors As Collection)
     Dim normalized As String

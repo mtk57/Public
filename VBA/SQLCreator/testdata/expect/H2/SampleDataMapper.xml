@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="SampleDataMapper">
+    <resultMap id="SampleDataResultMap" type="SampleData">
+        <id property="id" column="id" />
+        <id property="seq" column="seq" />
+        <result property="name" column="name" />
+    </resultMap>
+
+    <select id="findAll" resultMap="SampleDataResultMap">
+        SELECT
+          id,
+          seq,
+          name
+        FROM
+          sample_data
+    </select>
+
+    <insert id="insert"
+            parameterType="SampleData">
+        INSERT INTO
+          sample_data
+          (
+            id,
+            seq,
+            name
+          )
+        VALUES
+        (
+          #{id},
+          #{seq},
+          #{name}
+        )
+    </insert>
+
+    <update id="update"
+            parameterType="SampleData">
+        UPDATE
+          sample_data
+        SET
+          id = #{id},
+          seq = #{seq},
+          name = #{name}
+    </update>
+</mapper>

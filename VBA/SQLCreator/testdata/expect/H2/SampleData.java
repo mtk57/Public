@@ -1,13 +1,15 @@
 public class SampleData {
 
     private Long id;
+    private Long seq;
     private String name;
 
     public SampleData() {
     }
 
-    public SampleData(Long id, String name) {
+    public SampleData(Long id, Long seq, String name) {
         this.id = id;
+        this.seq = seq;
         this.name = name;
     }
 
@@ -17,6 +19,14 @@ public class SampleData {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getSeq() {
+        return seq;
+    }
+
+    public void setSeq(Long seq) {
+        this.seq = seq;
     }
 
     public String getName() {
@@ -29,6 +39,6 @@ public class SampleData {
 
     @Override
     public String toString() {
-        return "SampleData{" + "id=" + id + ", " + "name='" + name + "'" + "}";
+        return "SampleData{" + "id=" + id + ", " + "seq=" + seq + ", " + "name='" + name + "'" + "}";
     }
 }

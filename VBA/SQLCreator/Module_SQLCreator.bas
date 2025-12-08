@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.5.1"
+Private Const VER As String = "2.5.2"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -37,9 +37,10 @@ Private Const MAIN_COL_DATA_FILE As Long = 15
 Private Const MAIN_COL_DATA_SHEET As Long = 16
 Private Const MAIN_COL_DATA_TABLE As Long = 17
 Private Const MAIN_COL_DATA_START As Long = 18
-Private Const MAIN_COL_DTO_LANG As Long = 19
-Private Const MAIN_COL_DTO_CLASS As Long = 20
-Private Const MAIN_COL_MESSAGE As Long = 25
+Private Const MAIN_COL_DTO_TARGET As Long = 19
+Private Const MAIN_COL_DTO_LANG As Long = 20
+Private Const MAIN_COL_DTO_CLASS As Long = 21
+Private Const MAIN_COL_MESSAGE As Long = 26
 
 Private Const ORACLE_TIME_BASE_DATE As String = "1970-01-01"
 
@@ -307,7 +308,8 @@ Private Sub ProcessInstructionRows()
                           ", defTarget='" & targetMark & "'" & _
                           ", defFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DEF_FILE).value)) & "'" & _
                           ", dataTarget='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_TARGET).value)) & "'" & _
-                          ", dataFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_FILE).value)) & "'"
+                          ", dataFile='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DATA_FILE).value)) & "'" & _
+                          ", dtoTarget='" & Trim$(CStr(mainWs.Cells(currentRow, MAIN_COL_DTO_TARGET).value)) & "'"
             LogDebug rowSummary
         End If
         If targetMark = "○" Then
@@ -365,6 +367,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim dataTableName As String
     Dim dataStartAddr As String
     Dim dbms As String
+    Dim dtoTargetMark As String
     Dim dtoLanguage As String
     Dim dtoClassName As String
     Dim definitionWb As Workbook
@@ -401,13 +404,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     pkAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_PK_ADDR).value))
     notNullAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_NOTNULL_ADDR).value))
     dbms = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DBMS).value))
-    dtoLanguage = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_LANG).value))
-    dtoClassName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_CLASS).value))
     dataTargetMark = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TARGET).value))
     dataFilePath = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_FILE).value))
     dataSheetName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_SHEET).value))
     dataTableName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_TABLE).value))
     dataStartAddr = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DATA_START).value))
+    dtoTargetMark = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_TARGET).value))
+    dtoLanguage = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_LANG).value))
+    dtoClassName = Trim$(CStr(mainWs.Cells(rowIndex, MAIN_COL_DTO_CLASS).value))
 
     logPrefix = "Row " & CStr(rowIndex) & ": "
 
@@ -420,7 +424,8 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
                 ", データファイル=" & dataFilePath & _
                 ", データシート=" & dataSheetName & _
                 ", データテーブル=" & dataTableName & _
-                ", データ開始セル=" & dataStartAddr
+                ", データ開始セル=" & dataStartAddr & _
+                ", DTO対象=" & dtoTargetMark
     End If
 
     If LenB(definitionFilePath) = 0 Then
@@ -431,7 +436,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     End If
 
     hasDataFile = (dataTargetMark = "○")
-    shouldOutputDto = (LenB(dtoLanguage) > 0)
+    shouldOutputDto = (dtoTargetMark = "○")
 
     If LOG_ENABLED Then
         LogDebug logPrefix & "hasDataFile=" & CStr(hasDataFile) & ", hasDto=" & CStr(shouldOutputDto)

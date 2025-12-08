@@ -8,7 +8,7 @@ Excelシートの内容からDBのDROP TABLE/CREATE TABLE/INSERT SQLを作成し
 ## 言語
 Excel VBA
 
-## 仕様詳細  Version 2.5.1
+## 仕様詳細  Version 2.7.0
 
 # ユーザー入力につて
 1. ユーザーからの入力はExcelのシート上から行う。
@@ -98,6 +98,13 @@ No■項目名1■項目名2■・・・項目名n
 1. mainシートでDTO出力言語を指定した場合（Javaのみ対応）、テーブル定義からDTOクラスを出力する。
 2. DTOファイルは定義ファイルと同じフォルダに、指定したクラス名＋拡張子（.java）で出力する。
 3. 生成クラスにはフィールド、デフォルトコンストラクタ、全引数コンストラクタ、各種getter/setter、toStringを含める。
+
+# ORM/マッパー出力について
+1. ORMにMyBatisを指定した場合、DTOクラスから以下を出力する。
+    - マッパーXMLファイル（拡張子 .xml）
+    - マッパー用Javaインターフェースファイル（拡張子 .java）
+2. マッパーXML/Javaとも、DTOクラスのpackageが`.domain`で終わる場合は`.mapper`に付け替えてnamespace/packageを生成し、クラス名は`<DTO名>Mapper`とする。
+3. マッパーJavaインターフェースには`findAll`、`insert`、`update`メソッドを生成し、戻り値/引数はDTOクラスを参照する。
 
 #デバッグログについて
 1. 定数でON/OFF可能とする。

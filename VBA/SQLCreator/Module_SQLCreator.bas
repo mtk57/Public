@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.5.2"
+Private Const VER As String = "2.6.0"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -379,9 +379,12 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim createSql As String
     Dim insertSql As String
     Dim dtoText As String
+    Dim ormText As String
     Dim createOutputPath As String
     Dim insertOutputPath As String
     Dim dtoOutputPath As String
+    Dim ormOutputPath As String
+    Dim mapperFileName As String
     Dim timestampText As String
     Dim dataTargetMark As String
     Dim hasDataFile As Boolean
@@ -644,6 +647,20 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogDebug logPrefix & "DTO生成完了。文字数=" & CStr(Len(dtoText))
         End If
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "ORM XML生成開始"
+        End If
+        currentStage = "GenerateOrmXml"
+        ormText = GenerateOrmXmlText(definitionTableName, dtoClassName, columns, errors)
+        If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "ORM XML生成", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "ORM XML生成完了。文字数=" & CStr(Len(ormText))
+        End If
     End If
 
     timestampText = Format$(Now, "yyyymmdd_hhnnss")
@@ -691,6 +708,28 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogInfo logPrefix & "DTO出力完了: " & dtoOutputPath
         End If
+
+        mapperFileName = BuildMapperFileName(dtoClassName)
+        If LenB(mapperFileName) = 0 Then
+            AddError errors, "ORM出力ファイル名を生成できません。"
+            LogErrorsWithStage logPrefix, "ORMファイル名生成", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "ORMファイル出力開始"
+        End If
+        currentStage = "WriteOrmFile"
+        ormOutputPath = WriteOrmFile(definitionFilePath, mapperFileName, ormText, errors)
+        If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "ORMファイル出力", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogInfo logPrefix & "ORM出力完了: " & ormOutputPath
+        End If
     End If
 
     Dim successMessage As String
@@ -703,7 +742,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LenB(successMessage) > 0 Then
             successMessage = successMessage & vbLf
         End If
-        successMessage = successMessage & "DTO出力: " & dtoOutputPath
+        successMessage = successMessage & "DTO出力: " & dtoOutputPath & vbLf & "ORM出力: " & ormOutputPath
     End If
     If hasUnsupportedCharReplacement Then
         successMessage = successMessage & vbLf & BuildUnsupportedCharNote()
@@ -712,11 +751,11 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
 
     If LOG_ENABLED Then
         If hasDataFile And shouldOutputDto Then
-            LogInfo logPrefix & "処理完了 (CREATE/INSERT/DTO)"
+            LogInfo logPrefix & "処理完了 (CREATE/INSERT/DTO/ORM)"
         ElseIf hasDataFile Then
             LogInfo logPrefix & "処理完了 (CREATE/INSERT)"
         ElseIf shouldOutputDto Then
-            LogInfo logPrefix & "処理完了 (CREATE/DTO)"
+            LogInfo logPrefix & "処理完了 (CREATE/DTO/ORM)"
         Else
             LogInfo logPrefix & "処理完了 (CREATEのみ)"
         End If
@@ -873,6 +912,172 @@ Private Function GenerateDtoText(ByVal dtoLanguage As String, ByVal className As
         Case Else
             AddError errors, "DTO出力言語が未対応です: " & dtoLanguage
     End Select
+End Function
+
+Private Function GenerateOrmXmlText(ByVal tableName As String, ByVal dtoClassName As String, ByVal columns As Collection, ByVal errors As Collection) As String
+    If columns Is Nothing Or columns.Count = 0 Then
+        AddError errors, "ORM生成対象のカラム定義が存在しません。"
+        Exit Function
+    End If
+
+    Dim simpleClassName As String
+    simpleClassName = ExtractJavaSimpleClassName(dtoClassName)
+    If LenB(simpleClassName) = 0 Then
+        AddError errors, "DTOクラス名が不正です。"
+        Exit Function
+    End If
+
+    Dim mapperNamespace As String
+    mapperNamespace = BuildMapperNamespace(dtoClassName)
+    If LenB(mapperNamespace) = 0 Then
+        AddError errors, "ORM用のnamespaceを生成できません。"
+        Exit Function
+    End If
+
+    Dim resultMapId As String
+    resultMapId = simpleClassName & "ResultMap"
+
+    Dim domainType As String
+    domainType = Trim$(dtoClassName)
+
+    Dim pureTableName As String
+    pureTableName = ExtractTableName(tableName)
+    If LenB(pureTableName) = 0 Then
+        pureTableName = tableName
+    End If
+
+    Dim lines As New Collection
+    lines.Add "<?xml version=""1.0"" encoding=""UTF-8"" ?>"
+    lines.Add "<!DOCTYPE mapper"
+    lines.Add "  PUBLIC ""-//mybatis.org//DTD Mapper 3.0//EN"""
+    lines.Add "  ""http://mybatis.org/dtd/mybatis-3-mapper.dtd"">"
+    lines.Add vbNullString
+    lines.Add "<mapper namespace=""" & mapperNamespace & """>"
+    lines.Add "    <resultMap id=""" & resultMapId & """ type=""" & domainType & """>"
+
+    Dim idx As Long
+    For idx = 1 To columns.Count
+        Dim def As ColumnDefinition
+        Set def = columns(idx)
+        Dim tagName As String
+        If def.IsPrimaryKey Then
+            tagName = "id"
+        Else
+            tagName = "result"
+        End If
+        lines.Add "        <" & tagName & " property=""" & BuildJavaPropertyName(def.Name) & """ column=""" & def.Name & """ />"
+    Next idx
+
+    lines.Add "    </resultMap>"
+    lines.Add vbNullString
+
+    lines.Add "    <select id=""findAll"" resultMap=""" & resultMapId & """>"
+    lines.Add "        SELECT"
+    For idx = 1 To columns.Count
+        Dim selectLine As String
+        selectLine = "          " & columns(idx).Name
+        If idx < columns.Count Then
+            selectLine = selectLine & ","
+        End If
+        lines.Add selectLine
+    Next idx
+    lines.Add "        FROM"
+    lines.Add "          " & pureTableName
+    lines.Add "    </select>"
+    lines.Add vbNullString
+
+    lines.Add "    <insert id=""insert"""
+    lines.Add "            parameterType=""" & domainType & """>"
+    lines.Add "        INSERT INTO"
+    lines.Add "          " & pureTableName
+    lines.Add "          ("
+    For idx = 1 To columns.Count
+        Dim insertColLine As String
+        insertColLine = "            " & columns(idx).Name
+        If idx < columns.Count Then
+            insertColLine = insertColLine & ","
+        End If
+        lines.Add insertColLine
+    Next idx
+    lines.Add "          )"
+    lines.Add "        VALUES"
+    lines.Add "        ("
+    For idx = 1 To columns.Count
+        Dim valueLine As String
+        valueLine = "          #{" & BuildJavaPropertyName(columns(idx).Name) & "}"
+        If idx < columns.Count Then
+            valueLine = valueLine & ","
+        End If
+        lines.Add valueLine
+    Next idx
+    lines.Add "        )"
+    lines.Add "    </insert>"
+    lines.Add vbNullString
+
+    lines.Add "    <update id=""update"""
+    lines.Add "            parameterType=""" & domainType & """>"
+    lines.Add "        UPDATE"
+    lines.Add "          " & pureTableName
+    lines.Add "        SET"
+    For idx = 1 To columns.Count
+        Dim updateLine As String
+        updateLine = "          " & columns(idx).Name & " = #{" & BuildJavaPropertyName(columns(idx).Name) & "}"
+        If idx < columns.Count Then
+            updateLine = updateLine & ","
+        End If
+        lines.Add updateLine
+    Next idx
+    lines.Add "    </update>"
+    lines.Add "</mapper>"
+
+    GenerateOrmXmlText = JoinCollection(lines, vbCrLf)
+End Function
+
+Private Function ExtractJavaSimpleClassName(ByVal className As String) As String
+    Dim trimmed As String
+    trimmed = Trim$(className)
+    If LenB(trimmed) = 0 Then Exit Function
+
+    Dim parts() As String
+    parts = Split(trimmed, ".")
+    ExtractJavaSimpleClassName = parts(UBound(parts))
+End Function
+
+Private Function BuildMapperNamespace(ByVal dtoClassName As String) As String
+    Dim trimmed As String
+    trimmed = Trim$(dtoClassName)
+    If LenB(trimmed) = 0 Then Exit Function
+
+    Dim lastDot As Long
+    lastDot = InStrRev(trimmed, ".")
+    Dim basePackage As String
+    Dim simpleName As String
+    If lastDot > 0 Then
+        basePackage = Left$(trimmed, lastDot - 1)
+        simpleName = Mid$(trimmed, lastDot + 1)
+    Else
+        simpleName = trimmed
+    End If
+
+    Dim mapperPackage As String
+    If LenB(basePackage) > 0 Then
+        If Right$(basePackage, 7) = ".domain" Then
+            mapperPackage = Left$(basePackage, Len(basePackage) - 7) & ".mapper"
+        Else
+            mapperPackage = basePackage & ".mapper"
+        End If
+        BuildMapperNamespace = mapperPackage & "." & simpleName & "Mapper"
+    Else
+        BuildMapperNamespace = simpleName & "Mapper"
+    End If
+End Function
+
+Private Function BuildMapperFileName(ByVal dtoClassName As String) As String
+    Dim simpleName As String
+    simpleName = ExtractJavaSimpleClassName(dtoClassName)
+    If LenB(simpleName) = 0 Then Exit Function
+
+    BuildMapperFileName = SanitizeForFile(simpleName & "Mapper") & ".xml"
 End Function
 
 Private Function GenerateJavaDtoText(ByVal className As String, ByVal columns As Collection, ByVal errors As Collection) As String
@@ -1815,6 +2020,11 @@ End Function
 Private Function WriteDtoFile(ByVal sourceFilePath As String, ByVal fileName As String, _
                               ByVal dtoText As String, ByVal errors As Collection) As String
     WriteDtoFile = WriteTextFile(sourceFilePath, fileName, dtoText, errors, "DTOファイル")
+End Function
+
+Private Function WriteOrmFile(ByVal sourceFilePath As String, ByVal fileName As String, _
+                              ByVal ormText As String, ByVal errors As Collection) As String
+    WriteOrmFile = WriteTextFile(sourceFilePath, fileName, ormText, errors, "ORMファイル")
 End Function
 
 Private Function WriteTextFile(ByVal sourceFilePath As String, ByVal fileName As String, _

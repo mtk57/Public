@@ -1,15 +1,15 @@
-SQL Creator																									
-ver 2.5.2																									
-																									
-																									
-																									
-																									
-																									
-																									
-		テーブル定義											投入データ					DTO							
-	No	対象	定義ファイルパス	シート名	テーブル名	カラム名開始セル	型カラム開始セル	整数桁カラム開始セル	小数桁カラム開始セル	PKカラム開始セル	NotNullカラム開始セル	DBMS	対象	データファイルパス	シート名	テーブル名	データ開始セル	対象	Lang	クラス名					エラーメッセージ
-	1		C:\_git\Public\VBA\SQLCreator\testdata\テーブル定義.xlsx	HOGE	HOGE	B3	C3	D3	E3	F3	G3	Oracle	○	C:\_git\Public\VBA\SQLCreator\testdata\投入データ.xlsx	HOGE	HOGE	B3								
-	2	○	C:\_git\Public\VBA\SQLCreator\testdata\テーブル定義.xlsx	sample_data	sample_data	B3	C3	D3	E3	F3	G3	H2	○	C:\_git\Public\VBA\SQLCreator\testdata\投入データ.xlsx	sample_data	sample_data	B3	○	Java	SampleData					
+SQL Creator																										
+ver 2.6.1																										
+																										
+																										
+																										
+																										
+																										
+																										
+		テーブル定義											投入データ					DTO								
+	No	対象	定義ファイルパス	シート名	テーブル名	カラム名開始セル	型カラム開始セル	整数桁カラム開始セル	小数桁カラム開始セル	PKカラム開始セル	NotNullカラム開始セル	DBMS	対象	データファイルパス	シート名	テーブル名	データ開始セル	対象	Lang	ORM	クラス名					エラーメッセージ
+	1		C:\_git\Public\VBA\SQLCreator\testdata\テーブル定義.xlsx	HOGE	HOGE	B3	C3	D3	E3	F3	G3	Oracle		C:\_git\Public\VBA\SQLCreator\testdata\投入データ.xlsx	HOGE	HOGE	B3									
+	2	○	C:\_git\Public\VBA\SQLCreator\testdata\テーブル定義.xlsx	sample_data	sample_data	B3	C3	D3	E3	F3	G3	H2	○	C:\_git\Public\VBA\SQLCreator\testdata\投入データ.xlsx	sample_data	sample_data	B3	○	Java	MyBatis	SampleData					
 
 
 --------------------------------

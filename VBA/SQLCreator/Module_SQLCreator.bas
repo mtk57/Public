@@ -383,11 +383,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
     Dim insertSql As String
     Dim dtoText As String
     Dim ormText As String
+    Dim mapperJavaText As String
     Dim createOutputPath As String
     Dim insertOutputPath As String
     Dim dtoOutputPath As String
     Dim ormOutputPath As String
     Dim mapperFileName As String
+    Dim mapperJavaFileName As String
+    Dim mapperJavaOutputPath As String
     Dim timestampText As String
     Dim dataTargetMark As String
     Dim hasDataFile As Boolean
@@ -667,6 +670,20 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogDebug logPrefix & "ORM XML生成完了。文字数=" & CStr(Len(ormText))
         End If
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "マッパーJava生成開始"
+        End If
+        currentStage = "GenerateMapperJava"
+        mapperJavaText = GenerateMapperJavaText(dtoClassName, columns, ormType, errors)
+        If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "マッパーJava生成", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "マッパーJava生成完了。文字数=" & CStr(Len(mapperJavaText))
+        End If
     End If
 
     timestampText = Format$(Now, "yyyymmdd_hhnnss")
@@ -723,6 +740,14 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
             Exit Sub
         End If
 
+        mapperJavaFileName = BuildMapperJavaFileName(dtoClassName, ormType)
+        If LenB(mapperJavaFileName) = 0 Then
+            AddError errors, "マッパーJava出力ファイル名を生成できません。"
+            LogErrorsWithStage logPrefix, "マッパーJavaファイル名生成", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+
         If LOG_ENABLED Then
             LogDebug logPrefix & "ORMファイル出力開始"
         End If
@@ -736,6 +761,20 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LOG_ENABLED Then
             LogInfo logPrefix & "ORM出力完了: " & ormOutputPath
         End If
+
+        If LOG_ENABLED Then
+            LogDebug logPrefix & "マッパーJavaファイル出力開始"
+        End If
+        currentStage = "WriteMapperJavaFile"
+        mapperJavaOutputPath = WriteMapperJavaFile(definitionFilePath, mapperJavaFileName, mapperJavaText, errors)
+        If errors.Count > 0 Then
+            LogErrorsWithStage logPrefix, "マッパーJavaファイル出力", errors
+            WriteErrors mainWs, rowIndex, errors
+            Exit Sub
+        End If
+        If LOG_ENABLED Then
+            LogInfo logPrefix & "マッパーJava出力完了: " & mapperJavaOutputPath
+        End If
     End If
 
     Dim successMessage As String
@@ -748,7 +787,7 @@ Private Sub ProcessSingleInstruction(ByVal mainWs As Worksheet, ByVal typeCatalo
         If LenB(successMessage) > 0 Then
             successMessage = successMessage & vbLf
         End If
-        successMessage = successMessage & "DTO出力: " & dtoOutputPath & vbLf & "ORM出力: " & ormOutputPath
+        successMessage = successMessage & "DTO出力: " & dtoOutputPath & vbLf & "ORM出力: " & ormOutputPath & vbLf & "マッパーJava出力: " & mapperJavaOutputPath
     End If
     If hasUnsupportedCharReplacement Then
         successMessage = successMessage & vbLf & BuildUnsupportedCharNote()
@@ -929,6 +968,74 @@ Private Function GenerateOrmText(ByVal tableName As String, ByVal dtoClassName A
     End Select
 End Function
 
+Private Function GenerateMapperJavaText(ByVal dtoClassName As String, ByVal columns As Collection, ByVal ormType As String, ByVal errors As Collection) As String
+    Select Case ormType
+        Case "MyBatis"
+            GenerateMapperJavaText = GenerateMyBatisMapperJava(dtoClassName, columns, errors)
+        Case Else
+            AddError errors, "ORMが未対応です: " & ormType
+    End Select
+End Function
+
+Private Function GenerateMyBatisMapperJava(ByVal dtoClassName As String, ByVal columns As Collection, ByVal errors As Collection) As String
+    If columns Is Nothing Or columns.Count = 0 Then
+        AddError errors, "ORM生成対象のカラム定義が存在しません。"
+        Exit Function
+    End If
+
+    Dim mapperNamespace As String
+    mapperNamespace = BuildMapperNamespace(dtoClassName)
+    If LenB(mapperNamespace) = 0 Then
+        AddError errors, "ORM用のnamespaceを生成できません。"
+        Exit Function
+    End If
+
+    Dim mapperPackage As String
+    Dim mapperSimpleName As String
+    Dim lastDot As Long
+    lastDot = InStrRev(mapperNamespace, ".")
+    If lastDot > 0 Then
+        mapperPackage = Left$(mapperNamespace, lastDot - 1)
+        mapperSimpleName = Mid$(mapperNamespace, lastDot + 1)
+    Else
+        mapperSimpleName = mapperNamespace
+    End If
+
+    Dim domainType As String
+    domainType = Trim$(dtoClassName)
+
+    Dim domainSimpleName As String
+    domainSimpleName = ExtractJavaSimpleClassName(dtoClassName)
+    If LenB(domainSimpleName) = 0 Then
+        AddError errors, "DTOクラス名が不正です。"
+        Exit Function
+    End If
+
+    Dim lines As New Collection
+    If LenB(mapperPackage) > 0 Then
+        lines.Add "package " & mapperPackage & ";"
+        lines.Add vbNullString
+    End If
+
+    lines.Add "import java.util.List;"
+    lines.Add "import org.apache.ibatis.annotations.Mapper;"
+    lines.Add vbNullString
+    lines.Add "import " & domainType & ";"
+    lines.Add vbNullString
+
+    lines.Add "@Mapper"
+    lines.Add "public interface " & mapperSimpleName & " {"
+    lines.Add vbNullString
+    lines.Add "    List<" & domainSimpleName & "> findAll();"
+    lines.Add vbNullString
+    lines.Add "    int insert(" & domainSimpleName & " data);"
+    lines.Add vbNullString
+    lines.Add "    int update(" & domainSimpleName & " data);"
+    lines.Add "}"
+
+    GenerateMyBatisMapperJava = JoinCollection(lines, vbCrLf)
+End Function
+
 Private Function GenerateMyBatisMapperXml(ByVal tableName As String, ByVal dtoClassName As String, ByVal columns As Collection, ByVal errors As Collection) As String
     If columns Is Nothing Or columns.Count = 0 Then
         AddError errors, "ORM生成対象のカラム定義が存在しません。"
@@ -1087,14 +1194,28 @@ Private Function BuildMapperNamespace(ByVal dtoClassName As String) As String
     End If
 End Function
 
-Private Function BuildMapperFileName(ByVal dtoClassName As String, ByVal ormType As String) As String
+Private Function BuildMapperBaseName(ByVal dtoClassName As String, ByVal ormType As String) As String
     Select Case ormType
         Case "MyBatis"
             Dim simpleName As String
             simpleName = ExtractJavaSimpleClassName(dtoClassName)
             If LenB(simpleName) = 0 Then Exit Function
-            BuildMapperFileName = SanitizeForFile(simpleName & "Mapper") & ".xml"
+            BuildMapperBaseName = SanitizeForFile(simpleName & "Mapper")
     End Select
+End Function
+
+Private Function BuildMapperFileName(ByVal dtoClassName As String, ByVal ormType As String) As String
+    Dim baseName As String
+    baseName = BuildMapperBaseName(dtoClassName, ormType)
+    If LenB(baseName) = 0 Then Exit Function
+    BuildMapperFileName = baseName & ".xml"
+End Function
+
+Private Function BuildMapperJavaFileName(ByVal dtoClassName As String, ByVal ormType As String) As String
+    Dim baseName As String
+    baseName = BuildMapperBaseName(dtoClassName, ormType)
+    If LenB(baseName) = 0 Then Exit Function
+    BuildMapperJavaFileName = baseName & ".java"
 End Function
 
 Private Function GenerateJavaDtoText(ByVal className As String, ByVal columns As Collection, ByVal errors As Collection) As String
@@ -2042,6 +2163,11 @@ End Function
 Private Function WriteOrmFile(ByVal sourceFilePath As String, ByVal fileName As String, _
                               ByVal ormText As String, ByVal errors As Collection) As String
     WriteOrmFile = WriteTextFile(sourceFilePath, fileName, ormText, errors, "ORMファイル")
+End Function
+
+Private Function WriteMapperJavaFile(ByVal sourceFilePath As String, ByVal fileName As String, _
+                                     ByVal mapperJavaText As String, ByVal errors As Collection) As String
+    WriteMapperJavaFile = WriteTextFile(sourceFilePath, fileName, mapperJavaText, errors, "マッパーJavaファイル")
 End Function
 
 Private Function WriteTextFile(ByVal sourceFilePath As String, ByVal fileName As String, _

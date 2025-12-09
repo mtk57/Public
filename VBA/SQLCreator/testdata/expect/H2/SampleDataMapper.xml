@@ -5,16 +5,16 @@
 
 <mapper namespace="SampleDataMapper">
     <resultMap id="SampleDataResultMap" type="SampleData">
-        <id property="id" column="id" />
-        <id property="seq" column="seq" />
-        <result property="name" column="name" />
+        <id property="ID" column="ID" />
+        <id property="SEQ" column="SEQ" />
+        <result property="NAME" column="NAME" />
     </resultMap>
 
     <select id="findAll" resultMap="SampleDataResultMap">
         SELECT
-          id,
-          seq,
-          name
+          ID,
+          SEQ,
+          NAME
         FROM
           sample_data
     </select>
@@ -24,15 +24,15 @@
         INSERT INTO
           sample_data
           (
-            id,
-            seq,
-            name
+            ID,
+            SEQ,
+            NAME
           )
         VALUES
         (
-          #{id},
-          #{seq},
-          #{name}
+          #{ID},
+          #{SEQ},
+          #{NAME}
         )
     </insert>
 
@@ -41,8 +41,8 @@
         UPDATE
           sample_data
         SET
-          id = #{id},
-          seq = #{seq},
-          name = #{name}
+          ID = #{ID},
+          SEQ = #{SEQ},
+          NAME = #{NAME}
     </update>
 </mapper>

@@ -1,5 +1,5 @@
 SQL Creator																										
-ver 2.6.1																										
+ver 2.7.1																										
 																										
 																										
 																										

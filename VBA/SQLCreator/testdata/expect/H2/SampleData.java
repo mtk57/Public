@@ -1,44 +1,44 @@
 public class SampleData {
 
-    private Long id;
-    private Long seq;
-    private String name;
+    private Long ID;
+    private Long SEQ;
+    private String NAME;
 
     public SampleData() {
     }
 
-    public SampleData(Long id, Long seq, String name) {
-        this.id = id;
-        this.seq = seq;
-        this.name = name;
+    public SampleData(Long ID, Long SEQ, String NAME) {
+        this.ID = ID;
+        this.SEQ = SEQ;
+        this.NAME = NAME;
     }
 
-    public Long getId() {
-        return id;
+    public Long getID() {
+        return ID;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setID(Long ID) {
+        this.ID = ID;
     }
 
-    public Long getSeq() {
-        return seq;
+    public Long getSEQ() {
+        return SEQ;
     }
 
-    public void setSeq(Long seq) {
-        this.seq = seq;
+    public void setSEQ(Long SEQ) {
+        this.SEQ = SEQ;
     }
 
-    public String getName() {
-        return name;
+    public String getNAME() {
+        return NAME;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setNAME(String NAME) {
+        this.NAME = NAME;
     }
 
     @Override
     public String toString() {
-        return "SampleData{" + "id=" + id + ", " + "seq=" + seq + ", " + "name='" + name + "'" + "}";
+        return "SampleData{" + "ID=" + ID + ", " + "SEQ=" + SEQ + ", " + "NAME='" + NAME + "'" + "}";
     }
 }

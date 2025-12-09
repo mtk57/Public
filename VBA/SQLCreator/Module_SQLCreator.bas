@@ -1,7 +1,7 @@
 Attribute VB_Name = "Module_SQLCreator"
 Option Explicit
 
-Private Const VER As String = "2.6.1"
+Private Const VER As String = "2.7.1"
 
 Private Const LOG_ENABLED As Boolean = False
 Private Const LOG_FILE_NAME As String = "SQLCreator_debug.log"
@@ -1323,7 +1323,7 @@ Private Function BuildJavaPropertyName(ByVal sourceName As String) As String
         identifier = "field"
     End If
 
-    BuildJavaPropertyName = LCase$(Left$(identifier, 1)) & Mid$(identifier, 2)
+    BuildJavaPropertyName = identifier
 End Function
 
 Private Function NormalizeJavaIdentifier(ByVal sourceName As String) As String

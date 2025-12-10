@@ -191,8 +191,11 @@ git ls-tree -r --name-only HEAD | tree --fromfile .
   </dependency>
 
 2.application.properties
-  spring.h2.console.enabled=true        # H2コンソールを有効
-  spring.h2.console.path=/h2-console    # 後で出てくるURLに付けるパス
+  spring.main.web-application-type=servlet  # Webサーバとして起動する
+  #spring.main.web-application-type=none    # Webサーバとして起動しない(バッチアプリはこれ)
+
+  spring.h2.console.enabled=true                    # H2コンソールを有効
+  spring.h2.console.path=/h2-console                # 後で出てくるURLに付けるパス
   spring.h2.console.settings.web-allow-others=true  # H2コンソールを外部からアクセス可能にするか否か
 
   spring.batch.job.enabled=false        # バッチジョブの自動起動有無。falseだとアプリが起動してもジョブは起動せずWebサーバだけが立ち上がる
@@ -200,6 +203,7 @@ git ls-tree -r --name-only HEAD | tree --fromfile .
                                           JobLauncherApplicationRunner : Running default command line with: ...
                                           Job: [SimpleJob: [name=sampleDataJob]] launched with the following parameters: ...
   spring.profiles.active=local          # テスト用/本番用の切り替え
+  #spring.profiles.active=cloud         # テスト用/本番用の切り替え
 
 3.ビルドしてアプリを起動する
   ログに以下が出ていればOK
@@ -271,10 +275,14 @@ public class JobRunController {
   に変更
   →画面にsampleDataJob startedが出るのでジョブが開始される
 
+11.元に戻すときは
+   application.propertiesから以下をコメントアウト
+   #spring.h2.console.enabled=true
+   #spring.h2.console.path=/h2-console
+   #spring.h2.console.settings.web-allow-others=true
+   #spring.batch.job.enabled=false
 
-
-
-
-
+   #spring.main.web-application-type=servlet
+   spring.main.web-application-type=none
 
 ----------

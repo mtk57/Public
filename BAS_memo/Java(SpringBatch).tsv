@@ -309,3 +309,109 @@ Item 読み込み前後・エラー時をフックしたい → ItemReadListener など
 ・エラーの時にどこまで終わったか分かりづらい								
 ・後から一部だけリトライ／スキップしたいときに困る								
 ので、これは Stepを分割したほうがいい です。（1step / 1tasklet）								
+								
+								
+								
+								
+								
+■SAP BTP BASのSpring BatchからH2コンソールを使う								
+1.pom.xmlに以下を追加。(H2はメモリDBなのでバッチのようにアプリが終わってしまう場合はTomCatを常時起動しておく必要がある)								
+  <dependency>								
+      <groupId>org.springframework.boot</groupId>								
+      <artifactId>spring-boot-starter-web</artifactId>								
+  </dependency>								
+								
+2.application.properties								
+  spring.main.web-application-type=servlet  # Webサーバとして起動する								
+  #spring.main.web-application-type=none    # Webサーバとして起動しない(バッチアプリはこれ)								
+								
+  spring.h2.console.enabled=true                    # H2コンソールを有効								
+  spring.h2.console.path=/h2-console                # 後で出てくるURLに付けるパス								
+  spring.h2.console.settings.web-allow-others=true  # H2コンソールを外部からアクセス可能にするか否か								
+								
+  spring.batch.job.enabled=false        # バッチジョブの自動起動有無。falseだとアプリが起動してもジョブは起動せずWebサーバだけが立ち上がる								
+                                        # 以下のようなログが出ていなければ自動起動は抑止されている								
+                                          JobLauncherApplicationRunner : Running default command line with: ...								
+                                          Job: [SimpleJob: [name=sampleDataJob]] launched with the following parameters: ...								
+  spring.profiles.active=local          # テスト用/本番用の切り替え								
+  #spring.profiles.active=cloud         # テスト用/本番用の切り替え								
+								
+3.ビルドしてアプリを起動する								
+  ログに以下が出ていればOK								
+  Tomcat started on port 8080 (http) with context path '/'								
+  H2 console available at '/h2-console'.								
+								
+4.Ctrl + Shift + P								
+  Ports: Preview								
+8080								
+  →ブラウザで新しいタブが勝手に開く								
+  								
+5.開いたタブのURLの末尾に								
+  /h2-console								
+  →H2コンソールが開く								
+								
+6.H2コンソールのJDBC URLを								
+  jdbc:h2:mem:testdb								
+  にして「Connect」								
+								
+この方法だとバッチが最後まで走り切った状態のDBを覗くことになるので								
+バッチが走る前にDBを変更したい場合は、								
+								
+7.以下のクラスを追加								
+package com.example.batch_h2_mybatis_chunk_test.web;								
+								
+import java.time.Instant;								
+import java.util.HashMap;								
+import java.util.Map;								
+								
+import org.springframework.batch.core.Job;								
+import org.springframework.batch.core.JobParameters;								
+import org.springframework.batch.core.JobParametersBuilder;								
+import org.springframework.batch.core.launch.JobLauncher;								
+import org.springframework.http.ResponseEntity;								
+import org.springframework.web.bind.annotation.GetMapping;								
+import org.springframework.web.bind.annotation.RestController;								
+								
+@Profile("local")								
+@RestController								
+public class JobRunController {								
+								
+    private final JobLauncher jobLauncher;								
+    private final Job sampleDataJob;								
+								
+    public JobRunController(JobLauncher jobLauncher, Job sampleDataJob) {								
+        this.jobLauncher = jobLauncher;								
+        this.sampleDataJob = sampleDataJob;								
+    }								
+								
+    @GetMapping("/run-sample-job")								
+    public ResponseEntity<String> runJob() throws Exception {								
+        // ジョブパラメータに時刻を入れて、毎回別ジョブとみなしてもらう								
+        JobParameters params = new JobParametersBuilder()								
+                .addLong("runAt", Instant.now().toEpochMilli())								
+                .toJobParameters();								
+								
+        jobLauncher.run(sampleDataJob, params);								
+								
+        return ResponseEntity.ok("sampleDataJob started");								
+    }								
+}								
+								
+8.ビルドして、手順3～6を実施								
+								
+9.まだジョブは起動していないので、DBを変更しておく。								
+								
+10.URLの/h2-console以降を								
+  /run-sample-job								
+  に変更								
+  →画面にsampleDataJob startedが出るのでジョブが開始される								
+								
+11.元に戻すときは								
+   application.propertiesから以下をコメントアウト								
+   #spring.h2.console.enabled=true								
+   #spring.h2.console.path=/h2-console								
+   #spring.h2.console.settings.web-allow-others=true								
+   #spring.batch.job.enabled=false								
+								
+   #spring.main.web-application-type=servlet								
+   spring.main.web-application-type=none								

@@ -67,3 +67,81 @@ Spring Boot や IDE（IntelliJ, VS Code の拡張など）は
         </resource>		
     </resources>		
 </build>		
+		
+		
+		
+		
+		
+		
+		
+		
+1. Javaソースの特定フォルダをコンパイルから外す		
+		
+src/main/java/com/example/ignore/** をビルド対象外にしたい例：		
+		
+<build>		
+  <plugins>		
+    <plugin>		
+      <groupId>org.apache.maven.plugins</groupId>		
+      <artifactId>maven-compiler-plugin</artifactId>		
+      <version>3.13.0</version> <!-- 例 -->		
+      <configuration>		
+        <excludes>		
+          <exclude>com/example/ignore/**</exclude>		
+        </excludes>		
+      </configuration>		
+    </plugin>		
+  </plugins>		
+</build>		
+		
+これで、そのパターンにマッチするクラスはコンパイルされません。		
+		
+		
+		
+2. リソースフォルダを外す		
+		
+src/main/resources/tmp/** を含めたくない例：		
+		
+<build>		
+  <resources>		
+    <resource>		
+      <directory>src/main/resources</directory>		
+      <excludes>		
+        <exclude>tmp/**</exclude>		
+      </excludes>		
+    </resource>		
+  </resources>		
+</build>		
+		
+		
+		
+3. テストクラス・テストフォルダを外す		
+		
+src/test/java/com/example/slow/** をテスト実行から除外：		
+		
+<build>		
+  <plugins>		
+    <plugin>		
+      <groupId>org.apache.maven.plugins</groupId>		
+      <artifactId>maven-surefire-plugin</artifactId>		
+      <version>3.5.0</version> <!-- 例 -->		
+      <configuration>		
+        <excludes>		
+          <exclude>com/example/slow/**</exclude>		
+        </excludes>		
+      </configuration>		
+    </plugin>		
+  </plugins>		
+</build>		
+		
+		
+		
+4. いちばん簡単な考え方		
+		
+Maven が「自動でビルドする」のは基本この4つだけです		
+src/main/java		
+src/main/resources		
+src/test/java		
+src/test/resources		
+		
+それ以外の場所に置いたものは、そもそもビルド対象になりません。		

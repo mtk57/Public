@@ -79,10 +79,13 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
 
 ■Maven
 
+# ビルド成果物を消して、最初からビルドして成果物をローカルリポジトリ（~/.m2/repository）に登録する （テストはスキップ）
+mvn clean install -DskipTests
+
 # ビルド  ※targetの下にjarが出来る
 mvn clean package
 
-# テストはスキップでビルド
+# ビルド （テストはスキップ）
 mvn clean package -DskipTests
 
 # Springを起動
@@ -178,6 +181,8 @@ git push -u origin main
 # clone
 1.左のSource ControlのCHANGESの...からclone
 2.githubのURLを入れる
+
+git clone https://github.com/mtk57/BatchH2MyBatisTest2.git
 
 # git管理対象をツリー表示
 git ls-tree -r --name-only HEAD | tree --fromfile .

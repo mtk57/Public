@@ -149,7 +149,10 @@ byte[]        → BLOB / VARBINARY
 ■Linux
 
 # 8080ポートを誰がListenしているか?
-ss -ltnp | grep 8080
+lsof -i :8080
+
+# PIDのプロセスを落とす
+kill -9 <PID>
 
 # 全ファイル/フォルダを表示
 ls -a

@@ -367,4 +367,56 @@ public class JobRunController {
    #spring.main.web-application-type=servlet
    spring.main.web-application-type=none
 
+
+
+■Spring Batch
+
+# Chunkのイメージ：
+
+    list = []
+
+    while (true) {
+      in = reader.read()
+
+      if (in == null) {
+        if (list not empty) writer.write(list)   // 残りも出す
+        break
+      }
+
+      out = processor.process(in)   // 変換後（別オブジェクトになることが多い）
+
+      if (out != null) {            // null を返すと「その1件は捨てる」（filter）
+        list.add(out)
+      }
+
+      if (list.size >= CHUNK_SIZE) {
+        writer.write(list)
+        commit()                    // ★ここがチャンクの肝（まとめて確定）
+        list.clear()
+      }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ----------

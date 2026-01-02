@@ -398,8 +398,7 @@ public class JobRunController {
 
 
 
-
-
+TransientDataAccessException：一時的なDBエラーの親    ※リトライさせるならコレ
 
 
 

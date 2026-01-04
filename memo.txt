@@ -416,10 +416,57 @@ spring:
 
 
 
+■ OAuth
+
+# 仕組みの簡単な流れ（OAuth 2.0の場合）
+1.ユーザーがアプリ（クライアント）で「Googleでログイン」を選択。
+2.アプリがユーザーをGoogleの認可サーバーにリダイレクト。
+3.ユーザーがGoogleでログインし、許可を与える（同意画面）。
+4.Googleがアプリに「認可コード」を発行。
+5.アプリがそのコードをアクセストークンに交換。
+6.アプリがトークンを使ってGoogleのAPIにアクセス（ユーザーのデータ取得など）。
+
+
+# XSUAAの流れ
+
+## 登場人物：
+・Browser（ユーザ）
+・Approuter（入口。認証して、バックエンドへ中継）
+・XSUAA（OAuthの認可サーバ）
+・IdP（ログイン画面。IASや社内IdPなど）    ※Identity Provider
+・CAPサービス（Node/Javaのバックエンド）
+
+##シーケンス（初回アクセス）：   https://community.sap.com/t5/technology-blog-posts-by-members/approuter-and-xsuaa/ba-p/13515223
+1.Browser → Approuter
+  /odata/v4/... などにアクセス（まだログインしてない）
+
+2.Approuter：JWT（Json Web Token）が無い/無効 → ログイン開始
+  JWTが無いと判断すると、ユーザをログインへ誘導する（リダイレクト）。 
+
+3.Approuter → XSUAA（/oauth/authorize）
+  Authorization Code Grant を開始（response_type=code、redirect_uri など付き）。 
+
+4.XSUAA → IdP → Browser
+  XSUAAは（設定された）IdPのログインへ回し、ユーザが認証する。 
+
+5.IdP → XSUAA → Browser（認可コード付きで戻す）
+  認証が成功すると、XSUAAが 認可コード（authorization code） を発行して redirect_uri（=Approuter）へリダイレクト。 
+
+6.Approuter → XSUAA（/oauth/token）
+  受け取った  認可コード を使って、アクセストークン（JWT） を発行る。 
+
+7.Approuter → CAPサービス
+  Approuterは元のリクエストを再開し、JWTを付けてCAPへ転送（設定で forwardAuthToken を使うのが典型）。 
+
+8.CAPサービス：JWTを検証 → ユーザ情報として扱う
+  CAPは Authorization: Bearer <JWT> を受け取り、（XSUAAのバインド情報を使って）検証し、ユーザ/権限をリクエストに載せる。 
 
 
 
-----------
+
+
+
+=========================================================================
 YPUO 4ISP X42Y Y5BB 2AGJ 4H6Q 4JR4 7IH5-LY
 EEGA 32BI BK2O PWUN TXE7 3E74 LF3J J2HL-7A
 AQHO LIC5 4CUM R4PX L45Z CHSP 6AST 7JEE-AX

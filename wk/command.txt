@@ -1,0 +1,108 @@
+	cds		CAPのCLI																	
+			<主な用途>																	
+			・動かす（ローカル実行）																	
+				cds watch（開発サーバ起動。変更も自動反映）																
+			・DBへ反映（テーブル作成など）																	
+				cds deploy（CDS → DB定義にしてDBへ反映）																
+			・変換（SQLやEDMXを生成）																	
+				cds compile（CDS → SQL / ODataメタデータ などに変換）																
+																				
+	cf		Cloud Foundryを操作するCLI																	
+			<主な用途>																	
+			・cf login / cf target：ログイン・組織/スペース選択																	
+			・cf push：アプリをデプロイ（単体アプリ向け）																	
+			・cf apps / cf services：一覧を見る																	
+			・cf logs <app>：ログを見る																	
+			・cf create-service / cf bind-service：サービス作成・アプリへ紐付け																	
+																				
+	mbt		MTA.yaml からデプロイ用の .mtar を作る																	
+																				
+																				
+																				
+																				
+																				
+																				
+																				
+	# Cloud Foundry の CLI（cf コマンド）のバージョンを表示する																			
+	cf -v																			
+																				
+																				
+	# MultiApps（MTA）CLIプラグインが入っているか確認するためのコマンドです。MultiAppsプラグインは MTA の deploy などに使います。																			
+	cf plugins | grep -i multiapps																			
+																				
+																				
+	# cf deploy コマンドのヘルプ（使い方・オプション一覧）を表示します。																			
+	cf deploy -h																			
+																				
+																				
+	# いま「どの Cloud Foundry（API）」にログインしていて、どの Org / Space を操作対象にしているかを表示します。																			
+	cf target																			
+																				
+																				
+	# Cloud Foundry に “SSO（シングルサインオン）方式” でログインする																			
+	cf login --sso																			
+																				
+																				
+	# 操作対象の「組織(Org)」と「スペース(Space)」を指定する																			
+	cf target -o <ORG> -s <SPACE>																			
+																				
+																				
+	# MBT（Cloud MTA Build Tool） の バージョンを表示する																			
+	mbt --version																			
+																				
+																				
+	# MTAプロジェクト（mta.yaml）からデプロイ用のアーカイブ（.mtar）を作るコマンドです。（未指定なら「mta_archives」にmtarが作成される）																			
+	mbt build																			
+																				
+																				
+	# MTAプロジェクト（mta.yaml）からデプロイ用のアーカイブ（.mtar）を作る。Cloud Foundry向けビルド（明示的に指定）																			
+	mbt build -p cf																			
+																				
+																				
+																				
+	# ビルドで生成された MTAR（MTAアーカイブ）を詳細付きで確認する																			
+	ls -l mta_archives/*.mtar																			
+																				
+																				
+	# MTAアーカイブ（*.mtar）を Cloud Foundry にデプロイする																			
+	cf deploy <MTART>																			
+																				
+																				
+	# MTAアーカイブ（*.mtar）を Cloud Foundry にデプロイする。mtarのパスを明示的に指定。																			
+	cf deploy mta_archives/*.mtar																			
+																				
+																				
+																				
+	cf app cap-db-demo-srv																			
+																				
+																				
+	# いまログインしている org/space にデプロイ済みの MTA（Multi-Target Application）の一覧を表示します。																			
+	cf mtas																			
+																				
+																				
+																				
+	cf apps																			
+																				
+																				
+																				
+	cf services																			
+																				
+																				
+	# schema.cds からSQL（CREATE TABLEなど）を生成して表示																			
+	cds compile db/schema.cds --to sql																			
+																				
+																				
+	# schema.cds からSQL（CREATE TABLEなど）を生成してファイルに出力																			
+	cds compile db/schema.cds --to sql > ddl.sql																			
+																				
+																				
+	# サービス一覧からHDIコンテナだけを列挙																			
+	cf services | grep hdi-shared																			
+																				
+																				
+	# 環境変数設定（必ずシングルクォートで囲むこと！）																			
+	XSUAA_URL='https://50aed0a6trial.authentication.us10.hana.ondemand.com'																			
+																				
+																				
+	# 環境変数表示																			
+	echo $XSUAA_URL																			

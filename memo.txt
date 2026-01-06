@@ -130,6 +130,58 @@ jar tf job-01/target/job-01-0.0.1-SNAPSHOT.jar | grep messages.properties
 BOOT-INF/classes/messages.properties
 
 
+# JARの中からpom.propertiesがあるか確認（①）
+jar tf <JARファイル> | grep -E '^META-INF/maven/.+/pom\.properties$' || echo "pom.properties が見つかりません"
+
+# pom.propertiesがあれば、groupId, artifactId, versionを確認する
+unzip -p <JARファイル> <①の結果>
+
+# JARから完全修飾クラス名を確認する
+jar tf <JARファイル> \
+ | grep '\.class$' \
+ | grep -v '^META-INF/' \
+ | sed 's#/#.#g; s#\.class$##'
+
+
+
+
+## import文（パッケージ）が解決される仕組み
+
+ポイントは「エディタが直接 `javac` でコンパイルして判断しているわけではない」という点です。
+
+1. Java Language Server（JDT系） が、Javaファイルを読み取って「どのクラスが見えるか（クラスパス）」を作る
+   Java用の解析サーバ（Language Server）が裏で動きます。
+
+2. Mavenの `pom.xml` を読み、依存関係を解決して クラスパスに載せる
+
+   Mavenが落としてきたjarは基本 `~/.m2/repository` に置かれます
+   Language Serverは、そのjar群も含めて「参照できる一覧」を作り、importの解決・補完・赤線表示をします。
+
+
+## 「正しいimportなのに赤くなる」主な原因（よくある）
+
+1. Language Serverのキャッシュが古い/壊れた
+   → まれに import が解決できない “見かけのエラー” になります。
+
+2. pom.xml更新後の“再読み込み（プロジェクト更新）”が追いついてない
+   → `pom.xml` 右クリックの Reload Project で直ることがあります。
+
+3. 依存jarがまだ落ちてない/途中で失敗（プロキシ・ネットワーク・一時エラーなど）
+   → Maven的には取れてないので、Language Serverも解決できません。
+
+4. マルチモジュール/生成コード がうまく認識されてない
+   → “正しいはず” でも、エディタ側のプロジェクト認識がズレて赤くなることがあります。
+
+## まず試す「安全で効く」手順（BAS/VS Code共通）
+
+* `pom.xml` 右クリック → Reload Project
+* コマンドパレット（Ctrl+Shift+P）で Java: Clean Java Language Server Workspace（依存の作り直し）
+* それでもダメなら （Ctrl+Shift+P）で、Developer: Reload Window（画面ごと再読み込み）
+
+
+
+
+
 ■H2   ※メモリ型のDB
 
 # SpringBoot起動時のログに以下が出ていればH2に接続できている状態

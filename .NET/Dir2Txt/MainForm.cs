@@ -56,7 +56,8 @@ namespace Dir2Txt
             {
                 var ignoreDirs = ParseIgnoreList( txtIgnoreDirs.Text );
                 var ignoreFiles = ParseIgnoreList( txtIgnoreFiles.Text );
-                txtOutput.Text = BuildDirectoryText( dirPath, ignoreDirs, ignoreFiles );
+                var ignoreExts = ParseIgnoreList( txtIgnoreExt.Text );
+                txtOutput.Text = BuildDirectoryText( dirPath, ignoreDirs, ignoreFiles, ignoreExts );
             }
             catch ( Exception ex )
             {
@@ -76,14 +77,17 @@ namespace Dir2Txt
             }
         }
 
-        private string BuildDirectoryText ( string rootPath, IEnumerable<string> ignoreDirs, IEnumerable<string> ignoreFiles )
+        private string BuildDirectoryText ( string rootPath, IEnumerable<string> ignoreDirs, IEnumerable<string> ignoreFiles, IEnumerable<string> ignoreExts )
         {
             var ignoreDirSet = new HashSet<string>( ignoreDirs, StringComparer.OrdinalIgnoreCase );
             var ignoreFileSet = new HashSet<string>( ignoreFiles, StringComparer.OrdinalIgnoreCase );
+            var ignoreExtSet = new HashSet<string>(
+                ignoreExts.Select( NormalizeExtension ).Where( x => !string.IsNullOrEmpty( x ) ),
+                StringComparer.OrdinalIgnoreCase );
 
             var allFiles = Directory.GetFiles( rootPath, "*", SearchOption.AllDirectories )
                                     .OrderBy( x => x )
-                                    .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet ) )
+                                    .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet, ignoreExtSet ) )
                                     .ToList();
 
             var builder = new StringBuilder();
@@ -125,11 +129,32 @@ namespace Dir2Txt
             }
         }
 
-        private bool ShouldIgnoreFile ( string filePath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles )
+        private string NormalizeExtension ( string ext )
         {
-            if ( ignoreFiles.Contains( Path.GetFileName( filePath ) ) )
+            if ( string.IsNullOrWhiteSpace( ext ) )
+            {
+                return string.Empty;
+            }
+
+            var trimmed = ext.Trim();
+            return trimmed.StartsWith( "." ) ? trimmed.Substring( 1 ) : trimmed;
+        }
+
+        private bool ShouldIgnoreFile ( string filePath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles, HashSet<string> ignoreExts )
+        {
+            var fileName = Path.GetFileName( filePath );
+            if ( ignoreFiles.Contains( fileName ) )
             {
                 return true;
+            }
+
+            if ( ignoreExts.Count > 0 )
+            {
+                var ext = NormalizeExtension( Path.GetExtension( filePath ) );
+                if ( !string.IsNullOrEmpty( ext ) && ignoreExts.Contains( ext ) )
+                {
+                    return true;
+                }
             }
 
             if ( ignoreDirs.Count == 0 )
@@ -267,9 +292,10 @@ namespace Dir2Txt
                 var settings = LoadSettings();
                 if ( settings != null )
                 {
-                    txtDirPath.Text = settings.DirPath;
-                    txtIgnoreDirs.Text = settings.IgnoreDirs;
-                    txtIgnoreFiles.Text = settings.IgnoreFiles;
+                    txtDirPath.Text = settings.DirPath ?? string.Empty;
+                    txtIgnoreDirs.Text = settings.IgnoreDirs ?? string.Empty;
+                    txtIgnoreFiles.Text = settings.IgnoreFiles ?? string.Empty;
+                    txtIgnoreExt.Text = settings.IgnoreExt ?? string.Empty;
                 }
             }
             catch
@@ -285,7 +311,8 @@ namespace Dir2Txt
                 {
                     DirPath = txtDirPath.Text ?? string.Empty,
                     IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty,
-                    IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty
+                    IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty,
+                    IgnoreExt = txtIgnoreExt.Text ?? string.Empty
                 } );
             }
             catch
@@ -334,6 +361,9 @@ namespace Dir2Txt
 
             [DataMember]
             public string IgnoreFiles { get; set; }
+
+            [DataMember]
+            public string IgnoreExt { get; set; }
         }
 
 

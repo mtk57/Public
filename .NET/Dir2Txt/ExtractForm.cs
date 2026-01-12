@@ -118,6 +118,17 @@ namespace Dir2Txt
 
         private List<FileEntry> ParseEntries ( string rawText )
         {
+            var parsed = ParseEntriesCore( rawText, true );
+            if ( parsed.Count > 0 )
+            {
+                return parsed;
+            }
+
+            return ParseEntriesCore( rawText, false );
+        }
+
+        private List<FileEntry> ParseEntriesCore ( string rawText, bool skipHeader )
+        {
             var result = new List<FileEntry>();
             using ( var reader = new StringReader( rawText ?? string.Empty ) )
             {
@@ -125,9 +136,19 @@ namespace Dir2Txt
                 string currentPath = null;
                 string currentEncoding = "utf-8";
                 var contentBuilder = new StringBuilder();
+                var started = !skipHeader;
 
                 while ( ( line = reader.ReadLine() ) != null )
                 {
+                    if ( !started )
+                    {
+                        if ( line == "==========" )
+                        {
+                            started = true;
+                        }
+                        continue;
+                    }
+
                     if ( line.StartsWith( "@@" ) )
                     {
                         if ( currentPath != null )

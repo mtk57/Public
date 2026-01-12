@@ -90,7 +90,8 @@ namespace Dir2Txt
                                     .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet, ignoreExtSet ) )
                                     .ToList();
 
-            var builder = new StringBuilder();
+            var processedFiles = new List<string>();
+            var contentBuilder = new StringBuilder();
             foreach ( var file in allFiles )
             {
                 if ( IsBinaryFile( file ) )
@@ -98,15 +99,24 @@ namespace Dir2Txt
                     continue;
                 }
 
+                processedFiles.Add( file );
                 var read = ReadFileWithEncoding( file );
-                builder.Append( "@@" ).Append( file ).Append( "|" ).AppendLine( read.Encoding.WebName );
+                contentBuilder.Append( "@@" ).Append( file ).Append( "|" ).AppendLine( read.Encoding.WebName );
                 var content = read.Content;
-                builder.Append( content );
+                contentBuilder.Append( content );
                 if ( !content.EndsWith( Environment.NewLine ) )
                 {
-                    builder.AppendLine();
+                    contentBuilder.AppendLine();
                 }
             }
+
+            var builder = new StringBuilder();
+            foreach ( var file in processedFiles )
+            {
+                builder.AppendLine( file );
+            }
+            builder.AppendLine( "==========" );
+            builder.Append( contentBuilder.ToString() );
 
             return builder.ToString();
         }

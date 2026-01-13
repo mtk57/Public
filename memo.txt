@@ -82,11 +82,16 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
 generate-sources → generate-resources → compile → test → package
 
 
-# ビルド成果物を消して、最初からビルドして成果物をローカルリポジトリ（~/.m2/repository）に登録する （テストはスキップ）
-mvn clean install
-
-# ビルド  ※targetの下にjarが出来る
+# いったん前回の成果物を削除（clean：主に target/ を消す）
+# コンパイル・テスト等を実行して
+# JAR/WAR を target/ に作る（package）
+→「とりあえずビルド成果物が欲しい」用途。
 mvn clean package
+
+# 上の package まで全部やったうえで
+# 作った成果物をローカルリポジトリ（通常 ~/.m2/repository）に入れる（install）
+→「他のMavenプロジェクトから、この成果物を依存関係として使いたい」用途。
+mvn clean install
 
 # ビルド （テストはスキップ）
 mvn clean package -DskipTests
@@ -404,6 +409,32 @@ cp -r src dst
 
 # BASリロード
 Ctrl + Shift + P → "Developer: Reload Window"
+
+
+# launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Debug job-01 with TSV",
+      "request": "launch",
+      "mainClass": "com.example.batch.Application",
+      "projectName": "job-01",
+      "args": "--app.inputFile=/home/user/projects/BatchH2MyBatisTest2/job-01/src/test/resources/input/TESTDATA.tsv"
+    }
+  ]
+}
+
+# java
+@Value("${app.inputFile}")
+private String filePath;
+
+
+# デバッガ使用時は必ずワークスペースを変更すること。（projectsフォルダを開いているとダメ）
+
+
+
 
 
 ■Git

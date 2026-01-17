@@ -25,8 +25,10 @@ namespace Dir2Txt
             btnRefDirPath.Click += BtnRefDirPath_Click;
             btnRun.Click += BtnRun_Click;
             btnExtract.Click += BtnExtract_Click;
+            txtOutput.TextChanged += TxtOutput_TextChanged;
             Load += MainForm_Load;
             FormClosed += MainForm_FormClosed;
+            UpdateOutputLength();
         }
 
         private void BtnExtract_Click ( object sender, EventArgs e )
@@ -313,6 +315,11 @@ namespace Dir2Txt
             }
         }
 
+        private void TxtOutput_TextChanged ( object sender, EventArgs e )
+        {
+            UpdateOutputLength();
+        }
+
         private void MainForm_FormClosed ( object sender, FormClosedEventArgs e )
         {
             try
@@ -358,6 +365,26 @@ namespace Dir2Txt
                 var serializer = new DataContractJsonSerializer( typeof( MainFormSettings ) );
                 serializer.WriteObject( stream, settings );
             }
+        }
+
+        private void UpdateOutputLength ()
+        {
+            var text = txtOutput.Text ?? string.Empty;
+            const string delimiter = "==========";
+            var index = text.IndexOf( delimiter, StringComparison.Ordinal );
+            if ( index >= 0 )
+            {
+                var start = index + delimiter.Length;
+                while ( start < text.Length && ( text[start] == '\r' || text[start] == '\n' ) )
+                {
+                    start++;
+                }
+
+                text = text.Substring( start );
+            }
+
+            var lengthText = ( text?.Length ?? 0 ).ToString( "#,0" );
+            lblLength.Text = $"文字数: {lengthText}";
         }
 
         [DataContract]

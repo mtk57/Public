@@ -16,6 +16,8 @@ namespace Dir2Txt
 {
     public partial class MainForm : Form
     {
+        private const string DELIMITER = "==========";
+
         public MainForm ()
         {
             InitializeComponent();
@@ -113,7 +115,7 @@ namespace Dir2Txt
             {
                 builder.AppendLine( file );
             }
-            builder.AppendLine( "==========" );
+            builder.AppendLine( DELIMITER );
             builder.Append( contentBuilder.ToString() );
 
             return builder.ToString();
@@ -366,7 +368,7 @@ namespace Dir2Txt
         private void UpdateOutputLength ()
         {
             var text = txtOutput.Text ?? string.Empty;
-            const string delimiter = "==========";
+            const string delimiter = DELIMITER;
             var index = text.IndexOf( delimiter, StringComparison.Ordinal );
             if ( index >= 0 )
             {

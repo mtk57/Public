@@ -42,6 +42,7 @@
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.label4 = new System.Windows.Forms.Label();
             this.txtIgnoreExt = new System.Windows.Forms.TextBox();
+            this.lblLength = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // txtDirPath
@@ -154,11 +155,21 @@
             this.txtIgnoreExt.TabIndex = 10;
             this.toolTip1.SetToolTip(this.txtIgnoreExt, "複数指定時は\"/\"で区切る");
             // 
+            // lblLength
+            // 
+            this.lblLength.AutoSize = true;
+            this.lblLength.Location = new System.Drawing.Point(85, 209);
+            this.lblLength.Name = "lblLength";
+            this.lblLength.Size = new System.Drawing.Size(0, 12);
+            this.lblLength.TabIndex = 12;
+            this.toolTip1.SetToolTip(this.lblLength, "複数指定時は\"/\"で区切る");
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(522, 486);
+            this.Controls.Add(this.lblLength);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.txtIgnoreExt);
             this.Controls.Add(this.label3);
@@ -193,6 +204,7 @@
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox txtIgnoreExt;
+        private System.Windows.Forms.Label lblLength;
     }
 }
 

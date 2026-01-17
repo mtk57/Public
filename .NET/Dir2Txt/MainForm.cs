@@ -87,20 +87,16 @@ namespace Dir2Txt
                 ignoreExts.Select( NormalizeExtension ).Where( x => !string.IsNullOrEmpty( x ) ),
                 StringComparer.OrdinalIgnoreCase );
 
-            var allFiles = Directory.GetFiles( rootPath, "*", SearchOption.AllDirectories )
-                                    .OrderBy( x => x )
-                                    .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet, ignoreExtSet ) )
-                                    .ToList();
+            var textFiles = Directory.GetFiles( rootPath, "*", SearchOption.AllDirectories )
+                                     .OrderBy( x => x )
+                                     .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet, ignoreExtSet ) )
+                                     .Where( file => !IsBinaryFile( file ) )
+                                     .ToList();
 
             var processedFiles = new List<string>();
             var contentBuilder = new StringBuilder();
-            foreach ( var file in allFiles )
+            foreach ( var file in textFiles )
             {
-                if ( IsBinaryFile( file ) )
-                {
-                    continue;
-                }
-
                 processedFiles.Add( file );
                 var read = ReadFileWithEncoding( file );
                 contentBuilder.Append( "@@" ).Append( file ).Append( "|" ).AppendLine( read.Encoding.WebName );

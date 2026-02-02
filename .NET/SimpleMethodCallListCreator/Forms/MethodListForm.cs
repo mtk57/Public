@@ -317,18 +317,20 @@ namespace SimpleMethodCallListCreator
                 throw new ArgumentException("出力先パスが不正です。", nameof(exportPath));
             }
 
+            var tagPrefix = ResolveTagJumpPrefix();
+
             var headers = new List<string>
             {
                 "FilePath",
                 "FileName",
                 "PackageName",
                 "ClassName",
-                "MethodSignature"
+                "MethodSignature",
+                "RowNum",
+                "TagJumpFilePath",
+                "TagJumpMethodSignature",
+                "TagJumpMethodListPath"
             };
-            if (_exportMode == MethodListExportMode.RowNumber)
-            {
-                headers.Add("RowNum");
-            }
             if (includeStepCount)
             {
                 headers.Add("Steps");
@@ -339,21 +341,21 @@ namespace SimpleMethodCallListCreator
                 writer.WriteLine(string.Join("\t", headers));
                 foreach (var detail in results ?? Enumerable.Empty<MethodDefinitionDetail>())
                 {
+                    var lineNumber = detail?.LineNumber > 0
+                        ? detail.LineNumber.ToString(CultureInfo.InvariantCulture)
+                        : string.Empty;
                     var fields = new List<string>
                     {
                         EscapeForTsv(detail?.FilePath),
                         EscapeForTsv(detail?.FileName),
                         EscapeForTsv(detail?.PackageName),
                         EscapeForTsv(detail?.ClassName),
-                        EscapeForTsv(detail?.MethodSignature)
+                        EscapeForTsv(detail?.MethodSignature),
+                        lineNumber,
+                        EscapeForTsv(string.Concat(tagPrefix, detail?.FilePath ?? string.Empty)),
+                        EscapeForTsv(detail?.MethodSignature),
+                        EscapeForTsv(exportPath)
                     };
-                    if (_exportMode == MethodListExportMode.RowNumber)
-                    {
-                        var lineNumber = detail?.LineNumber > 0
-                            ? detail.LineNumber.ToString(CultureInfo.InvariantCulture)
-                            : string.Empty;
-                        fields.Add(lineNumber);
-                    }
 
                     if (includeStepCount)
                     {
@@ -365,6 +367,17 @@ namespace SimpleMethodCallListCreator
                     writer.WriteLine(string.Join("\t", fields));
                 }
             }
+        }
+
+        private string ResolveTagJumpPrefix()
+        {
+            var prefix = _settings?.LastTagJumpPrefix;
+            if (string.IsNullOrEmpty(prefix))
+            {
+                prefix = "//@ ";
+            }
+
+            return prefix;
         }
 
         private string EscapeForTsv(string value)

@@ -80,16 +80,18 @@ SimpleMethodCallListCreator は、指定した Java ソースのメソッド呼�
 - 形式: TSV（UTF-8）
 - ファイル名: `YYYYMMDD_HHMMSS.tsv`
 - ヘッダ:
-  - `FilePath, FileName, PackageName, ClassName, MethodSignature`
-  - **ステップカウント** 有効時は `Steps` 列が追加
+  - `FilePath, FileName, PackageName, ClassName, MethodSignature, RowNum, TagJumpFilePath, TagJumpMethodSignature, TagJumpMethodListPath`
+  - **ステップカウント** 有効時は最後に `Steps` 列が追加
 - **MethodSignature** は引数名を除き、型のみを出力（throws 句は除外）
+- **TagJump*** 列はタグジャンプ情報のコピペ用列です  
+  - `TagJumpFilePath` はプレフィックス付き（既定: `//@ `）
+  - `TagJumpMethodListPath` は出力したメソッドリストのパス
 
 #### 行番号版（ファイルパス＋行番号）
 「その他」画面の **ファイルパス＋行番号** グループのメソッドリスト作成を使うと、
-行番号列を含む TSV を作成します。
+ファイル名に `_row` が付いた TSV を作成します（RowNum 列は標準出力）。
 
 - ファイル名: `YYYYMMDD_HHMMSS_row.tsv`
-- ヘッダに `RowNum` 列が追加
 
 ### 3-2. タグジャンプ情報の埋め込み
 メソッド呼び出し行の末尾にタグジャンプ情報を追記します。

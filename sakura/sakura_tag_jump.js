@@ -1,4 +1,4 @@
-var EXE_PATH = "C:\\_git\\Public\\.NET\\SimpleMethodCallListCreator\\bin\\Debug\\SimpleMethodCallListCreator.exe";
+var EXE_PATH = "C:\\_git\\PublicMemo\\.NET\\SimpleMethodCallListCreator\\SimpleMethodCallListCreator.exe";
 
 // exeファイルの存在チェック
 var fso = new ActiveXObject("Scripting.FileSystemObject");

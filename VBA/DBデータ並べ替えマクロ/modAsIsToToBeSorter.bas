@@ -8,7 +8,7 @@ Private Const SHEET_TARGET As String = "target"
 Private Const SHEET_MACRO As String = "macro"
 
 Private Const TOBE_SUFFIX As String = "_ToBe"
-Private Const START_ROW As Long = 2
+Private Const START_ROW As Long = 5
 
 ' mapping sheet columns
 Private Const COL_MAP_TOBE_TABLE As Long = 2   ' B

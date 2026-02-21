@@ -72,50 +72,38 @@ FatalError:
 End Sub
 
 Private Sub ValidateMappingsForTargets(ByRef targets As Collection, ByRef mappingByToBe As Object, ByRef asIsToToBe As Object, ByRef errors As Collection)
-    Dim ws As Worksheet
-    Dim lastRow As Long
-    Dim rowNum As Long
-    Dim targetLine As TargetLineData
-    Dim sheetKey As String
-    Dim validatedSheets As Object
-    Dim mappingSheetHasToBe As Object
+    Dim requestedToBeKeys As Object
+    Dim item As Variant
+    Dim key As Variant
+    Dim targetRow As Object
+    Dim requestInfo As Object
+    Dim mappingSheetName As String
+    Dim toBeTable As String
+    Dim toBeKey As String
 
-    If Not TryGetThisWorkbookSheet(SHEET_TARGET, ws, errors) Then
-        Exit Sub
-    End If
+    Set requestedToBeKeys = NewDictionary()
 
-    Set validatedSheets = NewDictionary()
-    Set mappingSheetHasToBe = NewDictionary()
-    lastRow = GetTargetLastRow(ws)
+    For Each item In targets
+        Set targetRow = item
+        mappingSheetName = CStr(targetRow(KEY_TARGET_MAPPING_SHEET))
+        toBeTable = CStr(targetRow(KEY_TARGET_TOBE_TABLE))
+        toBeKey = BuildToBeMappingKey(mappingSheetName, toBeTable)
 
-    If lastRow < START_ROW Then
-        Exit Sub
-    End If
-
-    For rowNum = START_ROW To lastRow
-        If Not ReadTargetLine(ws, rowNum, targetLine) Then
-            GoTo NextTargetRow
+        If Not requestedToBeKeys.Exists(toBeKey) Then
+            Set requestInfo = NewDictionary()
+            requestInfo.Add KEY_TARGET_MAPPING_SHEET, mappingSheetName
+            requestInfo.Add KEY_TARGET_TOBE_TABLE, toBeTable
+            requestedToBeKeys.Add toBeKey, requestInfo
         End If
+    Next item
 
-        If Len(targetLine.MappingSheetName) = 0 Then
-            GoTo NextTargetRow
-        End If
-
-        If Not HasAnyToBeTableInMappingSheet(targetLine.MappingSheetName, mappingSheetHasToBe) Then
-            GoTo NextTargetRow
-        End If
-
-        sheetKey = NormalizeKey(targetLine.MappingSheetName)
-        If Not validatedSheets.Exists(sheetKey) Then
-            validatedSheets.Add sheetKey, targetLine.MappingSheetName
-            ValidateMappingSheet targetLine.MappingSheetName, mappingByToBe, asIsToToBe, errors
-        End If
-
-NextTargetRow:
-    Next rowNum
+    For Each key In requestedToBeKeys.Keys
+        Set requestInfo = requestedToBeKeys(CStr(key))
+        ValidateMappingTable CStr(requestInfo(KEY_TARGET_MAPPING_SHEET)), CStr(requestInfo(KEY_TARGET_TOBE_TABLE)), mappingByToBe, asIsToToBe, errors
+    Next key
 End Sub
 
-Private Sub ValidateMappingSheet(ByVal mappingSheetName As String, ByRef mappingByToBe As Object, ByRef asIsToToBe As Object, ByRef errors As Collection)
+Private Sub ValidateMappingTable(ByVal mappingSheetName As String, ByVal targetToBeTable As String, ByRef mappingByToBe As Object, ByRef asIsToToBe As Object, ByRef errors As Collection)
     Dim ws As Worksheet
     Dim lastRow As Long
     Dim rowNum As Long
@@ -157,6 +145,10 @@ Private Sub ValidateMappingSheet(ByVal mappingSheetName As String, ByRef mapping
 
         hasAnyValue = (Len(toBeTable) > 0 Or Len(toBeColumn) > 0 Or Len(asIsTable) > 0 Or Len(asIsColumn) > 0)
         If Not hasAnyValue Then
+            GoTo NextMappingRow
+        End If
+
+        If NormalizeKey(toBeTable) <> NormalizeKey(targetToBeTable) Then
             GoTo NextMappingRow
         End If
 
@@ -226,10 +218,7 @@ Private Sub ValidateMappingSheet(ByVal mappingSheetName As String, ByRef mapping
 NextMappingRow:
     Next rowNum
 
-    If validRowCount = 0 Then
-        AddError errors, "[" & mappingSheetName & "]" & JpNoValidRowsSuffix()
-        Exit Sub
-    End If
+    If validRowCount = 0 Then Exit Sub
 
     For Each key In sheetToBeKeys.Keys
         If Not toBeToAsIsTable.Exists(CStr(key)) Then

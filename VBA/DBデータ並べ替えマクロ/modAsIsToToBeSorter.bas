@@ -1,7 +1,7 @@
 Attribute VB_Name = "modAsIsToToBeSorter"
 Option Explicit
 
-Private Const VER As String = "1.2.0"
+Private Const VER As String = "1.3.0"
 
 Public Sub •À‚Ñ‘Ö‚¦ŠJŽn()
     StartSort

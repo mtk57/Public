@@ -1,13 +1,13 @@
 Attribute VB_Name = "modAsIsToToBeSorter"
 Option Explicit
 
-Private Const VER = "0.0.1"
+Private Const VER = "0.5.0"
 
 Private Const SHEET_MAPPING As String = "mapping"
 Private Const SHEET_TARGET As String = "target"
-Private Const SHEET_MACRO As String = "macro"
+Private Const SHEET_MACRO As String = "log"
 
-Private Const TOBE_SUFFIX As String = "_ToBe"
+Private Const TOBE_FILE_SUFFIX As String = "_TOBE"
 Private Const START_ROW As Long = 5
 
 ' mapping sheet columns
@@ -23,7 +23,7 @@ Private Const COL_TARGET_ASIS_TABLE As Long = 5 ' E
 Private Const COL_TARGET_HEADER_CELL As Long = 6 ' F
 Private Const COL_TARGET_DATA_CELL As Long = 7   ' G
 
-' macro log area (B:D)
+' log area (B:D)
 Private Const LOG_ROW_HEADER As Long = 1
 Private Const LOG_ROW_START As Long = 2
 Private Const LOG_COL_TIME As Long = 2
@@ -51,9 +51,13 @@ Public Sub StartSort()
 
     On Error GoTo FatalError
 
+    If MsgBox(BuildExecuteConfirmMessage(), vbQuestion + vbYesNo + vbDefaultButton2) <> vbYes Then
+        Exit Sub
+    End If
+
     PrepareApplication
     InitLog
-    WriteLog "INFO", "並び替え処理を開始します。"
+    WriteLog LogLevelInfo(), "並び替え処理を開始します。"
 
     Set errors = New Collection
     Set mappingByToBe = NewDictionary()
@@ -72,7 +76,7 @@ Public Sub StartSort()
 
     ExecuteSort targets, mappingByToBe
 
-    WriteLog "INFO", "並び替え処理が正常終了しました。"
+    WriteLog LogLevelInfo(), "並び替え処理が正常終了しました。"
     MsgBox "並び替え処理が完了しました。", vbInformation + vbOKOnly
 
 SafeExit:
@@ -80,8 +84,8 @@ SafeExit:
     Exit Sub
 
 FatalError:
-    WriteLog "ERROR", "予期しないエラー: (" & Err.Number & ") " & Err.Description
-    MsgBox "予期しないエラーが発生しました。macroシートのログを確認してください。", vbCritical + vbOKOnly
+    WriteLog LogLevelError(), "予期しないエラー: (" & Err.Number & ") " & Err.Description
+    MsgBox ChrW(&H4E88) & ChrW(&H671F) & ChrW(&H3057) & ChrW(&H306A) & ChrW(&H3044) & ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC) & ChrW(&H304C) & ChrW(&H767A) & ChrW(&H751F) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3002) & ChrW(&H6C) & ChrW(&H6F) & ChrW(&H67) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H3092) & ChrW(&H78BA) & ChrW(&H8A8D) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3002), vbCritical + vbOKOnly
     RestoreApplication
 End Sub
 
@@ -290,6 +294,7 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
         targetRow.Add "AsIsTable", asIsTable
         targetRow.Add "HeaderCell", UCase$(headerCell)
         targetRow.Add "DataCell", UCase$(dataCell)
+        targetRow.Add "OutputFilePath", BuildToBeFilePath(filePath)
 
         targets.Add targetRow
 
@@ -322,6 +327,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
     Dim targetItem As Variant
     Dim targetRow As Object
     Dim filePath As String
+    Dim outputFilePath As String
     Dim sheetName As String
     Dim wb As Workbook
     Dim ws As Worksheet
@@ -341,10 +347,15 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
     For Each targetItem In targets
         Set targetRow = targetItem
         filePath = CStr(targetRow("FilePath"))
+        outputFilePath = CStr(targetRow("OutputFilePath"))
         rowNum = CLng(targetRow("RowNum"))
 
         If Not FileExists(filePath) Then
-            AddError errors, "target 行" & rowNum & " のファイルが存在しません: " & filePath
+            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306E) & ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H304C) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20) & filePath
+        End If
+
+        If FileExists(outputFilePath) Then
+            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306E) & ChrW(&H51FA) & ChrW(&H529B) & ChrW(&H5148) & ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H304C) & ChrW(&H65E2) & ChrW(&H306B) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3059) & ChrW(&H3A) & ChrW(&H20) & outputFilePath
         End If
     Next targetItem
 
@@ -365,12 +376,8 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
 
         Set ws = Nothing
         If Not TryGetWorksheetFromWorkbook(wb, sheetName, ws) Then
-            AddError errors, "target 行" & rowNum & " のシートが存在しません: " & filePath & " / " & sheetName
+            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306E) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H304C) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20) & filePath & " / " & sheetName
             GoTo NextTarget
-        End If
-
-        If WorksheetExists(wb, sheetName & TOBE_SUFFIX) Then
-            AddError errors, "target 行" & rowNum & " は出力先シートが既に存在します: " & filePath & " / " & sheetName & TOBE_SUFFIX
         End If
 
         toBeKey = ""
@@ -383,7 +390,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
         End If
 
         If Not mappingByToBe.Exists(toBeKey) Then
-            AddError errors, "target 行" & rowNum & " に対応するToBeテーブル定義が見つかりません。"
+            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306B) & ChrW(&H5BFE) & ChrW(&H5FDC) & ChrW(&H3059) & ChrW(&H308B) & ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30C6) & ChrW(&H30FC) & ChrW(&H30D6) & ChrW(&H30EB) & ChrW(&H5B9A) & ChrW(&H7FA9) & ChrW(&H304C) & ChrW(&H898B) & ChrW(&H3064) & ChrW(&H304B) & ChrW(&H308A) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3002)
             GoTo NextTarget
         End If
 
@@ -396,7 +403,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
 
             If Len(asIsColumn) > 0 Then
                 If Not headerLookup.Exists(NormalizeKey(asIsColumn)) Then
-                    AddError errors, "target 行" & rowNum & " で必要なAsIsカラムが見つかりません: " & asIsColumn & " (" & filePath & " / " & sheetName & ")"
+                    AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H3067) & ChrW(&H5FC5) & ChrW(&H8981) & ChrW(&H306A) & ChrW(&H41) & ChrW(&H73) & ChrW(&H49) & ChrW(&H73) & ChrW(&H30AB) & ChrW(&H30E9) & ChrW(&H30E0) & ChrW(&H304C) & ChrW(&H898B) & ChrW(&H3064) & ChrW(&H304B) & ChrW(&H308A) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20) & asIsColumn & " (" & filePath & " / " & sheetName & ")"
                 End If
             End If
         Next mapItem
@@ -410,42 +417,52 @@ End Sub
 
 Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Object)
     Dim openedBooks As Object
+    Dim copiedFiles As Object
     Dim targetItem As Variant
     Dim targetRow As Object
     Dim wb As Workbook
-    Dim srcWs As Worksheet
-    Dim outWs As Worksheet
+    Dim ws As Worksheet
     Dim mappingRows As Collection
-    Dim filePath As String
+    Dim sourceFilePath As String
+    Dim outputFilePath As String
     Dim sheetName As String
-    Dim outputSheetName As String
     Dim toBeKey As String
     Dim rowNum As Long
     Dim key As Variant
+    Dim copyKey As String
 
     Set openedBooks = NewDictionary()
+    Set copiedFiles = NewDictionary()
 
     On Error GoTo ExecError
 
     For Each targetItem In targets
         Set targetRow = targetItem
+        sourceFilePath = CStr(targetRow("FilePath"))
+        outputFilePath = CStr(targetRow("OutputFilePath"))
+        copyKey = NormalizeKey(sourceFilePath)
+
+        If Not copiedFiles.Exists(copyKey) Then
+            FileCopy sourceFilePath, outputFilePath
+            copiedFiles.Add copyKey, outputFilePath
+            WriteLog LogLevelInfo(), ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H3092) & ChrW(&H30B3) & ChrW(&H30D4) & ChrW(&H30FC) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3A) & ChrW(&H20) & outputFilePath
+        End If
+    Next targetItem
+
+    For Each targetItem In targets
+        Set targetRow = targetItem
         rowNum = CLng(targetRow("RowNum"))
-        filePath = CStr(targetRow("FilePath"))
+        outputFilePath = CStr(targetRow("OutputFilePath"))
         sheetName = CStr(targetRow("SheetName"))
         toBeKey = CStr(targetRow("ToBeTableKey"))
-        outputSheetName = sheetName & TOBE_SUFFIX
 
-        Set wb = GetOrOpenWorkbookForRun(filePath, openedBooks)
-        Set srcWs = wb.Worksheets(sheetName)
-
-        srcWs.Copy After:=wb.Worksheets(wb.Worksheets.Count)
-        Set outWs = wb.Worksheets(wb.Worksheets.Count)
-        outWs.Name = outputSheetName
+        Set wb = GetOrOpenWorkbookForRun(outputFilePath, openedBooks)
+        Set ws = wb.Worksheets(sheetName)
 
         Set mappingRows = mappingByToBe(toBeKey)
-        RebuildToBeSheet outWs, CStr(targetRow("HeaderCell")), CStr(targetRow("DataCell")), mappingRows
+        RebuildToBeSheet ws, CStr(targetRow("HeaderCell")), CStr(targetRow("DataCell")), mappingRows
 
-        WriteLog "INFO", "target 行" & rowNum & " を処理しました: " & filePath & " / " & outputSheetName
+        WriteLog LogLevelInfo(), TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H3092) & ChrW(&H51E6) & ChrW(&H7406) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3A) & ChrW(&H20) & outputFilePath & " / " & sheetName
     Next targetItem
 
     For Each key In openedBooks.Keys
@@ -688,13 +705,13 @@ End Sub
 Private Sub ReportValidationErrors(ByRef errors As Collection)
     Dim item As Variant
 
-    WriteLog "ERROR", "入力チェックでエラーが " & errors.Count & " 件見つかりました。"
+    WriteLog LogLevelError(), "入力チェックでエラーが " & errors.Count & " 件見つかりました。"
 
     For Each item In errors
-        WriteLog "ERROR", CStr(item)
+        WriteLog LogLevelError(), CStr(item)
     Next item
 
-    MsgBox "入力チェックでエラーが " & errors.Count & " 件見つかりました。macroシートを確認してください。", vbCritical + vbOKOnly
+    MsgBox ChrW(&H5165) & ChrW(&H529B) & ChrW(&H30C1) & ChrW(&H30A7) & ChrW(&H30C3) & ChrW(&H30AF) & ChrW(&H3067) & ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC) & ChrW(&H304C) & ChrW(&H20) & errors.Count & ChrW(&H20) & ChrW(&H4EF6) & ChrW(&H898B) & ChrW(&H3064) & ChrW(&H304B) & ChrW(&H308A) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3002) & ChrW(&H6C) & ChrW(&H6F) & ChrW(&H67) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H3092) & ChrW(&H78BA) & ChrW(&H8A8D) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3002), vbCritical + vbOKOnly
 End Sub
 
 Private Function TrimSafe(ByVal value As Variant) As String
@@ -713,6 +730,61 @@ Private Function FileExists(ByVal filePath As String) As Boolean
     Dim found As String
     found = Dir$(filePath, vbNormal Or vbReadOnly Or vbHidden Or vbSystem Or vbArchive)
     FileExists = (Len(found) > 0)
+End Function
+
+Private Function BuildToBeFilePath(ByVal sourceFilePath As String) As String
+    Dim slashPosBack As Long
+    Dim slashPosSlash As Long
+    Dim slashPos As Long
+    Dim folderPath As String
+    Dim fileName As String
+    Dim dotPos As Long
+    Dim baseName As String
+    Dim ext As String
+
+    slashPosBack = InStrRev(sourceFilePath, "\")
+    slashPosSlash = InStrRev(sourceFilePath, "/")
+
+    If slashPosBack > slashPosSlash Then
+        slashPos = slashPosBack
+    Else
+        slashPos = slashPosSlash
+    End If
+
+    If slashPos > 0 Then
+        folderPath = Left(sourceFilePath, slashPos)
+        fileName = Mid(sourceFilePath, slashPos + 1)
+    Else
+        folderPath = ""
+        fileName = sourceFilePath
+    End If
+
+    dotPos = InStrRev(fileName, ".")
+    If dotPos > 1 Then
+        baseName = Left(fileName, dotPos - 1)
+        ext = Mid(fileName, dotPos)
+    Else
+        baseName = fileName
+        ext = ""
+    End If
+
+    BuildToBeFilePath = folderPath & baseName & TOBE_FILE_SUFFIX & ext
+End Function
+
+Private Function BuildExecuteConfirmMessage() As String
+    BuildExecuteConfirmMessage = ChrW(&H4E26) & ChrW(&H3073) & ChrW(&H66FF) & ChrW(&H3048) & ChrW(&H3092) & ChrW(&H5B9F) & ChrW(&H884C) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3059) & ChrW(&H304B) & "?"
+End Function
+
+Private Function LogLevelInfo() As String
+    LogLevelInfo = ChrW(&H60C5) & ChrW(&H5831)
+End Function
+
+Private Function LogLevelError() As String
+    LogLevelError = ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC)
+End Function
+
+Private Function TargetRowLabel(ByVal rowNum As Long) As String
+    TargetRowLabel = ChrW(&H5BFE) & ChrW(&H8C61) & ChrW(&H884C) & CStr(rowNum)
 End Function
 
 Private Function ParseA1Address(ByVal address As String, ByRef colNumber As Long, ByRef rowNumber As Long) As Boolean

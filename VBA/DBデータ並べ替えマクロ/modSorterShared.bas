@@ -27,7 +27,7 @@ Public Const COL_MAP_ASIS_COLUMN As Long = 17 ' Q
 Public Const COL_TARGET_MAPPING_SHEET As Long = 2 ' B
 Public Const COL_TARGET_FILE As Long = 3       ' C
 Public Const COL_TARGET_SHEET As Long = 4      ' D
-Public Const COL_TARGET_ASIS_TABLE As Long = 5 ' E
+Public Const COL_TARGET_TOBE_TABLE As Long = 5 ' E
 Public Const COL_TARGET_HEADER_CELL As Long = 6 ' F
 Public Const COL_TARGET_DATA_CELL As Long = 7   ' G
 
@@ -158,8 +158,8 @@ Public Function JpTargetDataStartRowOrderSuffix() As String
     JpTargetDataStartRowOrderSuffix = "ではデータ開始セル(G列)はカラム名開始セル(F列)より下の行を指定してください。"
 End Function
 
-Public Function JpTargetAsIsMappingNotFoundError(ByVal rowNum As Long, ByVal asIsTable As String, ByVal mappingSheetName As String) As String
-    JpTargetAsIsMappingNotFoundError = TargetRowLabel(rowNum) & "でAsIsテーブルに対応するマッピングが見つかりません: " & asIsTable & " (マッピングシート: " & mappingSheetName & ")"
+Public Function JpTargetToBeTableMappingNotFoundError(ByVal rowNum As Long, ByVal toBeTable As String, ByVal mappingSheetName As String) As String
+    JpTargetToBeTableMappingNotFoundError = TargetRowLabel(rowNum) & "でToBeテーブルに対応するマッピングが見つかりません: " & toBeTable & " (マッピングシート: " & mappingSheetName & ")"
 End Function
 
 Public Function JpTargetToBeMappingNotFoundError(ByVal rowNum As Long, ByVal mappingSheetName As String) As String
@@ -546,4 +546,3 @@ Public Sub WriteLog(ByVal level As String, ByVal message As String)
 Fallback:
     Debug.Print Format$(Now, "yyyy/mm/dd hh:nn:ss") & " [" & level & "] " & message
 End Sub
-

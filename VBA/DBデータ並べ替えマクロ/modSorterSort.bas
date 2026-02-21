@@ -5,7 +5,7 @@ Private Const KEY_TARGET_ROWNUM As String = "RowNum"
 Private Const KEY_TARGET_MAPPING_SHEET As String = "MappingSheetName"
 Private Const KEY_TARGET_FILE_PATH As String = "FilePath"
 Private Const KEY_TARGET_SHEET_NAME As String = "SheetName"
-Private Const KEY_TARGET_ASIS_TABLE As String = "AsIsTable"
+Private Const KEY_TARGET_TOBE_TABLE As String = "ToBeTable"
 Private Const KEY_TARGET_HEADER_CELL As String = "HeaderCell"
 Private Const KEY_TARGET_DATA_CELL As String = "DataCell"
 Private Const KEY_TARGET_OUTPUT_FILE_PATH As String = "OutputFilePath"
@@ -21,7 +21,7 @@ Private Type TargetLineData
     MappingSheetName As String
     FilePath As String
     SheetName As String
-    AsIsTable As String
+    ToBeTable As String
     HeaderCell As String
     DataCell As String
 End Type
@@ -48,7 +48,7 @@ Public Sub StartSort()
 
     ValidateTarget targets, errors
     ValidateMappingsForTargets targets, mappingByToBe, asIsToToBe, errors
-    BindTargetsToMapping targets, asIsToToBe, errors
+    BindTargetsToMapping targets, mappingByToBe, errors
     ValidateFilesSheetsAndColumns targets, mappingByToBe, errors
 
     If errors.Count > 0 Then
@@ -78,12 +78,14 @@ Private Sub ValidateMappingsForTargets(ByRef targets As Collection, ByRef mappin
     Dim targetLine As TargetLineData
     Dim sheetKey As String
     Dim validatedSheets As Object
+    Dim mappingSheetHasToBe As Object
 
     If Not TryGetThisWorkbookSheet(SHEET_TARGET, ws, errors) Then
         Exit Sub
     End If
 
     Set validatedSheets = NewDictionary()
+    Set mappingSheetHasToBe = NewDictionary()
     lastRow = GetTargetLastRow(ws)
 
     If lastRow < START_ROW Then
@@ -96,6 +98,10 @@ Private Sub ValidateMappingsForTargets(ByRef targets As Collection, ByRef mappin
         End If
 
         If Len(targetLine.MappingSheetName) = 0 Then
+            GoTo NextTargetRow
+        End If
+
+        If Not HasAnyToBeTableInMappingSheet(targetLine.MappingSheetName, mappingSheetHasToBe) Then
             GoTo NextTargetRow
         End If
 
@@ -240,11 +246,13 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
     Dim rowNum As Long
     Dim targetLine As TargetLineData
     Dim targetRow As Object
+    Dim mappingSheetHasToBe As Object
 
     If Not TryGetThisWorkbookSheet(SHEET_TARGET, ws, errors) Then
         Exit Sub
     End If
 
+    Set mappingSheetHasToBe = NewDictionary()
     lastRow = GetTargetLastRow(ws)
     If lastRow < START_ROW Then
         AddError errors, "target" & JpNoDataRowsSuffix()
@@ -253,6 +261,14 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
 
     For rowNum = START_ROW To lastRow
         If Not ReadTargetLine(ws, rowNum, targetLine) Then
+            GoTo NextTargetRow
+        End If
+
+        If Len(targetLine.MappingSheetName) = 0 Then
+            GoTo NextTargetRow
+        End If
+
+        If Not HasAnyToBeTableInMappingSheet(targetLine.MappingSheetName, mappingSheetHasToBe) Then
             GoTo NextTargetRow
         End If
 
@@ -273,14 +289,14 @@ NextTargetRow:
 End Sub
 
 Private Function GetTargetLastRow(ByVal ws As Worksheet) As Long
-    GetTargetLastRow = GetLastRowInColumns6(ws, COL_TARGET_MAPPING_SHEET, COL_TARGET_FILE, COL_TARGET_SHEET, COL_TARGET_ASIS_TABLE, COL_TARGET_HEADER_CELL, COL_TARGET_DATA_CELL)
+    GetTargetLastRow = GetLastRowInColumns6(ws, COL_TARGET_MAPPING_SHEET, COL_TARGET_FILE, COL_TARGET_SHEET, COL_TARGET_TOBE_TABLE, COL_TARGET_HEADER_CELL, COL_TARGET_DATA_CELL)
 End Function
 
 Private Function ReadTargetLine(ByVal ws As Worksheet, ByVal rowNum As Long, ByRef targetLine As TargetLineData) As Boolean
     targetLine.MappingSheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_MAPPING_SHEET).Value)
     targetLine.FilePath = TrimSafe(ws.Cells(rowNum, COL_TARGET_FILE).Value)
     targetLine.SheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_SHEET).Value)
-    targetLine.AsIsTable = TrimSafe(ws.Cells(rowNum, COL_TARGET_ASIS_TABLE).Value)
+    targetLine.ToBeTable = TrimSafe(ws.Cells(rowNum, COL_TARGET_TOBE_TABLE).Value)
     targetLine.HeaderCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_HEADER_CELL).Value)
     targetLine.DataCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_DATA_CELL).Value)
 
@@ -291,9 +307,50 @@ Private Function HasAnyTargetInput(ByRef targetLine As TargetLineData) As Boolea
     HasAnyTargetInput = (Len(targetLine.MappingSheetName) > 0 _
         Or Len(targetLine.FilePath) > 0 _
         Or Len(targetLine.SheetName) > 0 _
-        Or Len(targetLine.AsIsTable) > 0 _
+        Or Len(targetLine.ToBeTable) > 0 _
         Or Len(targetLine.HeaderCell) > 0 _
         Or Len(targetLine.DataCell) > 0)
+End Function
+
+Private Function HasAnyToBeTableInMappingSheet(ByVal mappingSheetName As String, ByRef cache As Object) As Boolean
+    Dim key As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim rowNum As Long
+
+    key = NormalizeKey(mappingSheetName)
+    If cache.Exists(key) Then
+        HasAnyToBeTableInMappingSheet = CBool(cache(key))
+        Exit Function
+    End If
+
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(mappingSheetName)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        cache.Add key, False
+        HasAnyToBeTableInMappingSheet = False
+        Exit Function
+    End If
+
+    lastRow = ws.Cells(ws.Rows.Count, COL_MAP_TOBE_TABLE).End(xlUp).Row
+    If lastRow < START_ROW Then
+        cache.Add key, False
+        HasAnyToBeTableInMappingSheet = False
+        Exit Function
+    End If
+
+    For rowNum = START_ROW To lastRow
+        If Len(TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_TABLE).Value)) > 0 Then
+            cache.Add key, True
+            HasAnyToBeTableInMappingSheet = True
+            Exit Function
+        End If
+    Next rowNum
+
+    cache.Add key, False
+    HasAnyToBeTableInMappingSheet = False
 End Function
 
 Private Function ValidateTargetLine(ByVal rowNum As Long, ByRef targetLine As TargetLineData, ByRef errors As Collection) As Boolean
@@ -326,7 +383,7 @@ Private Function ValidateTargetLine(ByVal rowNum As Long, ByRef targetLine As Ta
         rowHasError = True
     End If
 
-    If Len(targetLine.AsIsTable) = 0 Then
+    If Len(targetLine.ToBeTable) = 0 Then
         AddError errors, "target!E" & rowNum & JpRequiredSuffix()
         rowHasError = True
     End If
@@ -359,7 +416,7 @@ Private Function CreateTargetRow(ByVal rowNum As Long, ByRef targetLine As Targe
     targetRow.Add KEY_TARGET_MAPPING_SHEET, targetLine.MappingSheetName
     targetRow.Add KEY_TARGET_FILE_PATH, targetLine.FilePath
     targetRow.Add KEY_TARGET_SHEET_NAME, targetLine.SheetName
-    targetRow.Add KEY_TARGET_ASIS_TABLE, targetLine.AsIsTable
+    targetRow.Add KEY_TARGET_TOBE_TABLE, targetLine.ToBeTable
     targetRow.Add KEY_TARGET_HEADER_CELL, UCase$(targetLine.HeaderCell)
     targetRow.Add KEY_TARGET_DATA_CELL, UCase$(targetLine.DataCell)
     targetRow.Add KEY_TARGET_OUTPUT_FILE_PATH, BuildToBeFilePath(targetLine.FilePath)
@@ -367,21 +424,21 @@ Private Function CreateTargetRow(ByVal rowNum As Long, ByRef targetLine As Targe
     Set CreateTargetRow = targetRow
 End Function
 
-Private Sub BindTargetsToMapping(ByRef targets As Collection, ByRef asIsToToBe As Object, ByRef errors As Collection)
+Private Sub BindTargetsToMapping(ByRef targets As Collection, ByRef mappingByToBe As Object, ByRef errors As Collection)
     Dim item As Variant
     Dim targetRow As Object
-    Dim asIsKey As String
+    Dim toBeKey As String
     Dim mappingSheetName As String
 
     For Each item In targets
         Set targetRow = item
         mappingSheetName = CStr(targetRow(KEY_TARGET_MAPPING_SHEET))
-        asIsKey = BuildAsIsMappingKey(mappingSheetName, CStr(targetRow(KEY_TARGET_ASIS_TABLE)))
+        toBeKey = BuildToBeMappingKey(mappingSheetName, CStr(targetRow(KEY_TARGET_TOBE_TABLE)))
 
-        If Not asIsToToBe.Exists(asIsKey) Then
-            AddError errors, JpTargetAsIsMappingNotFoundError(CLng(targetRow(KEY_TARGET_ROWNUM)), CStr(targetRow(KEY_TARGET_ASIS_TABLE)), mappingSheetName)
+        If Not mappingByToBe.Exists(toBeKey) Then
+            AddError errors, JpTargetToBeTableMappingNotFoundError(CLng(targetRow(KEY_TARGET_ROWNUM)), CStr(targetRow(KEY_TARGET_TOBE_TABLE)), mappingSheetName)
         Else
-            targetRow.Add KEY_TARGET_TOBE_TABLE_KEY, CStr(asIsToToBe(asIsKey))
+            targetRow.Add KEY_TARGET_TOBE_TABLE_KEY, toBeKey
         End If
     Next item
 End Sub
@@ -685,4 +742,3 @@ End Function
 Private Function BuildAsIsMappingKey(ByVal mappingSheetName As String, ByVal asIsTable As String) As String
     BuildAsIsMappingKey = NormalizeKey(mappingSheetName) & "|" & NormalizeKey(asIsTable)
 End Function
-

@@ -26,6 +26,8 @@ npm install -g @openai/codex@latest
 2.wsl
 3.codex
 
+※プロンプトの改行：CTRL + J
+
 <バージョン確認>
 codex --version
 

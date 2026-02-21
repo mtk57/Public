@@ -1,7 +1,7 @@
 Attribute VB_Name = "modAsIsToToBeSorter"
 Option Explicit
 
-Private Const VER = "0.8.0"
+Private Const VER = "1.0.0"
 
 Private Const SHEET_MAPPING As String = "mapping"
 Private Const SHEET_TARGET As String = "target"
@@ -26,6 +26,7 @@ Private Const COL_MAP_ASIS_TABLE As Long = 15  ' O
 Private Const COL_MAP_ASIS_COLUMN As Long = 17 ' Q
 
 ' target sheet columns
+Private Const COL_TARGET_MAPPING_SHEET As Long = 2 ' B
 Private Const COL_TARGET_FILE As Long = 3       ' C
 Private Const COL_TARGET_SHEET As Long = 4      ' D
 Private Const COL_TARGET_ASIS_TABLE As Long = 5 ' E
@@ -89,8 +90,8 @@ Public Sub StartSort()
     Set asIsToToBe = NewDictionary()
     Set targets = New Collection
 
-    ValidateMapping mappingByToBe, asIsToToBe, errors
     ValidateTarget targets, errors
+    ValidateMappingsForTargets targets, mappingByToBe, asIsToToBe, errors
     BindTargetsToMapping targets, asIsToToBe, errors
     ValidateFilesSheetsAndColumns targets, mappingByToBe, errors
 
@@ -110,7 +111,7 @@ SafeExit:
 
 FatalError:
     WriteLog LogLevelError(), "予期しないエラー: (" & Err.Number & ") " & Err.Description
-    MsgBox ChrW(&H4E88) & ChrW(&H671F) & ChrW(&H3057) & ChrW(&H306A) & ChrW(&H3044) & ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC) & ChrW(&H304C) & ChrW(&H767A) & ChrW(&H751F) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3002) & ChrW(&H6C) & ChrW(&H6F) & ChrW(&H67) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H3092) & ChrW(&H78BA) & ChrW(&H8A8D) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3002), vbCritical + vbOKOnly
+    MsgBox "予期しないエラーが発生しました。logシートを確認してください。", vbCritical + vbOKOnly
     RestoreApplication
 End Sub
 
@@ -322,7 +323,7 @@ Private Function BuildUniqueMappingSeedSheetName() As String
         End If
     Next index
 
-    Err.Raise vbObjectError + 2101, "BuildUniqueMappingSeedSheetName", ChrW(&H51FA) & ChrW(&H529B) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H540D) & ChrW(&H3092) & ChrW(&H4F5C) & ChrW(&H6210) & ChrW(&H3067) & ChrW(&H304D) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3002)
+    Err.Raise vbObjectError + 2101, "BuildUniqueMappingSeedSheetName", "出力シート名を作成できません。"
 End Function
 
 Private Sub WriteSeedSupportRows(ByVal srcWb As Workbook, ByVal targetSheets As Collection, ByVal settings As Object, ByVal wsOutput As Worksheet, ByRef createdCount As Long, ByRef errors As Collection)
@@ -426,66 +427,159 @@ Private Function BuildMacroCellLabel(ByVal rowNum As Long) As String
 End Function
 
 Private Function JpRequiredSuffix() As String
-    JpRequiredSuffix = ChrW(&H20) & ChrW(&H306F) & ChrW(&H5FC5) & ChrW(&H9808) & ChrW(&H3067) & ChrW(&H3059) & ChrW(&H3002)
+    JpRequiredSuffix = " は必須です。"
 End Function
 
 Private Function JpAbsolutePathSuffix() As String
-    JpAbsolutePathSuffix = ChrW(&H20) & ChrW(&H306F) & ChrW(&H7D76) & ChrW(&H5BFE) & ChrW(&H30D1) & ChrW(&H30B9) & ChrW(&H3067) & ChrW(&H5165) & ChrW(&H529B) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3A) & ChrW(&H20)
+    JpAbsolutePathSuffix = " は絶対パスで入力してください: "
 End Function
 
 Private Function JpInvalidA1Suffix() As String
-    JpInvalidA1Suffix = ChrW(&H20) & ChrW(&H306E) & ChrW(&H30BB) & ChrW(&H30EB) & ChrW(&H4F4D) & ChrW(&H7F6E) & ChrW(&H28) & ChrW(&H41) & ChrW(&H31) & ChrW(&H5F62) & ChrW(&H5F0F) & ChrW(&H29) & ChrW(&H304C) & ChrW(&H4E0D) & ChrW(&H6B63) & ChrW(&H3067) & ChrW(&H3059) & ChrW(&H3A) & ChrW(&H20)
+    JpInvalidA1Suffix = " のセル位置(A1形式)が不正です: "
 End Function
 
 Private Function JpNoSheetNamesMessage() As String
-    JpNoSheetNamesMessage = ChrW(&H6D) & ChrW(&H61) & ChrW(&H63) & ChrW(&H72) & ChrW(&H6F) & ChrW(&H21) & ChrW(&H42) & ChrW(&H33) & ChrW(&H32) & ChrW(&H4EE5) & ChrW(&H964D) & ChrW(&H306B) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H540D) & ChrW(&H3092) & ChrW(&H31) & ChrW(&H4EF6) & ChrW(&H4EE5) & ChrW(&H4E0A) & ChrW(&H5165) & ChrW(&H529B) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3002)
+    JpNoSheetNamesMessage = "macro!B32以降にシート名を1件以上入力してください。"
 End Function
 
 Private Function JpDefSheetNotFoundSuffix() As String
-    JpDefSheetNotFoundSuffix = ChrW(&H20) & ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30C6) & ChrW(&H30FC) & ChrW(&H30D6) & ChrW(&H30EB) & ChrW(&H5B9A) & ChrW(&H7FA9) & ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H306B) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H304C) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20)
+    JpDefSheetNotFoundSuffix = " ToBeテーブル定義ファイルにシートが存在しません: "
 End Function
 
 Private Function JpDefFileNotFoundSuffix() As String
-    JpDefFileNotFoundSuffix = ChrW(&H20) & ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30C6) & ChrW(&H30FC) & ChrW(&H30D6) & ChrW(&H30EB) & ChrW(&H5B9A) & ChrW(&H7FA9) & ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H304C) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20)
+    JpDefFileNotFoundSuffix = " ToBeテーブル定義ファイルが存在しません: "
 End Function
 
 Private Function JpDuplicateSheetNameSuffix() As String
-    JpDuplicateSheetNameSuffix = ChrW(&H20) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H540D) & ChrW(&H304C) & ChrW(&H91CD) & ChrW(&H8907) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H3044) & ChrW(&H307E) & ChrW(&H3059) & ChrW(&H3A) & ChrW(&H20)
+    JpDuplicateSheetNameSuffix = " シート名が重複しています: "
 End Function
 
 Private Function JpTablePhysEmptySuffix() As String
-    JpTablePhysEmptySuffix = ChrW(&H20) & ChrW(&H30C6) & ChrW(&H30FC) & ChrW(&H30D6) & ChrW(&H30EB) & ChrW(&H7269) & ChrW(&H7406) & ChrW(&H540D) & ChrW(&H304C) & ChrW(&H7A7A) & ChrW(&H306E) & ChrW(&H305F) & ChrW(&H3081) & ChrW(&H51E6) & ChrW(&H7406) & ChrW(&H3067) & ChrW(&H304D) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20)
+    JpTablePhysEmptySuffix = " テーブル物理名が空のため処理できません: "
 End Function
 
 Private Function JpSeedStartMessage() As String
-    JpSeedStartMessage = ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30DE) & ChrW(&H30C3) & ChrW(&H30D4) & ChrW(&H30F3) & ChrW(&H30B0) & ChrW(&H5143) & ChrW(&H30CD) & ChrW(&H30BF) & ChrW(&H4F5C) & ChrW(&H6210) & ChrW(&H652F) & ChrW(&H63F4) & ChrW(&H3092) & ChrW(&H958B) & ChrW(&H59CB) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3059) & ChrW(&H3002)
+    JpSeedStartMessage = "ToBeマッピング元ネタ作成支援を開始します。"
 End Function
 
 Private Function JpSeedCompletedMessage(ByVal outputSheetName As String, ByVal createdCount As Long) As String
-    JpSeedCompletedMessage = ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30DE) & ChrW(&H30C3) & ChrW(&H30D4) & ChrW(&H30F3) & ChrW(&H30B0) & ChrW(&H5143) & ChrW(&H30CD) & ChrW(&H30BF) & ChrW(&H4F5C) & ChrW(&H6210) & ChrW(&H652F) & ChrW(&H63F4) & ChrW(&H304C) & ChrW(&H5B8C) & ChrW(&H4E86) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3002) & vbCrLf & JpSeedOutputSheetPrefix() & outputSheetName & vbCrLf & JpSeedCreatedCountPrefix() & CStr(createdCount)
+    JpSeedCompletedMessage = "ToBeマッピング元ネタ作成支援が完了しました。" & vbCrLf & JpSeedOutputSheetPrefix() & outputSheetName & vbCrLf & JpSeedCreatedCountPrefix() & CStr(createdCount)
 End Function
 
 Private Function JpSeedOutputSheetPrefix() As String
-    JpSeedOutputSheetPrefix = ChrW(&H51FA) & ChrW(&H529B) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H540D) & ChrW(&H3A) & ChrW(&H20)
+    JpSeedOutputSheetPrefix = "出力シート名: "
 End Function
 
 Private Function JpSeedCreatedCountPrefix() As String
-    JpSeedCreatedCountPrefix = ChrW(&H4F5C) & ChrW(&H6210) & ChrW(&H4EF6) & ChrW(&H6570) & ChrW(&H3A) & ChrW(&H20)
+    JpSeedCreatedCountPrefix = "作成件数: "
 End Function
 
 Private Function JpSheetProcessedPrefix() As String
-    JpSheetProcessedPrefix = ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H51E6) & ChrW(&H7406) & ChrW(&H5B8C) & ChrW(&H4E86) & ChrW(&H3A) & ChrW(&H20)
+    JpSheetProcessedPrefix = "シート処理完了: "
 End Function
 
 Private Function JpSeedFatalPrefix() As String
-    JpSeedFatalPrefix = ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30DE) & ChrW(&H30C3) & ChrW(&H30D4) & ChrW(&H30F3) & ChrW(&H30B0) & ChrW(&H5143) & ChrW(&H30CD) & ChrW(&H30BF) & ChrW(&H4F5C) & ChrW(&H6210) & ChrW(&H652F) & ChrW(&H63F4) & ChrW(&H3067) & ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC)
+    JpSeedFatalPrefix = "ToBeマッピング元ネタ作成支援でエラー"
 End Function
 
 Private Function JpSeedFatalDialogMessage() As String
-    JpSeedFatalDialogMessage = ChrW(&H4E88) & ChrW(&H671F) & ChrW(&H3057) & ChrW(&H306A) & ChrW(&H3044) & ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC) & ChrW(&H304C) & ChrW(&H767A) & ChrW(&H751F) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3002) & ChrW(&H6C) & ChrW(&H6F) & ChrW(&H67) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H3092) & ChrW(&H78BA) & ChrW(&H8A8D) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3002)
+    JpSeedFatalDialogMessage = "予期しないエラーが発生しました。logシートを確認してください。"
 End Function
 
-Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As Object, ByRef errors As Collection)
+Private Function JpNoDataRowsSuffix() As String
+    JpNoDataRowsSuffix = "にデータ行がありません。"
+End Function
+
+Private Function JpNoValidRowsSuffix() As String
+    JpNoValidRowsSuffix = "に有効な行がありません。"
+End Function
+
+Private Function JpMappingAsIsPairError(ByVal mappingSheetName As String, ByVal rowNum As Long) As String
+    JpMappingAsIsPairError = "[" & mappingSheetName & "] 行" & rowNum & "のAsIsテーブル(O列)とAsIsカラム(Q列)は両方入力または両方空欄にしてください。"
+End Function
+
+Private Function JpDuplicateToBeColumnError(ByVal mappingSheetName As String, ByVal rowNum As Long, ByVal toBeTable As String, ByVal toBeColumn As String) As String
+    JpDuplicateToBeColumnError = "[" & mappingSheetName & "] 行" & rowNum & "でToBeカラムが重複しています: " & toBeTable & "." & toBeColumn
+End Function
+
+Private Function JpAsIsToToBeConflictError(ByVal mappingSheetName As String, ByVal rowNum As Long, ByVal asIsTable As String) As String
+    JpAsIsToToBeConflictError = "[" & mappingSheetName & "] 行" & rowNum & "でAsIsテーブルの対応先が重複しています: " & asIsTable
+End Function
+
+Private Function JpToBeToAsIsConflictError(ByVal mappingSheetName As String, ByVal toBeTable As String) As String
+    JpToBeToAsIsConflictError = "[" & mappingSheetName & "] ToBeテーブルに複数のAsIsテーブルが定義されています: " & toBeTable
+End Function
+
+Private Function JpToBeNoAsIsError(ByVal mappingSheetName As String, ByVal toBeTable As String) As String
+    JpToBeNoAsIsError = "[" & mappingSheetName & "] ToBeテーブルにAsIsテーブルが1件も定義されていません: " & toBeTable
+End Function
+
+Private Function JpTargetDataStartRowOrderSuffix() As String
+    JpTargetDataStartRowOrderSuffix = "ではデータ開始セル(G列)はカラム名開始セル(F列)より下の行を指定してください。"
+End Function
+
+Private Function JpTargetAsIsMappingNotFoundError(ByVal rowNum As Long, ByVal asIsTable As String, ByVal mappingSheetName As String) As String
+    JpTargetAsIsMappingNotFoundError = TargetRowLabel(rowNum) & "でAsIsテーブルに対応するマッピングが見つかりません: " & asIsTable & " (マッピングシート: " & mappingSheetName & ")"
+End Function
+
+Private Function JpTargetToBeMappingNotFoundError(ByVal rowNum As Long, ByVal mappingSheetName As String) As String
+    JpTargetToBeMappingNotFoundError = TargetRowLabel(rowNum) & "でToBeテーブル定義が見つかりません (マッピングシート: " & mappingSheetName & ")。"
+End Function
+
+Private Sub ValidateMappingsForTargets(ByRef targets As Collection, ByRef mappingByToBe As Object, ByRef asIsToToBe As Object, ByRef errors As Collection)
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim rowNum As Long
+    Dim mappingSheetName As String
+    Dim filePath As String
+    Dim sheetName As String
+    Dim asIsTable As String
+    Dim headerCell As String
+    Dim dataCell As String
+    Dim hasAnyValue As Boolean
+    Dim sheetKey As String
+    Dim validatedSheets As Object
+
+    If Not TryGetThisWorkbookSheet(SHEET_TARGET, ws, errors) Then
+        Exit Sub
+    End If
+
+    Set validatedSheets = NewDictionary()
+    lastRow = GetLastRowInColumns6(ws, COL_TARGET_MAPPING_SHEET, COL_TARGET_FILE, COL_TARGET_SHEET, COL_TARGET_ASIS_TABLE, COL_TARGET_HEADER_CELL, COL_TARGET_DATA_CELL)
+
+    If lastRow < START_ROW Then
+        Exit Sub
+    End If
+
+    For rowNum = START_ROW To lastRow
+        mappingSheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_MAPPING_SHEET).Value)
+        filePath = TrimSafe(ws.Cells(rowNum, COL_TARGET_FILE).Value)
+        sheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_SHEET).Value)
+        asIsTable = TrimSafe(ws.Cells(rowNum, COL_TARGET_ASIS_TABLE).Value)
+        headerCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_HEADER_CELL).Value)
+        dataCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_DATA_CELL).Value)
+
+        hasAnyValue = (Len(mappingSheetName) > 0 Or Len(filePath) > 0 Or Len(sheetName) > 0 Or Len(asIsTable) > 0 Or Len(headerCell) > 0 Or Len(dataCell) > 0)
+        If Not hasAnyValue Then
+            GoTo NextTargetRow
+        End If
+
+        If Len(mappingSheetName) = 0 Then
+            GoTo NextTargetRow
+        End If
+
+        sheetKey = NormalizeKey(mappingSheetName)
+        If Not validatedSheets.Exists(sheetKey) Then
+            validatedSheets.Add sheetKey, mappingSheetName
+            ValidateMappingSheet mappingSheetName, mappingByToBe, asIsToToBe, errors
+        End If
+
+NextTargetRow:
+    Next rowNum
+End Sub
+
+
+Private Sub ValidateMappingSheet(ByVal mappingSheetName As String, ByRef mappingByToBe As Object, ByRef asIsToToBe As Object, ByRef errors As Collection)
     Dim ws As Worksheet
     Dim lastRow As Long
     Dim rowNum As Long
@@ -502,25 +596,28 @@ Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As O
     Dim mapRows As Collection
     Dim mapRow As Object
     Dim key As Variant
+    Dim sheetToBeKeys As Object
+    Dim validRowCount As Long
 
-    If Not TryGetThisWorkbookSheet(SHEET_MAPPING, ws, errors) Then
+    If Not TryGetThisWorkbookSheet(mappingSheetName, ws, errors) Then
         Exit Sub
     End If
 
     lastRow = GetLastRowInColumns(ws, COL_MAP_TOBE_TABLE, COL_MAP_TOBE_COLUMN, COL_MAP_ASIS_TABLE, COL_MAP_ASIS_COLUMN)
     If lastRow < START_ROW Then
-        AddError errors, "mappingシートにデータ行がありません。"
+        AddError errors, "[" & mappingSheetName & "]" & JpNoDataRowsSuffix()
         Exit Sub
     End If
 
     Set toBeColumnKeys = NewDictionary()
     Set toBeToAsIsTable = NewDictionary()
+    Set sheetToBeKeys = NewDictionary()
 
     For rowNum = START_ROW To lastRow
-        toBeTable = TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_TABLE).value)
-        toBeColumn = TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_COLUMN).value)
-        asIsTable = TrimSafe(ws.Cells(rowNum, COL_MAP_ASIS_TABLE).value)
-        asIsColumn = TrimSafe(ws.Cells(rowNum, COL_MAP_ASIS_COLUMN).value)
+        toBeTable = TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_TABLE).Value)
+        toBeColumn = TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_COLUMN).Value)
+        asIsTable = TrimSafe(ws.Cells(rowNum, COL_MAP_ASIS_TABLE).Value)
+        asIsColumn = TrimSafe(ws.Cells(rowNum, COL_MAP_ASIS_COLUMN).Value)
 
         hasAnyValue = (Len(toBeTable) > 0 Or Len(toBeColumn) > 0 Or Len(asIsTable) > 0 Or Len(asIsColumn) > 0)
         If Not hasAnyValue Then
@@ -528,24 +625,24 @@ Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As O
         End If
 
         If Len(toBeTable) = 0 Then
-            AddError errors, "mapping!B" & rowNum & " が空です。ToBeテーブル名(物理名)は必須です。"
+            AddError errors, mappingSheetName & "!B" & rowNum & JpRequiredSuffix()
             GoTo NextMappingRow
         End If
 
         If Len(toBeColumn) = 0 Then
-            AddError errors, "mapping!D" & rowNum & " が空です。ToBeカラム名(物理名)は必須です。"
+            AddError errors, mappingSheetName & "!D" & rowNum & JpRequiredSuffix()
             GoTo NextMappingRow
         End If
 
         If (Len(asIsTable) = 0 Xor Len(asIsColumn) = 0) Then
-            AddError errors, "mapping 行" & rowNum & " の AsIsテーブル名(O列)とAsIsカラム名(Q列)は両方入力か両方空欄にしてください。"
+            AddError errors, JpMappingAsIsPairError(mappingSheetName, rowNum)
             GoTo NextMappingRow
         End If
 
-        toBeKey = NormalizeKey(toBeTable)
+        toBeKey = BuildToBeMappingKey(mappingSheetName, toBeTable)
         duplicateToBeColumnKey = toBeKey & "|" & NormalizeKey(toBeColumn)
         If toBeColumnKeys.Exists(duplicateToBeColumnKey) Then
-            AddError errors, "mapping 行" & rowNum & " のToBeカラムが重複しています（同一ToBeテーブル内で重複不可）: " & toBeTable & "." & toBeColumn
+            AddError errors, JpDuplicateToBeColumnError(mappingSheetName, rowNum, toBeTable, toBeColumn)
             GoTo NextMappingRow
         End If
         toBeColumnKeys.Add duplicateToBeColumnKey, rowNum
@@ -553,6 +650,10 @@ Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As O
         If Not mappingByToBe.Exists(toBeKey) Then
             Set mapRows = New Collection
             mappingByToBe.Add toBeKey, mapRows
+        End If
+
+        If Not sheetToBeKeys.Exists(toBeKey) Then
+            sheetToBeKeys.Add toBeKey, True
         End If
 
         Set mapRow = NewDictionary()
@@ -564,13 +665,14 @@ Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As O
 
         Set mapRows = mappingByToBe(toBeKey)
         mapRows.Add mapRow
+        validRowCount = validRowCount + 1
 
         If Len(asIsTable) > 0 Then
-            asIsKey = NormalizeKey(asIsTable)
+            asIsKey = BuildAsIsMappingKey(mappingSheetName, asIsTable)
 
             If asIsToToBe.Exists(asIsKey) Then
                 If CStr(asIsToToBe(asIsKey)) <> toBeKey Then
-                    AddError errors, "mapping 行" & rowNum & " でAsIsテーブル " & asIsTable & " が複数ToBeテーブルに紐づいています。"
+                    AddError errors, JpAsIsToToBeConflictError(mappingSheetName, rowNum, asIsTable)
                 End If
             Else
                 asIsToToBe.Add asIsKey, toBeKey
@@ -578,7 +680,7 @@ Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As O
 
             If toBeToAsIsTable.Exists(toBeKey) Then
                 If CStr(toBeToAsIsTable(toBeKey)) <> asIsKey Then
-                    AddError errors, "mapping のToBeテーブル " & toBeTable & " に複数のAsIsテーブル名が定義されています。"
+                    AddError errors, JpToBeToAsIsConflictError(mappingSheetName, toBeTable)
                 End If
             Else
                 toBeToAsIsTable.Add toBeKey, asIsKey
@@ -588,16 +690,16 @@ Private Sub ValidateMapping(ByRef mappingByToBe As Object, ByRef asIsToToBe As O
 NextMappingRow:
     Next rowNum
 
-    If mappingByToBe.Count = 0 Then
-        AddError errors, "mappingシートに有効なマッピング定義がありません。"
+    If validRowCount = 0 Then
+        AddError errors, "[" & mappingSheetName & "]" & JpNoValidRowsSuffix()
         Exit Sub
     End If
 
-    For Each key In mappingByToBe.Keys
+    For Each key In sheetToBeKeys.Keys
         If Not toBeToAsIsTable.Exists(CStr(key)) Then
             Set mapRows = mappingByToBe(CStr(key))
             Set mapRow = mapRows(1)
-            AddError errors, "mapping のToBeテーブル " & CStr(mapRow("ToBeTable")) & " にはAsIsテーブルが1件も定義されていません。"
+            AddError errors, JpToBeNoAsIsError(mappingSheetName, CStr(mapRow("ToBeTable")))
         End If
     Next key
 End Sub
@@ -606,6 +708,7 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
     Dim ws As Worksheet
     Dim lastRow As Long
     Dim rowNum As Long
+    Dim mappingSheetName As String
     Dim filePath As String
     Dim sheetName As String
     Dim asIsTable As String
@@ -623,58 +726,64 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
         Exit Sub
     End If
 
-    lastRow = GetLastRowInColumns5(ws, COL_TARGET_FILE, COL_TARGET_SHEET, COL_TARGET_ASIS_TABLE, COL_TARGET_HEADER_CELL, COL_TARGET_DATA_CELL)
+    lastRow = GetLastRowInColumns6(ws, COL_TARGET_MAPPING_SHEET, COL_TARGET_FILE, COL_TARGET_SHEET, COL_TARGET_ASIS_TABLE, COL_TARGET_HEADER_CELL, COL_TARGET_DATA_CELL)
     If lastRow < START_ROW Then
-        AddError errors, "targetシートにデータ行がありません。"
+        AddError errors, "target" & JpNoDataRowsSuffix()
         Exit Sub
     End If
 
     For rowNum = START_ROW To lastRow
         rowHasError = False
-        filePath = TrimSafe(ws.Cells(rowNum, COL_TARGET_FILE).value)
-        sheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_SHEET).value)
-        asIsTable = TrimSafe(ws.Cells(rowNum, COL_TARGET_ASIS_TABLE).value)
-        headerCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_HEADER_CELL).value)
-        dataCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_DATA_CELL).value)
+        mappingSheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_MAPPING_SHEET).Value)
+        filePath = TrimSafe(ws.Cells(rowNum, COL_TARGET_FILE).Value)
+        sheetName = TrimSafe(ws.Cells(rowNum, COL_TARGET_SHEET).Value)
+        asIsTable = TrimSafe(ws.Cells(rowNum, COL_TARGET_ASIS_TABLE).Value)
+        headerCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_HEADER_CELL).Value)
+        dataCell = TrimSafe(ws.Cells(rowNum, COL_TARGET_DATA_CELL).Value)
 
-        hasAnyValue = (Len(filePath) > 0 Or Len(sheetName) > 0 Or Len(asIsTable) > 0 Or Len(headerCell) > 0 Or Len(dataCell) > 0)
+        hasAnyValue = (Len(mappingSheetName) > 0 Or Len(filePath) > 0 Or Len(sheetName) > 0 Or Len(asIsTable) > 0 Or Len(headerCell) > 0 Or Len(dataCell) > 0)
         If Not hasAnyValue Then
             GoTo NextTargetRow
         End If
 
+        If Len(mappingSheetName) = 0 Then
+            AddError errors, "target!B" & rowNum & JpRequiredSuffix()
+            rowHasError = True
+        End If
+
         If Len(filePath) = 0 Then
-            AddError errors, "target!C" & rowNum & " が空です。AsIsデータのExcelファイルパスは必須です。"
+            AddError errors, "target!C" & rowNum & JpRequiredSuffix()
             GoTo NextTargetRow
         End If
 
         If Not IsAbsolutePath(filePath) Then
-            AddError errors, "target!C" & rowNum & " は絶対パスで入力してください: " & filePath
+            AddError errors, "target!C" & rowNum & JpAbsolutePathSuffix() & filePath
             rowHasError = True
         End If
 
         If Len(sheetName) = 0 Then
-            AddError errors, "target!D" & rowNum & " が空です。AsIsシート名は必須です。"
+            AddError errors, "target!D" & rowNum & JpRequiredSuffix()
             rowHasError = True
         End If
 
         If Len(asIsTable) = 0 Then
-            AddError errors, "target!E" & rowNum & " が空です。AsIsテーブル名は必須です。"
+            AddError errors, "target!E" & rowNum & JpRequiredSuffix()
             rowHasError = True
         End If
 
         If Not ParseA1Address(headerCell, headerCol, headerRow) Then
-            AddError errors, "target!F" & rowNum & " の開始セル(A1形式)が不正です: " & headerCell
+            AddError errors, "target!F" & rowNum & JpInvalidA1Suffix() & headerCell
             rowHasError = True
         End If
 
         If Not ParseA1Address(dataCell, dataCol, dataRow) Then
-            AddError errors, "target!G" & rowNum & " の開始セル(A1形式)が不正です: " & dataCell
+            AddError errors, "target!G" & rowNum & JpInvalidA1Suffix() & dataCell
             rowHasError = True
         End If
 
         If ParseA1Address(headerCell, headerCol, headerRow) And ParseA1Address(dataCell, dataCol, dataRow) Then
             If dataRow <= headerRow Then
-                AddError errors, "target 行" & rowNum & " はデータ開始セル(G列)の行番号がカラム名開始セル(F列)より下である必要があります。"
+                AddError errors, TargetRowLabel(rowNum) & JpTargetDataStartRowOrderSuffix()
                 rowHasError = True
             End If
         End If
@@ -685,6 +794,7 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
 
         Set targetRow = NewDictionary()
         targetRow.Add "RowNum", rowNum
+        targetRow.Add "MappingSheetName", mappingSheetName
         targetRow.Add "FilePath", filePath
         targetRow.Add "SheetName", sheetName
         targetRow.Add "AsIsTable", asIsTable
@@ -698,7 +808,7 @@ NextTargetRow:
     Next rowNum
 
     If targets.Count = 0 Then
-        AddError errors, "targetシートに有効な処理対象行がありません。"
+        AddError errors, "target" & JpNoValidRowsSuffix()
     End If
 End Sub
 
@@ -706,18 +816,21 @@ Private Sub BindTargetsToMapping(ByRef targets As Collection, ByRef asIsToToBe A
     Dim item As Variant
     Dim targetRow As Object
     Dim asIsKey As String
+    Dim mappingSheetName As String
 
     For Each item In targets
         Set targetRow = item
-        asIsKey = NormalizeKey(CStr(targetRow("AsIsTable")))
+        mappingSheetName = CStr(targetRow("MappingSheetName"))
+        asIsKey = BuildAsIsMappingKey(mappingSheetName, CStr(targetRow("AsIsTable")))
 
         If Not asIsToToBe.Exists(asIsKey) Then
-            AddError errors, "target 行" & CLng(targetRow("RowNum")) & " のAsIsテーブル " & CStr(targetRow("AsIsTable")) & " に対応するmapping定義がありません。"
+            AddError errors, JpTargetAsIsMappingNotFoundError(CLng(targetRow("RowNum")), CStr(targetRow("AsIsTable")), mappingSheetName)
         Else
             targetRow.Add "ToBeTableKey", CStr(asIsToToBe(asIsKey))
         End If
     Next item
 End Sub
+
 
 Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef mappingByToBe As Object, ByRef errors As Collection)
     Dim targetItem As Variant
@@ -725,6 +838,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
     Dim filePath As String
     Dim outputFilePath As String
     Dim sheetName As String
+    Dim mappingSheetName As String
     Dim wb As Workbook
     Dim ws As Worksheet
     Dim openedBooks As Object
@@ -747,11 +861,11 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
         rowNum = CLng(targetRow("RowNum"))
 
         If Not FileExists(filePath) Then
-            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306E) & ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H304C) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20) & filePath
+            AddError errors, TargetRowLabel(rowNum) & " のファイルが存在しません: " & filePath
         End If
 
         If FileExists(outputFilePath) Then
-            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306E) & ChrW(&H51FA) & ChrW(&H529B) & ChrW(&H5148) & ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H304C) & ChrW(&H65E2) & ChrW(&H306B) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3059) & ChrW(&H3A) & ChrW(&H20) & outputFilePath
+            AddError errors, TargetRowLabel(rowNum) & " の出力先ファイルが既に存在します: " & outputFilePath
         End If
     Next targetItem
 
@@ -759,6 +873,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
         Set targetRow = targetItem
         filePath = CStr(targetRow("FilePath"))
         sheetName = CStr(targetRow("SheetName"))
+        mappingSheetName = CStr(targetRow("MappingSheetName"))
         rowNum = CLng(targetRow("RowNum"))
 
         If Not FileExists(filePath) Then
@@ -772,7 +887,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
 
         Set ws = Nothing
         If Not TryGetWorksheetFromWorkbook(wb, sheetName, ws) Then
-            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306E) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H304C) & ChrW(&H5B58) & ChrW(&H5728) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20) & filePath & " / " & sheetName
+            AddError errors, TargetRowLabel(rowNum) & " のシートが存在しません: " & filePath & " / " & sheetName
             GoTo NextTarget
         End If
 
@@ -786,7 +901,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
         End If
 
         If Not mappingByToBe.Exists(toBeKey) Then
-            AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H306B) & ChrW(&H5BFE) & ChrW(&H5FDC) & ChrW(&H3059) & ChrW(&H308B) & ChrW(&H54) & ChrW(&H6F) & ChrW(&H42) & ChrW(&H65) & ChrW(&H30C6) & ChrW(&H30FC) & ChrW(&H30D6) & ChrW(&H30EB) & ChrW(&H5B9A) & ChrW(&H7FA9) & ChrW(&H304C) & ChrW(&H898B) & ChrW(&H3064) & ChrW(&H304B) & ChrW(&H308A) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3002)
+            AddError errors, JpTargetToBeMappingNotFoundError(rowNum, mappingSheetName)
             GoTo NextTarget
         End If
 
@@ -799,7 +914,7 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
 
             If Len(asIsColumn) > 0 Then
                 If Not headerLookup.Exists(NormalizeKey(asIsColumn)) Then
-                    AddError errors, TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H3067) & ChrW(&H5FC5) & ChrW(&H8981) & ChrW(&H306A) & ChrW(&H41) & ChrW(&H73) & ChrW(&H49) & ChrW(&H73) & ChrW(&H30AB) & ChrW(&H30E9) & ChrW(&H30E0) & ChrW(&H304C) & ChrW(&H898B) & ChrW(&H3064) & ChrW(&H304B) & ChrW(&H308A) & ChrW(&H307E) & ChrW(&H305B) & ChrW(&H3093) & ChrW(&H3A) & ChrW(&H20) & asIsColumn & " (" & filePath & " / " & sheetName & ")"
+                    AddError errors, TargetRowLabel(rowNum) & " で必要なAsIsカラムが見つかりません: " & asIsColumn & " (" & filePath & " / " & sheetName & ")"
                 End If
             End If
         Next mapItem
@@ -841,7 +956,7 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         If Not copiedFiles.Exists(copyKey) Then
             FileCopy sourceFilePath, outputFilePath
             copiedFiles.Add copyKey, outputFilePath
-            WriteLog LogLevelInfo(), ChrW(&H30D5) & ChrW(&H30A1) & ChrW(&H30A4) & ChrW(&H30EB) & ChrW(&H3092) & ChrW(&H30B3) & ChrW(&H30D4) & ChrW(&H30FC) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3A) & ChrW(&H20) & outputFilePath
+            WriteLog LogLevelInfo(), "ファイルをコピーしました: " & outputFilePath
         End If
     Next targetItem
 
@@ -858,7 +973,7 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         Set mappingRows = mappingByToBe(toBeKey)
         RebuildToBeSheet ws, CStr(targetRow("HeaderCell")), CStr(targetRow("DataCell")), mappingRows
 
-        WriteLog LogLevelInfo(), TargetRowLabel(rowNum) & ChrW(&H20) & ChrW(&H3092) & ChrW(&H51E6) & ChrW(&H7406) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3A) & ChrW(&H20) & outputFilePath & " / " & sheetName
+        WriteLog LogLevelInfo(), TargetRowLabel(rowNum) & " を処理しました: " & outputFilePath & " / " & sheetName
     Next targetItem
 
     For Each key In openedBooks.Keys
@@ -1107,7 +1222,7 @@ Private Sub ReportValidationErrors(ByRef errors As Collection)
         WriteLog LogLevelError(), CStr(item)
     Next item
 
-    MsgBox ChrW(&H5165) & ChrW(&H529B) & ChrW(&H30C1) & ChrW(&H30A7) & ChrW(&H30C3) & ChrW(&H30AF) & ChrW(&H3067) & ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC) & ChrW(&H304C) & ChrW(&H20) & errors.Count & ChrW(&H20) & ChrW(&H4EF6) & ChrW(&H898B) & ChrW(&H3064) & ChrW(&H304B) & ChrW(&H308A) & ChrW(&H307E) & ChrW(&H3057) & ChrW(&H305F) & ChrW(&H3002) & ChrW(&H6C) & ChrW(&H6F) & ChrW(&H67) & ChrW(&H30B7) & ChrW(&H30FC) & ChrW(&H30C8) & ChrW(&H3092) & ChrW(&H78BA) & ChrW(&H8A8D) & ChrW(&H3057) & ChrW(&H3066) & ChrW(&H304F) & ChrW(&H3060) & ChrW(&H3055) & ChrW(&H3044) & ChrW(&H3002), vbCritical + vbOKOnly
+    MsgBox "入力チェックでエラーが " & errors.Count & " 件見つかりました。logシートを確認してください。", vbCritical + vbOKOnly
 End Sub
 
 Private Function TrimSafe(ByVal value As Variant) As String
@@ -1121,6 +1236,15 @@ End Function
 Private Function NormalizeKey(ByVal value As String) As String
     NormalizeKey = Trim$(value)
 End Function
+
+Private Function BuildToBeMappingKey(ByVal mappingSheetName As String, ByVal toBeTable As String) As String
+    BuildToBeMappingKey = NormalizeKey(mappingSheetName) & "|" & NormalizeKey(toBeTable)
+End Function
+
+Private Function BuildAsIsMappingKey(ByVal mappingSheetName As String, ByVal asIsTable As String) As String
+    BuildAsIsMappingKey = NormalizeKey(mappingSheetName) & "|" & NormalizeKey(asIsTable)
+End Function
+
 
 Private Function FileExists(ByVal filePath As String) As Boolean
     Dim found As String
@@ -1168,19 +1292,19 @@ Private Function BuildToBeFilePath(ByVal sourceFilePath As String) As String
 End Function
 
 Private Function BuildExecuteConfirmMessage() As String
-    BuildExecuteConfirmMessage = ChrW(&H4E26) & ChrW(&H3073) & ChrW(&H66FF) & ChrW(&H3048) & ChrW(&H3092) & ChrW(&H5B9F) & ChrW(&H884C) & ChrW(&H3057) & ChrW(&H307E) & ChrW(&H3059) & ChrW(&H304B) & "?"
+    BuildExecuteConfirmMessage = "並び替えを実行しますか?"
 End Function
 
 Private Function LogLevelInfo() As String
-    LogLevelInfo = ChrW(&H60C5) & ChrW(&H5831)
+    LogLevelInfo = "情報"
 End Function
 
 Private Function LogLevelError() As String
-    LogLevelError = ChrW(&H30A8) & ChrW(&H30E9) & ChrW(&H30FC)
+    LogLevelError = "エラー"
 End Function
 
 Private Function TargetRowLabel(ByVal rowNum As Long) As String
-    TargetRowLabel = ChrW(&H5BFE) & ChrW(&H8C61) & ChrW(&H884C) & CStr(rowNum)
+    TargetRowLabel = "対象行" & CStr(rowNum)
 End Function
 
 Private Function ParseA1Address(ByVal address As String, ByRef colNumber As Long, ByRef rowNumber As Long) As Boolean
@@ -1295,6 +1419,21 @@ Private Function GetLastRowInColumns5(ByVal ws As Worksheet, ByVal col1 As Long,
 
     GetLastRowInColumns5 = maxRow
 End Function
+
+Private Function GetLastRowInColumns6(ByVal ws As Worksheet, ByVal col1 As Long, ByVal col2 As Long, ByVal col3 As Long, ByVal col4 As Long, ByVal col5 As Long, ByVal col6 As Long) As Long
+    Dim maxRow As Long
+    maxRow = 1
+
+    maxRow = Application.WorksheetFunction.Max(maxRow, ws.Cells(ws.Rows.Count, col1).End(xlUp).Row)
+    maxRow = Application.WorksheetFunction.Max(maxRow, ws.Cells(ws.Rows.Count, col2).End(xlUp).Row)
+    maxRow = Application.WorksheetFunction.Max(maxRow, ws.Cells(ws.Rows.Count, col3).End(xlUp).Row)
+    maxRow = Application.WorksheetFunction.Max(maxRow, ws.Cells(ws.Rows.Count, col4).End(xlUp).Row)
+    maxRow = Application.WorksheetFunction.Max(maxRow, ws.Cells(ws.Rows.Count, col5).End(xlUp).Row)
+    maxRow = Application.WorksheetFunction.Max(maxRow, ws.Cells(ws.Rows.Count, col6).End(xlUp).Row)
+
+    GetLastRowInColumns6 = maxRow
+End Function
+
 
 Private Function GetLastUsedRow(ByVal ws As Worksheet) As Long
     Dim found As Range

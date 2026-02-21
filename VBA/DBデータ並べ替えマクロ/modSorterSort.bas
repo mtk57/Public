@@ -10,6 +10,9 @@ Private Const KEY_TARGET_HEADER_CELL As String = "HeaderCell"
 Private Const KEY_TARGET_DATA_CELL As String = "DataCell"
 Private Const KEY_TARGET_OUTPUT_FILE_PATH As String = "OutputFilePath"
 Private Const KEY_TARGET_TOBE_TABLE_KEY As String = "ToBeTableKey"
+Private Const KEY_PLAN_SOURCE_FILE As String = "SourceFilePath"
+Private Const KEY_PLAN_OUTPUT_FILE As String = "OutputFilePath"
+Private Const KEY_PLAN_TARGET_SHEETS As String = "TargetSheets"
 
 Private Const KEY_MAP_ROWNUM As String = "RowNum"
 Private Const KEY_MAP_TOBE_TABLE As String = "ToBeTable"
@@ -528,7 +531,9 @@ End Sub
 
 Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Object)
     Dim openedBooks As Object
-    Dim copiedFiles As Object
+    Dim outputPlans As Object
+    Dim outputPlan As Object
+    Dim targetSheets As Object
     Dim targetItem As Variant
     Dim targetRow As Object
     Dim wb As Workbook
@@ -540,10 +545,10 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
     Dim toBeKey As String
     Dim rowNum As Long
     Dim key As Variant
-    Dim copyKey As String
+    Dim planKey As String
 
     Set openedBooks = NewDictionary()
-    Set copiedFiles = NewDictionary()
+    Set outputPlans = NewDictionary()
 
     On Error GoTo ExecError
 
@@ -551,14 +556,38 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         Set targetRow = targetItem
         sourceFilePath = CStr(targetRow(KEY_TARGET_FILE_PATH))
         outputFilePath = CStr(targetRow(KEY_TARGET_OUTPUT_FILE_PATH))
-        copyKey = NormalizeKey(sourceFilePath)
+        sheetName = CStr(targetRow(KEY_TARGET_SHEET_NAME))
+        planKey = NormalizeKey(sourceFilePath)
 
-        If Not copiedFiles.Exists(copyKey) Then
-            FileCopy sourceFilePath, outputFilePath
-            copiedFiles.Add copyKey, outputFilePath
-            WriteLog LogLevelInfo(), "ファイルをコピーしました: " & outputFilePath
+        If Not outputPlans.Exists(planKey) Then
+            Set outputPlan = NewDictionary()
+            outputPlan.Add KEY_PLAN_SOURCE_FILE, sourceFilePath
+            outputPlan.Add KEY_PLAN_OUTPUT_FILE, outputFilePath
+            Set targetSheets = NewDictionary()
+            outputPlan.Add KEY_PLAN_TARGET_SHEETS, targetSheets
+            outputPlans.Add planKey, outputPlan
+        End If
+
+        Set outputPlan = outputPlans(planKey)
+        Set targetSheets = outputPlan(KEY_PLAN_TARGET_SHEETS)
+        If Not targetSheets.Exists(NormalizeKey(sheetName)) Then
+            targetSheets.Add NormalizeKey(sheetName), sheetName
         End If
     Next targetItem
+
+    For Each key In outputPlans.Keys
+        Set outputPlan = outputPlans(CStr(key))
+        sourceFilePath = CStr(outputPlan(KEY_PLAN_SOURCE_FILE))
+        outputFilePath = CStr(outputPlan(KEY_PLAN_OUTPUT_FILE))
+
+        FileCopy sourceFilePath, outputFilePath
+        WriteLog LogLevelInfo(), "ファイルをコピーしました: " & outputFilePath
+
+        Set wb = GetOrOpenWorkbookForRun(outputFilePath, openedBooks)
+        Set targetSheets = outputPlan(KEY_PLAN_TARGET_SHEETS)
+        KeepOnlyTargetSheets wb, targetSheets
+        ResetTargetSheetView wb, targetSheets
+    Next key
 
     For Each targetItem In targets
         Set targetRow = targetItem
@@ -586,6 +615,65 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
 ExecError:
     CloseWorkbooks openedBooks, False
     Err.Raise Err.Number, "ExecuteSort", Err.Description
+End Sub
+
+Private Sub KeepOnlyTargetSheets(ByVal wb As Workbook, ByVal targetSheets As Object)
+    Dim ws As Worksheet
+    Dim sh As Object
+    Dim keepSheet As Worksheet
+    Dim deleteNames As Collection
+    Dim item As Variant
+
+    Set deleteNames = New Collection
+
+    For Each ws In wb.Worksheets
+        If targetSheets.Exists(NormalizeKey(ws.Name)) Then
+            If keepSheet Is Nothing Then
+                Set keepSheet = ws
+            End If
+        End If
+    Next ws
+
+    For Each sh In wb.Sheets
+        If Not targetSheets.Exists(NormalizeKey(CStr(sh.Name))) Then
+            deleteNames.Add CStr(sh.Name)
+        End If
+    Next sh
+
+    If keepSheet Is Nothing Then
+        Err.Raise vbObjectError + 3001, "KeepOnlyTargetSheets", "targetで指定されたシートが_TOBE内に見つかりません。"
+    End If
+
+    keepSheet.Visible = xlSheetVisible
+
+    For Each item In deleteNames
+        wb.Sheets(CStr(item)).Delete
+    Next item
+End Sub
+
+Private Sub ResetTargetSheetView(ByVal wb As Workbook, ByVal targetSheets As Object)
+    Dim ws As Worksheet
+
+    For Each ws In wb.Worksheets
+        If targetSheets.Exists(NormalizeKey(ws.Name)) Then
+            ClearSheetFilters ws
+            ws.Cells.EntireColumn.Hidden = False
+        End If
+    Next ws
+End Sub
+
+Private Sub ClearSheetFilters(ByVal ws As Worksheet)
+    Dim listObj As ListObject
+
+    On Error Resume Next
+    ws.ShowAllData
+    On Error GoTo 0
+
+    For Each listObj In ws.ListObjects
+        On Error Resume Next
+        listObj.AutoFilter.ShowAllData
+        On Error GoTo 0
+    Next listObj
 End Sub
 
 Private Sub RebuildToBeSheet(ByVal ws As Worksheet, ByVal headerCellAddress As String, ByVal dataCellAddress As String, ByVal mappingRows As Collection)

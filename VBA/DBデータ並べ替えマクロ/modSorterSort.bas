@@ -19,6 +19,8 @@ Private Const KEY_MAP_TOBE_TABLE As String = "ToBeTable"
 Private Const KEY_MAP_TOBE_COLUMN As String = "ToBeColumn"
 Private Const KEY_MAP_ASIS_TABLE As String = "AsIsTable"
 Private Const KEY_MAP_ASIS_COLUMN As String = "AsIsColumn"
+Private Const PROGRESS_INTERVAL_ROWS As Long = 50
+
 
 Private Type TargetLineData
     MappingSheetName As String
@@ -49,9 +51,13 @@ Public Sub StartSort()
     Set asIsToToBe = NewDictionary()
     Set targets = New Collection
 
+    SetStatusMessage "並び替え: target入力をチェック中"
     ValidateTarget targets, errors
+    SetStatusMessage "並び替え: mapping定義をチェック中"
     ValidateMappingsForTargets targets, mappingByToBe, asIsToToBe, errors
+    SetStatusMessage "並び替え: targetとmappingを紐づけ中"
     BindTargetsToMapping targets, mappingByToBe, errors
+    SetStatusMessage "並び替え: ファイル・シート・カラムを事前チェック中"
     ValidateFilesSheetsAndColumns targets, mappingByToBe, errors
 
     If errors.Count > 0 Then
@@ -59,7 +65,9 @@ Public Sub StartSort()
         GoTo SafeExit
     End If
 
+    SetStatusMessage "並び替え: ToBeファイルを再構成中"
     ExecuteSort targets, mappingByToBe
+    SetStatusMessage "並び替え: 完了"
 
     WriteLog LogLevelInfo(), "並び替え処理が正常終了しました。"
     MsgBox "並び替え処理が完了しました。", vbInformation + vbOKOnly
@@ -83,6 +91,8 @@ Private Sub ValidateMappingsForTargets(ByRef targets As Collection, ByRef mappin
     Dim mappingSheetName As String
     Dim toBeTable As String
     Dim toBeKey As String
+    Dim tableIndex As Long
+    Dim tableTotal As Long
 
     Set requestedToBeKeys = NewDictionary()
 
@@ -100,8 +110,13 @@ Private Sub ValidateMappingsForTargets(ByRef targets As Collection, ByRef mappin
         End If
     Next item
 
+    tableTotal = requestedToBeKeys.Count
+    tableIndex = 0
+
     For Each key In requestedToBeKeys.Keys
         Set requestInfo = requestedToBeKeys(CStr(key))
+        tableIndex = tableIndex + 1
+        SetStatusProgress "並び替え: mappingテーブルをチェック中", tableIndex, tableTotal, CStr(requestInfo(KEY_TARGET_TOBE_TABLE))
         ValidateMappingTable CStr(requestInfo(KEY_TARGET_MAPPING_SHEET)), CStr(requestInfo(KEY_TARGET_TOBE_TABLE)), mappingByToBe, asIsToToBe, errors
     Next key
 End Sub
@@ -125,6 +140,7 @@ Private Sub ValidateMappingTable(ByVal mappingSheetName As String, ByVal targetT
     Dim key As Variant
     Dim sheetToBeKeys As Object
     Dim validRowCount As Long
+    Dim mappingTotalRows As Long
 
     If Not TryGetThisWorkbookSheet(mappingSheetName, ws, errors) Then
         Exit Sub
@@ -139,8 +155,12 @@ Private Sub ValidateMappingTable(ByVal mappingSheetName As String, ByVal targetT
     Set toBeColumnKeys = NewDictionary()
     Set toBeToAsIsTable = NewDictionary()
     Set sheetToBeKeys = NewDictionary()
+    mappingTotalRows = lastRow - START_ROW + 1
 
     For rowNum = START_ROW To lastRow
+        If rowNum = START_ROW Or rowNum = lastRow Or ((rowNum - START_ROW + 1) Mod PROGRESS_INTERVAL_ROWS = 0) Then
+            SetStatusProgress "並び替え: mapping行をチェック中", rowNum - START_ROW + 1, mappingTotalRows, mappingSheetName & ":" & targetToBeTable
+        End If
         toBeTable = TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_TABLE).Value)
         toBeColumn = TrimSafe(ws.Cells(rowNum, COL_MAP_TOBE_COLUMN).Value)
         asIsTable = TrimSafe(ws.Cells(rowNum, COL_MAP_ASIS_TABLE).Value)
@@ -239,6 +259,7 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
     Dim targetLine As TargetLineData
     Dim targetRow As Object
     Dim mappingSheetHasToBe As Object
+    Dim totalRows As Long
 
     If Not TryGetThisWorkbookSheet(SHEET_TARGET, ws, errors) Then
         Exit Sub
@@ -251,7 +272,12 @@ Private Sub ValidateTarget(ByRef targets As Collection, ByRef errors As Collecti
         Exit Sub
     End If
 
+    totalRows = lastRow - START_ROW + 1
+
     For rowNum = START_ROW To lastRow
+        If rowNum = START_ROW Or rowNum = lastRow Or ((rowNum - START_ROW + 1) Mod PROGRESS_INTERVAL_ROWS = 0) Then
+            SetStatusProgress "並び替え: target行をチェック中", rowNum - START_ROW + 1, totalRows
+        End If
         If Not ReadTargetLine(ws, rowNum, targetLine) Then
             GoTo NextTargetRow
         End If
@@ -452,16 +478,23 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
     Dim asIsColumn As String
     Dim headerLookup As Object
     Dim rowNum As Long
+    Dim targetCount As Long
+    Dim targetIndex As Long
 
     Set openedBooks = NewDictionary()
 
     On Error GoTo Cleanup
+
+    targetCount = targets.Count
+    targetIndex = 0
 
     For Each targetItem In targets
         Set targetRow = targetItem
         filePath = CStr(targetRow(KEY_TARGET_FILE_PATH))
         outputFilePath = CStr(targetRow(KEY_TARGET_OUTPUT_FILE_PATH))
         rowNum = CLng(targetRow(KEY_TARGET_ROWNUM))
+        targetIndex = targetIndex + 1
+        SetStatusProgress "並び替え: 出力ファイルを事前チェック中", targetIndex, targetCount
 
         If Not FileExists(filePath) Then
             AddError errors, TargetRowLabel(rowNum) & " のファイルが存在しません: " & filePath
@@ -472,12 +505,16 @@ Private Sub ValidateFilesSheetsAndColumns(ByRef targets As Collection, ByRef map
         End If
     Next targetItem
 
+    targetIndex = 0
+
     For Each targetItem In targets
         Set targetRow = targetItem
         filePath = CStr(targetRow(KEY_TARGET_FILE_PATH))
         sheetName = CStr(targetRow(KEY_TARGET_SHEET_NAME))
         mappingSheetName = CStr(targetRow(KEY_TARGET_MAPPING_SHEET))
         rowNum = CLng(targetRow(KEY_TARGET_ROWNUM))
+        targetIndex = targetIndex + 1
+        SetStatusProgress "並び替え: 元シート/カラムを事前チェック中", targetIndex, targetCount
 
         If Not FileExists(filePath) Then
             GoTo NextTarget
@@ -546,11 +583,20 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
     Dim rowNum As Long
     Dim key As Variant
     Dim planKey As String
+    Dim targetCount As Long
+    Dim targetIndex As Long
+    Dim planCount As Long
+    Dim planIndex As Long
+    Dim saveCount As Long
+    Dim saveIndex As Long
 
     Set openedBooks = NewDictionary()
     Set outputPlans = NewDictionary()
 
     On Error GoTo ExecError
+
+    targetCount = targets.Count
+    targetIndex = 0
 
     For Each targetItem In targets
         Set targetRow = targetItem
@@ -558,6 +604,8 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         outputFilePath = CStr(targetRow(KEY_TARGET_OUTPUT_FILE_PATH))
         sheetName = CStr(targetRow(KEY_TARGET_SHEET_NAME))
         planKey = NormalizeKey(sourceFilePath)
+        targetIndex = targetIndex + 1
+        SetStatusProgress "並び替え: 出力ファイル計画を作成中", targetIndex, targetCount
 
         If Not outputPlans.Exists(planKey) Then
             Set outputPlan = NewDictionary()
@@ -575,10 +623,15 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         End If
     Next targetItem
 
+    planCount = outputPlans.Count
+    planIndex = 0
+
     For Each key In outputPlans.Keys
         Set outputPlan = outputPlans(CStr(key))
         sourceFilePath = CStr(outputPlan(KEY_PLAN_SOURCE_FILE))
         outputFilePath = CStr(outputPlan(KEY_PLAN_OUTPUT_FILE))
+        planIndex = planIndex + 1
+        SetStatusProgress "並び替え: _TOBEファイルを作成中", planIndex, planCount
 
         FileCopy sourceFilePath, outputFilePath
         WriteLog LogLevelInfo(), "ファイルをコピーしました: " & outputFilePath
@@ -589,12 +642,16 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         ResetTargetSheetView wb, targetSheets
     Next key
 
+    targetIndex = 0
+
     For Each targetItem In targets
         Set targetRow = targetItem
         rowNum = CLng(targetRow(KEY_TARGET_ROWNUM))
         outputFilePath = CStr(targetRow(KEY_TARGET_OUTPUT_FILE_PATH))
         sheetName = CStr(targetRow(KEY_TARGET_SHEET_NAME))
         toBeKey = CStr(targetRow(KEY_TARGET_TOBE_TABLE_KEY))
+        targetIndex = targetIndex + 1
+        SetStatusProgress "並び替え: シートを再構成中", targetIndex, targetCount, sheetName
 
         Set wb = GetOrOpenWorkbookForRun(outputFilePath, openedBooks)
         Set ws = wb.Worksheets(sheetName)
@@ -605,7 +662,12 @@ Private Sub ExecuteSort(ByRef targets As Collection, ByRef mappingByToBe As Obje
         WriteLog LogLevelInfo(), TargetRowLabel(rowNum) & " を処理しました: " & outputFilePath & " / " & sheetName
     Next targetItem
 
+    saveCount = openedBooks.Count
+    saveIndex = 0
+
     For Each key In openedBooks.Keys
+        saveIndex = saveIndex + 1
+        SetStatusProgress "並び替え: ファイルを保存中", saveIndex, saveCount
         openedBooks(key).Save
     Next key
 

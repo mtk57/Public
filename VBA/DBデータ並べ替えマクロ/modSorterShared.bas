@@ -62,6 +62,8 @@ Private gPrevScreenUpdating As Boolean
 Private gPrevEnableEvents As Boolean
 Private gPrevDisplayAlerts As Boolean
 Private gPrevCalculation As XlCalculation
+Private gPrevDisplayStatusBar As Boolean
+Private gPrevStatusBar As Variant
 Public Function BuildMacroCellLabel(ByVal rowNum As Long) As String
     BuildMacroCellLabel = "macro!B" & CStr(rowNum)
 End Function
@@ -494,11 +496,14 @@ Public Sub PrepareApplication()
     gPrevEnableEvents = Application.EnableEvents
     gPrevDisplayAlerts = Application.DisplayAlerts
     gPrevCalculation = Application.Calculation
+    gPrevDisplayStatusBar = Application.DisplayStatusBar
+    gPrevStatusBar = Application.StatusBar
 
     Application.ScreenUpdating = False
     Application.EnableEvents = False
     Application.DisplayAlerts = False
     Application.Calculation = xlCalculationManual
+    Application.DisplayStatusBar = True
 End Sub
 
 Public Sub RestoreApplication()
@@ -507,7 +512,39 @@ Public Sub RestoreApplication()
     Application.EnableEvents = gPrevEnableEvents
     Application.DisplayAlerts = gPrevDisplayAlerts
     Application.Calculation = gPrevCalculation
+    Application.StatusBar = gPrevStatusBar
+    Application.DisplayStatusBar = gPrevDisplayStatusBar
     On Error GoTo 0
+End Sub
+
+Public Sub SetStatusMessage(ByVal message As String)
+    On Error Resume Next
+    Application.DisplayStatusBar = True
+    Application.StatusBar = message
+    DoEvents
+    On Error GoTo 0
+End Sub
+
+Public Sub SetStatusProgress(ByVal phase As String, ByVal current As Long, ByVal total As Long, Optional ByVal detail As String = "")
+    Dim safeCurrent As Long
+    Dim percentValue As Double
+    Dim statusText As String
+
+    If total <= 0 Then
+        statusText = phase
+    Else
+        safeCurrent = current
+        If safeCurrent < 0 Then safeCurrent = 0
+        If safeCurrent > total Then safeCurrent = total
+        percentValue = CDbl(safeCurrent) / CDbl(total)
+        statusText = phase & " (" & CStr(safeCurrent) & "/" & CStr(total) & ", " & Format$(percentValue, "0%") & ")"
+    End If
+
+    If Len(detail) > 0 Then
+        statusText = statusText & " - " & detail
+    End If
+
+    SetStatusMessage statusText
 End Sub
 
 Public Sub InitLog()

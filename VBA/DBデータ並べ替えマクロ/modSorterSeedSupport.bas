@@ -1,5 +1,7 @@
 Attribute VB_Name = "modSorterSeedSupport"
 Option Explicit
+
+Private Const PROGRESS_INTERVAL_SEED_ROWS As Long = 100
 Public Sub CreateToBeMappingSeedSupport()
     Dim errors As Collection
     Dim settings As Object
@@ -13,25 +15,31 @@ Public Sub CreateToBeMappingSeedSupport()
     PrepareApplication
     InitLog
     WriteLog LogLevelInfo(), JpSeedStartMessage()
+    SetStatusMessage "元ネタ作成支援: 開始"
 
     Set errors = New Collection
     Set settings = NewDictionary()
     Set targetSheets = New Collection
 
+    SetStatusMessage "元ネタ作成支援: 入力チェック中"
     ValidateSeedSupportInput settings, targetSheets, errors
     If errors.Count > 0 Then
         ReportValidationErrors errors
         GoTo SafeExit
     End If
 
+    SetStatusMessage "元ネタ作成支援: 定義ブックをオープン中"
     Set srcWb = Workbooks.Open(Filename:=CStr(settings("DefFilePath")), ReadOnly:=True, UpdateLinks:=0)
+    SetStatusMessage "元ネタ作成支援: 元シートをチェック中"
     ValidateSeedSourceSheets srcWb, targetSheets, errors
     If errors.Count > 0 Then
         ReportValidationErrors errors
         GoTo SafeExit
     End If
 
+    SetStatusMessage "元ネタ作成支援: 出力シートを作成中"
     Set wsOutput = CreateSeedOutputSheet()
+    SetStatusMessage "元ネタ作成支援: 行データを抽出中"
     WriteSeedSupportRows srcWb, targetSheets, settings, wsOutput, createdCount, errors
 
     If errors.Count > 0 Then
@@ -39,6 +47,7 @@ Public Sub CreateToBeMappingSeedSupport()
         GoTo SafeExit
     End If
 
+    SetStatusMessage "元ネタ作成支援: 完了"
     WriteLog LogLevelInfo(), JpSeedCompletedMessage(wsOutput.Name, createdCount)
     MsgBox JpSeedCompletedMessage(wsOutput.Name, createdCount), vbInformation + vbOKOnly
 
@@ -159,8 +168,15 @@ End Sub
 Private Sub ValidateSeedSourceSheets(ByVal srcWb As Workbook, ByVal targetSheets As Collection, ByRef errors As Collection)
     Dim sheetItem As Variant
     Dim ws As Worksheet
+    Dim totalSheets As Long
+    Dim sheetIndex As Long
+
+    totalSheets = targetSheets.Count
+    sheetIndex = 0
 
     For Each sheetItem In targetSheets
+        sheetIndex = sheetIndex + 1
+        SetStatusProgress "元ネタ作成支援: 元シートをチェック中", sheetIndex, totalSheets, CStr(sheetItem)
         Set ws = Nothing
         If Not TryGetWorksheetFromWorkbook(srcWb, CStr(sheetItem), ws) Then
             AddError errors, CStr(sheetItem) & JpDefSheetNotFoundSuffix() & srcWb.FullName
@@ -216,10 +232,16 @@ Private Sub WriteSeedSupportRows(ByVal srcWb As Workbook, ByVal targetSheets As 
     Dim toBeCol As String
     Dim deleteFlag As String
     Dim tablePhys As String
+    Dim sheetTotal As Long
+    Dim sheetIndex As Long
 
     outRow = START_ROW
+    sheetTotal = targetSheets.Count
+    sheetIndex = 0
 
     For Each sheetItem In targetSheets
+        sheetIndex = sheetIndex + 1
+        SetStatusProgress "元ネタ作成支援: シートを処理中", sheetIndex, sheetTotal, CStr(sheetItem)
         Set wsSrc = srcWb.Worksheets(CStr(sheetItem))
 
         tablePhys = TrimSafe(GetFixedCellValue(wsSrc, settings, "TablePhys"))
@@ -232,6 +254,10 @@ Private Sub WriteSeedSupportRows(ByVal srcWb As Workbook, ByVal targetSheets As 
         rowOffset = 0
 
         Do
+            If rowOffset = 0 Or ((rowOffset + 1) Mod PROGRESS_INTERVAL_SEED_ROWS = 0) Then
+                SetStatusMessage "元ネタ作成支援: カラム読込中 - " & CStr(sheetItem) & " / 行 " & CStr(rowOffset + 1)
+            End If
+
             toBeCol = TrimSafe(GetRowCellValue(wsSrc, settings, "ColPhys", rowOffset))
             If Len(toBeCol) = 0 Then
                 Exit Do
@@ -302,4 +328,3 @@ Private Sub SetSettingValue(ByRef settings As Object, ByVal key As String, ByVal
         settings.Add key, value
     End If
 End Sub
-

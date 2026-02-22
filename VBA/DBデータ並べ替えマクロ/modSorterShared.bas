@@ -64,6 +64,7 @@ Private gPrevDisplayAlerts As Boolean
 Private gPrevCalculation As XlCalculation
 Private gPrevDisplayStatusBar As Boolean
 Private gPrevStatusBar As Variant
+Private gLastStatusMessage As String
 Public Function BuildMacroCellLabel(ByVal rowNum As Long) As String
     BuildMacroCellLabel = "macro!B" & CStr(rowNum)
 End Function
@@ -283,8 +284,15 @@ End Function
 
 Public Function FileExists(ByVal filePath As String) As Boolean
     Dim found As String
+    On Error Resume Next
     found = Dir$(filePath, vbNormal Or vbReadOnly Or vbHidden Or vbSystem Or vbArchive)
-    FileExists = (Len(found) > 0)
+    If Err.Number <> 0 Then
+        Err.Clear
+        FileExists = False
+    Else
+        FileExists = (Len(found) > 0)
+    End If
+    On Error GoTo 0
 End Function
 
 Public Function BuildToBeFilePath(ByVal sourceFilePath As String) As String
@@ -336,6 +344,31 @@ End Function
 
 Public Function LogLevelError() As String
     LogLevelError = "エラー"
+End Function
+
+Public Function BuildUnexpectedErrorMessage(ByVal context As String, ByVal errNumber As Long, ByVal errDescription As String, ByVal errSource As String, Optional ByVal errLine As Long = 0) As String
+    Dim sourceText As String
+    Dim statusText As String
+    Dim lineText As String
+
+    sourceText = errSource
+    If Len(sourceText) = 0 Then
+        sourceText = "(なし)"
+    End If
+
+    statusText = gLastStatusMessage
+    If Len(statusText) = 0 Then
+        statusText = "(なし)"
+    End If
+
+    If errLine > 0 Then
+        lineText = CStr(errLine)
+    Else
+        lineText = "(なし)"
+    End If
+
+    BuildUnexpectedErrorMessage = context & " 予期しないエラー: (" & CStr(errNumber) & ") " & errDescription & _
+        " [Source=" & sourceText & "] [Line=" & lineText & "] [Status=" & statusText & "]"
 End Function
 
 Public Function TargetRowLabel(ByVal rowNum As Long) As String
@@ -504,6 +537,7 @@ Public Sub PrepareApplication()
     Application.DisplayAlerts = False
     Application.Calculation = xlCalculationManual
     Application.DisplayStatusBar = True
+    gLastStatusMessage = ""
 End Sub
 
 Public Sub RestoreApplication()
@@ -519,6 +553,7 @@ End Sub
 
 Public Sub SetStatusMessage(ByVal message As String)
     On Error Resume Next
+    gLastStatusMessage = message
     Application.DisplayStatusBar = True
     Application.StatusBar = message
     DoEvents

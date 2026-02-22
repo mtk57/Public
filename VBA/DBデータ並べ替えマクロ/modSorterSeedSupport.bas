@@ -62,7 +62,7 @@ SafeExit:
     Exit Sub
 
 FatalError:
-    WriteLog LogLevelError(), JpSeedFatalPrefix() & " (" & Err.Number & ") " & Err.Description
+    WriteLog LogLevelError(), BuildUnexpectedErrorMessage(JpSeedFatalPrefix(), Err.Number, Err.Description, Err.Source, Erl)
     MsgBox JpSeedFatalDialogMessage(), vbCritical + vbOKOnly
 
     On Error Resume Next

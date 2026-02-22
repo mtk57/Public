@@ -77,7 +77,7 @@ SafeExit:
     Exit Sub
 
 FatalError:
-    WriteLog LogLevelError(), "予期しないエラー: (" & Err.Number & ") " & Err.Description
+    WriteLog LogLevelError(), BuildUnexpectedErrorMessage("並び替え処理", Err.Number, Err.Description, Err.Source, Erl)
     MsgBox "予期しないエラーが発生しました。logシートを確認してください。", vbCritical + vbOKOnly
     RestoreApplication
 End Sub

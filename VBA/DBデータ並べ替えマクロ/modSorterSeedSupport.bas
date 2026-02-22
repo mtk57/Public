@@ -15,6 +15,7 @@ Public Sub CreateToBeMappingSeedSupport()
     PrepareApplication
     InitLog
     WriteLog LogLevelInfo(), JpSeedStartMessage()
+    DebugTrace "CreateToBeMappingSeedSupport", "開始"
     SetStatusMessage "元ネタ作成支援: 開始"
 
     Set errors = New Collection
@@ -22,6 +23,7 @@ Public Sub CreateToBeMappingSeedSupport()
     Set targetSheets = New Collection
 
     SetStatusMessage "元ネタ作成支援: 入力チェック中"
+    DebugTrace "CreateToBeMappingSeedSupport", "ValidateSeedSupportInput 呼出"
     ValidateSeedSupportInput settings, targetSheets, errors
     If errors.Count > 0 Then
         ReportValidationErrors errors
@@ -29,8 +31,10 @@ Public Sub CreateToBeMappingSeedSupport()
     End If
 
     SetStatusMessage "元ネタ作成支援: 定義ブックをオープン中"
+    DebugTrace "CreateToBeMappingSeedSupport", "定義ブックOpen | file=" & CStr(settings("DefFilePath"))
     Set srcWb = Workbooks.Open(Filename:=CStr(settings("DefFilePath")), ReadOnly:=True, UpdateLinks:=0)
     SetStatusMessage "元ネタ作成支援: 元シートをチェック中"
+    DebugTrace "CreateToBeMappingSeedSupport", "ValidateSeedSourceSheets 呼出 | sheetCount=" & CStr(targetSheets.Count)
     ValidateSeedSourceSheets srcWb, targetSheets, errors
     If errors.Count > 0 Then
         ReportValidationErrors errors
@@ -38,8 +42,10 @@ Public Sub CreateToBeMappingSeedSupport()
     End If
 
     SetStatusMessage "元ネタ作成支援: 出力シートを作成中"
+    DebugTrace "CreateToBeMappingSeedSupport", "CreateSeedOutputSheet 呼出"
     Set wsOutput = CreateSeedOutputSheet()
     SetStatusMessage "元ネタ作成支援: 行データを抽出中"
+    DebugTrace "CreateToBeMappingSeedSupport", "WriteSeedSupportRows 呼出"
     WriteSeedSupportRows srcWb, targetSheets, settings, wsOutput, createdCount, errors
 
     If errors.Count > 0 Then
@@ -48,6 +54,7 @@ Public Sub CreateToBeMappingSeedSupport()
     End If
 
     SetStatusMessage "元ネタ作成支援: 完了"
+    DebugTrace "CreateToBeMappingSeedSupport", "完了 | createdCount=" & CStr(createdCount)
     WriteLog LogLevelInfo(), JpSeedCompletedMessage(wsOutput.Name, createdCount)
     MsgBox JpSeedCompletedMessage(wsOutput.Name, createdCount), vbInformation + vbOKOnly
 
@@ -173,9 +180,11 @@ Private Sub ValidateSeedSourceSheets(ByVal srcWb As Workbook, ByVal targetSheets
 
     totalSheets = targetSheets.Count
     sheetIndex = 0
+    DebugTrace "ValidateSeedSourceSheets", "開始 | totalSheets=" & CStr(totalSheets)
 
     For Each sheetItem In targetSheets
         sheetIndex = sheetIndex + 1
+        DebugTrace "ValidateSeedSourceSheets", "確認 | sheet=" & CStr(sheetItem)
         SetStatusProgress "元ネタ作成支援: 元シートをチェック中", sheetIndex, totalSheets, CStr(sheetItem)
         Set ws = Nothing
         If Not TryGetWorksheetFromWorkbook(srcWb, CStr(sheetItem), ws) Then
@@ -238,9 +247,11 @@ Private Sub WriteSeedSupportRows(ByVal srcWb As Workbook, ByVal targetSheets As 
     outRow = START_ROW
     sheetTotal = targetSheets.Count
     sheetIndex = 0
+    DebugTrace "WriteSeedSupportRows", "開始 | sheetTotal=" & CStr(sheetTotal)
 
     For Each sheetItem In targetSheets
         sheetIndex = sheetIndex + 1
+        DebugTrace "WriteSeedSupportRows", "シート処理開始 | sheet=" & CStr(sheetItem)
         SetStatusProgress "元ネタ作成支援: シートを処理中", sheetIndex, sheetTotal, CStr(sheetItem)
         Set wsSrc = srcWb.Worksheets(CStr(sheetItem))
 

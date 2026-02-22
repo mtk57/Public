@@ -1,6 +1,8 @@
 Attribute VB_Name = "modSorterShared"
 Option Explicit
 
+Public Const DEBUG_MODE As Boolean = False
+
 Public Const SHEET_MAPPING As String = "mapping"
 Public Const SHEET_TARGET As String = "target"
 Public Const SHEET_MACRO As String = "log"
@@ -65,6 +67,7 @@ Private gPrevCalculation As XlCalculation
 Private gPrevDisplayStatusBar As Boolean
 Private gPrevStatusBar As Variant
 Private gLastStatusMessage As String
+Private gLastDebugPoint As String
 Public Function BuildMacroCellLabel(ByVal rowNum As Long) As String
     BuildMacroCellLabel = "macro!B" & CStr(rowNum)
 End Function
@@ -176,17 +179,20 @@ Public Function GetOrOpenWorkbook(ByVal filePath As String, ByVal readOnly As Bo
     key = NormalizeKey(filePath)
 
     If openedBooks.Exists(key) Then
+        DebugTrace "GetOrOpenWorkbook", "cache hit | row=" & CStr(targetRowNum) & ", file=" & filePath
         Set GetOrOpenWorkbook = openedBooks(key)
         Exit Function
     End If
 
     On Error GoTo OpenError
+    DebugTrace "GetOrOpenWorkbook", "open | row=" & CStr(targetRowNum) & ", readOnly=" & CStr(readOnly) & ", file=" & filePath
     Set wb = Workbooks.Open(Filename:=filePath, readOnly:=readOnly, UpdateLinks:=0)
     openedBooks.Add key, wb
     Set GetOrOpenWorkbook = wb
     Exit Function
 
 OpenError:
+    DebugTrace "GetOrOpenWorkbook", "open error | row=" & CStr(targetRowNum) & ", file=" & filePath & ", err=" & CStr(Err.Number)
     AddError errors, "target 行" & targetRowNum & " のファイルを開けません: " & filePath & " / " & Err.Description
     Err.Clear
 End Function
@@ -198,10 +204,12 @@ Public Function GetOrOpenWorkbookForRun(ByVal filePath As String, ByRef openedBo
     key = NormalizeKey(filePath)
 
     If openedBooks.Exists(key) Then
+        DebugTrace "GetOrOpenWorkbookForRun", "cache hit | file=" & filePath
         Set GetOrOpenWorkbookForRun = openedBooks(key)
         Exit Function
     End If
 
+    DebugTrace "GetOrOpenWorkbookForRun", "open | file=" & filePath
     Set wb = Workbooks.Open(Filename:=filePath, readOnly:=False, UpdateLinks:=0)
     openedBooks.Add key, wb
     Set GetOrOpenWorkbookForRun = wb
@@ -287,6 +295,7 @@ Public Function FileExists(ByVal filePath As String) As Boolean
     On Error Resume Next
     found = Dir$(filePath, vbNormal Or vbReadOnly Or vbHidden Or vbSystem Or vbArchive)
     If Err.Number <> 0 Then
+        DebugTrace "FileExists", "Dir error | file=" & filePath & ", err=" & CStr(Err.Number)
         Err.Clear
         FileExists = False
     Else
@@ -346,10 +355,38 @@ Public Function LogLevelError() As String
     LogLevelError = "エラー"
 End Function
 
+Public Sub DebugTrace(ByVal pointName As String, Optional ByVal detail As String = "")
+    Dim message As String
+
+    If Not DEBUG_MODE Then
+        Exit Sub
+    End If
+
+    gLastDebugPoint = pointName
+    If gLogNextRow < LOG_ROW_START Then
+        Exit Sub
+    End If
+
+    message = "[DEBUG] " & pointName
+    If Len(detail) > 0 Then
+        message = message & " | " & detail
+    End If
+    WriteLog LogLevelInfo(), message
+End Sub
+
+Public Function LastDebugPointOrDefault() As String
+    If Len(gLastDebugPoint) = 0 Then
+        LastDebugPointOrDefault = "(なし)"
+    Else
+        LastDebugPointOrDefault = gLastDebugPoint
+    End If
+End Function
+
 Public Function BuildUnexpectedErrorMessage(ByVal context As String, ByVal errNumber As Long, ByVal errDescription As String, ByVal errSource As String, Optional ByVal errLine As Long = 0) As String
     Dim sourceText As String
     Dim statusText As String
     Dim lineText As String
+    Dim debugPointText As String
 
     sourceText = errSource
     If Len(sourceText) = 0 Then
@@ -367,8 +404,13 @@ Public Function BuildUnexpectedErrorMessage(ByVal context As String, ByVal errNu
         lineText = "(なし)"
     End If
 
+    debugPointText = ""
+    If DEBUG_MODE Then
+        debugPointText = " [DebugPoint=" & LastDebugPointOrDefault() & "]"
+    End If
+
     BuildUnexpectedErrorMessage = context & " 予期しないエラー: (" & CStr(errNumber) & ") " & errDescription & _
-        " [Source=" & sourceText & "] [Line=" & lineText & "] [Status=" & statusText & "]"
+        " [Source=" & sourceText & "] [Line=" & lineText & "] [Status=" & statusText & "]" & debugPointText
 End Function
 
 Public Function TargetRowLabel(ByVal rowNum As Long) As String
@@ -538,6 +580,7 @@ Public Sub PrepareApplication()
     Application.Calculation = xlCalculationManual
     Application.DisplayStatusBar = True
     gLastStatusMessage = ""
+    gLastDebugPoint = ""
 End Sub
 
 Public Sub RestoreApplication()
@@ -556,6 +599,9 @@ Public Sub SetStatusMessage(ByVal message As String)
     gLastStatusMessage = message
     Application.DisplayStatusBar = True
     Application.StatusBar = message
+    If DEBUG_MODE And gLogNextRow >= LOG_ROW_START Then
+        WriteLog LogLevelInfo(), "[DEBUG] STATUS | " & message
+    End If
     DoEvents
     On Error GoTo 0
 End Sub

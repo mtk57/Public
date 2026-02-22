@@ -823,9 +823,15 @@ Private Sub RebuildToBeSheet(ByVal ws As Worksheet, ByVal headerCellAddress As S
             sourceCol = CLng(headerLookup(NormalizeKey(asIsColumn)))
             columnData = ws.Range(ws.Cells(dataStartRow, sourceCol), ws.Cells(dataStartRow + rowCount - 1, sourceCol)).Value2
 
-            For dataIndex = 1 To rowCount
-                outputArray(dataIndex + 1, mapIndex) = columnData(dataIndex, 1)
-            Next dataIndex
+            If IsArray(columnData) Then
+                For dataIndex = 1 To rowCount
+                    outputArray(dataIndex + 1, mapIndex) = columnData(dataIndex, 1)
+                Next dataIndex
+            Else
+                ' 1セル取得時は配列ではなく単一値になるため直接設定する
+                outputArray(2, mapIndex) = columnData
+                DebugTrace "RebuildToBeSheet", "単一セル値を設定 | column=" & asIsColumn
+            End If
         End If
     Next mapItem
 

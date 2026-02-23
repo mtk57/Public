@@ -222,6 +222,30 @@ namespace Excel2Tsv
             }
         }
 
+        private void ClearSelectedCells()
+        {
+            if (dataGridView1.SelectedCells == null || dataGridView1.SelectedCells.Count == 0)
+            {
+                return;
+            }
+
+            foreach (DataGridViewCell cell in dataGridView1.SelectedCells)
+            {
+                if (cell == null || cell.ReadOnly)
+                {
+                    continue;
+                }
+
+                var row = cell.OwningRow;
+                if (row != null && row.IsNewRow)
+                {
+                    continue;
+                }
+
+                cell.Value = string.Empty;
+            }
+        }
+
         private string ConvertExcelSheetsToTsv()
         {
             var excelFilePath = (txtExcelFilePath.Text ?? string.Empty).Trim().Trim('"');

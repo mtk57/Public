@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -63,6 +64,7 @@ namespace Excel2Tsv
 
             progressBar1.Minimum = 0;
             progressBar1.Maximum = ProgressScale;
+            progressBar1.Style = ProgressBarStyle.Blocks;
             progressBar1.Value = 0;
             btnAbort.Enabled = false;
             UpdateProgressUi(new ConversionProgress { TotalSheets = 0, CompletedSheets = 0, TotalEstimatedRows = 0, ProcessedRows = 0, Message = string.Empty });
@@ -237,34 +239,61 @@ namespace Excel2Tsv
             _isRunning = true;
             _abortTokenSource = new CancellationTokenSource();
             SetRunningState(true);
+            var stopwatch = Stopwatch.StartNew();
             UpdateProgressUi(new ConversionProgress
             {
                 TotalSheets = request.Mappings.Count,
                 CompletedSheets = 0,
-                TotalEstimatedRows = Math.Max(1, request.Mappings.Count),
+                TotalEstimatedRows = 0,
                 ProcessedRows = 0,
-                Message = "準備中"
+                IsIndeterminate = true,
+                Message = "準備中: 開始"
             });
 
             var progress = new Progress<ConversionProgress>(UpdateProgressUi);
+            TimeSpan elapsedAtFinish;
             try
             {
                 var outputDirectory = await Task.Run(
                     () => ConvertExcelSheetsToTsv(request, _abortTokenSource.Token, progress),
                     _abortTokenSource.Token);
 
-                MessageBox.Show("完了しました。\r\n出力先: " + outputDirectory, "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                stopwatch.Stop();
+                elapsedAtFinish = stopwatch.Elapsed;
+                MessageBox.Show(
+                    "完了しました。\r\n出力先: " + outputDirectory + "\r\n経過時間: " + FormatElapsed(elapsedAtFinish),
+                    "完了",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show("処理を中止しました。", "中止", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                stopwatch.Stop();
+                elapsedAtFinish = stopwatch.Elapsed;
+                MessageBox.Show(
+                    "処理を中止しました。\r\n経過時間: " + FormatElapsed(elapsedAtFinish),
+                    "中止",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                stopwatch.Stop();
+                elapsedAtFinish = stopwatch.Elapsed;
+                MessageBox.Show(
+                    ex.Message + "\r\n経過時間: " + FormatElapsed(elapsedAtFinish),
+                    "エラー",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
             finally
             {
+                if (stopwatch.IsRunning)
+                {
+                    stopwatch.Stop();
+                }
+                elapsedAtFinish = stopwatch.Elapsed;
+
                 if (_abortTokenSource != null)
                 {
                     _abortTokenSource.Dispose();
@@ -273,6 +302,9 @@ namespace Excel2Tsv
 
                 _isRunning = false;
                 SetRunningState(false);
+                btnAbort.Enabled = false;
+                btnStart.Enabled = true;
+                lblProgress.Text += "  経過時間: " + FormatElapsed(elapsedAtFinish);
             }
         }
 
@@ -298,18 +330,60 @@ namespace Excel2Tsv
             txtTsvDirPath.Enabled = !running;
             dataGridView1.Enabled = !running;
             Cursor = running ? Cursors.WaitCursor : Cursors.Default;
+
+            if (!running && progressBar1.Style == ProgressBarStyle.Marquee)
+            {
+                progressBar1.Style = ProgressBarStyle.Blocks;
+                progressBar1.MarqueeAnimationSpeed = 0;
+            }
         }
 
         private void UpdateProgressUi(ConversionProgress progress)
         {
+            if (progress.IsIndeterminate)
+            {
+                if (progressBar1.Style != ProgressBarStyle.Marquee)
+                {
+                    progressBar1.Style = ProgressBarStyle.Marquee;
+                    progressBar1.MarqueeAnimationSpeed = 20;
+                }
+
+                var totalSheetsText = progress.TotalSheets > 0 ? string.Format("{0}/{1} シート", progress.CompletedSheets, progress.TotalSheets) : string.Empty;
+                if (string.IsNullOrWhiteSpace(progress.Message))
+                {
+                    lblProgress.Text = totalSheetsText;
+                }
+                else if (string.IsNullOrWhiteSpace(totalSheetsText))
+                {
+                    lblProgress.Text = progress.Message;
+                }
+                else
+                {
+                    lblProgress.Text = totalSheetsText + "  " + progress.Message;
+                }
+
+                return;
+            }
+
+            if (progressBar1.Style != ProgressBarStyle.Blocks)
+            {
+                progressBar1.Style = ProgressBarStyle.Blocks;
+                progressBar1.MarqueeAnimationSpeed = 0;
+            }
+
             var totalSheets = Math.Max(1, progress.TotalSheets);
             var completedSheets = Math.Max(0, Math.Min(progress.CompletedSheets, totalSheets));
 
-            var totalRows = Math.Max(1L, progress.TotalEstimatedRows);
-            var processedRows = Math.Max(0L, Math.Min(progress.ProcessedRows, totalRows));
+            var totalRows = progress.TotalEstimatedRows > 0 ? progress.TotalEstimatedRows : 0;
+            var processedRows = progress.ProcessedRows;
 
-            var ratio = (double)processedRows / totalRows;
-            if (progress.TotalEstimatedRows <= 0)
+            double ratio;
+            if (totalRows > 0)
+            {
+                var bounded = Math.Max(0L, Math.Min(processedRows, totalRows));
+                ratio = (double)bounded / totalRows;
+            }
+            else
             {
                 ratio = (double)completedSheets / totalSheets;
             }
@@ -318,13 +392,25 @@ namespace Excel2Tsv
             progressBar1.Value = Math.Max(progressBar1.Minimum, Math.Min(progressBar1.Maximum, progressValue));
 
             var percent = ratio * 100.0;
-            lblProgress.Text = string.Format(
-                "{0}/{1} シート  {2:N0}/{3:N0} 行  {4:0.0}%",
-                completedSheets,
-                progress.TotalSheets,
-                processedRows,
-                progress.TotalEstimatedRows,
-                percent);
+            if (totalRows > 0)
+            {
+                lblProgress.Text = string.Format(
+                    "{0}/{1} シート  {2:N0}/{3:N0} 行  {4:0.0}%",
+                    completedSheets,
+                    progress.TotalSheets,
+                    Math.Max(0L, Math.Min(processedRows, totalRows)),
+                    totalRows,
+                    percent);
+            }
+            else
+            {
+                lblProgress.Text = string.Format(
+                    "{0}/{1} シート  処理行数 {2:N0}  {3:0.0}%",
+                    completedSheets,
+                    progress.TotalSheets,
+                    Math.Max(0L, processedRows),
+                    percent);
+            }
 
             if (!string.IsNullOrWhiteSpace(progress.Message))
             {
@@ -371,8 +457,33 @@ namespace Excel2Tsv
         {
             token.ThrowIfCancellationRequested();
 
-            var plan = BuildConversionPlan(request, token);
+            if (progress != null)
+            {
+                progress.Report(new ConversionProgress
+                {
+                    TotalSheets = request.Mappings.Count,
+                    CompletedSheets = 0,
+                    TotalEstimatedRows = 0,
+                    ProcessedRows = 0,
+                    IsIndeterminate = true,
+                    Message = "準備中: ワークブックを解析しています"
+                });
+            }
+
+            var plan = BuildConversionPlan(request, token, progress);
             var tracker = new ProgressTracker(plan.TotalEstimatedRows, plan.WorkItems.Count, progress);
+            if (progress != null)
+            {
+                progress.Report(new ConversionProgress
+                {
+                    TotalSheets = plan.WorkItems.Count,
+                    CompletedSheets = 0,
+                    TotalEstimatedRows = plan.TotalEstimatedRows,
+                    ProcessedRows = 0,
+                    IsIndeterminate = false,
+                    Message = "変換開始"
+                });
+            }
             tracker.Report("開始");
 
             var options = new ParallelOptions
@@ -409,7 +520,7 @@ namespace Excel2Tsv
             return request.OutputDirectory;
         }
 
-        private static ConversionPlan BuildConversionPlan(ConversionRequest request, CancellationToken token)
+        private static ConversionPlan BuildConversionPlan(ConversionRequest request, CancellationToken token, IProgress<ConversionProgress> progress)
         {
             var workItems = new List<SheetWorkItem>(request.Mappings.Count);
             var outputPathSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -424,11 +535,14 @@ namespace Excel2Tsv
                     throw new InvalidOperationException("Excel ファイルの読み込みに失敗しました。");
                 }
 
-                sharedStringValues = LoadSharedStringValues(workbookPart);
+                sharedStringValues = LoadSharedStringValues(workbookPart, token, progress, request.Mappings.Count);
 
-                foreach (var mapping in request.Mappings)
+                for (var i = 0; i < request.Mappings.Count; i++)
                 {
                     token.ThrowIfCancellationRequested();
+                    var mapping = request.Mappings[i];
+                    var indexText = string.Format("{0}/{1}", i + 1, request.Mappings.Count);
+                    ReportPreparationProgress(progress, request.Mappings.Count, i, "準備中: シート情報確認 " + indexText + " " + mapping.SheetName);
 
                     var sheet = workbookPart.Workbook.Sheets.Elements<Sheet>()
                         .FirstOrDefault(x => string.Equals(x.Name != null ? x.Name.Value : string.Empty, mapping.SheetName, StringComparison.OrdinalIgnoreCase));
@@ -454,6 +568,7 @@ namespace Excel2Tsv
                         throw new InvalidOperationException("TSVファイル名が重複しています: " + mapping.TsvFileName);
                     }
 
+                    ReportPreparationProgress(progress, request.Mappings.Count, i, "準備中: 行数見積り " + indexText + " " + mapping.SheetName);
                     var estimatedRows = EstimateTotalRows(worksheetPart);
                     totalEstimatedRows += estimatedRows;
 
@@ -471,7 +586,7 @@ namespace Excel2Tsv
             {
                 SharedStringValues = sharedStringValues,
                 WorkItems = workItems,
-                TotalEstimatedRows = Math.Max(1, totalEstimatedRows)
+                TotalEstimatedRows = totalEstimatedRows > 0 ? totalEstimatedRows : 0
             };
         }
 
@@ -482,29 +597,95 @@ namespace Excel2Tsv
             return Math.Max(1, Math.Min(limit, workItemCount));
         }
 
-        private static List<string> LoadSharedStringValues(WorkbookPart workbookPart)
+        private static void ReportPreparationProgress(IProgress<ConversionProgress> progress, int totalSheets, int currentIndexZeroBased, string message)
+        {
+            if (progress == null)
+            {
+                return;
+            }
+
+            var completed = Math.Max(0, Math.Min(totalSheets, currentIndexZeroBased));
+            progress.Report(new ConversionProgress
+            {
+                TotalSheets = totalSheets,
+                CompletedSheets = completed,
+                TotalEstimatedRows = 0,
+                ProcessedRows = 0,
+                IsIndeterminate = true,
+                Message = message
+            });
+        }
+
+        private static List<string> LoadSharedStringValues(WorkbookPart workbookPart, CancellationToken token, IProgress<ConversionProgress> progress, int totalSheets)
         {
             if (workbookPart.SharedStringTablePart == null || workbookPart.SharedStringTablePart.SharedStringTable == null)
             {
                 return new List<string>();
             }
 
-            return workbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>()
-                .Select(x => x.InnerText ?? string.Empty)
-                .ToList();
+            var items = workbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>();
+            var values = new List<string>();
+            var index = 0;
+
+            foreach (var item in items)
+            {
+                token.ThrowIfCancellationRequested();
+                values.Add(item.InnerText ?? string.Empty);
+                index++;
+
+                if (index % 50000 == 0)
+                {
+                    if (progress != null)
+                    {
+                        progress.Report(new ConversionProgress
+                        {
+                            TotalSheets = totalSheets,
+                            CompletedSheets = 0,
+                            TotalEstimatedRows = 0,
+                            ProcessedRows = 0,
+                            IsIndeterminate = true,
+                            Message = string.Format("準備中: 共有文字列読込 {0:N0} 件", index)
+                        });
+                    }
+                }
+            }
+
+            return values;
         }
 
         private static long EstimateTotalRows(WorksheetPart worksheetPart)
         {
-            var reference = worksheetPart.Worksheet != null
-                && worksheetPart.Worksheet.SheetDimension != null
-                && worksheetPart.Worksheet.SheetDimension.Reference != null
-                ? worksheetPart.Worksheet.SheetDimension.Reference.Value
-                : string.Empty;
+            using (var reader = OpenXmlReader.Create(worksheetPart))
+            {
+                while (reader.Read())
+                {
+                    if (!reader.IsStartElement)
+                    {
+                        continue;
+                    }
 
+                    if (reader.ElementType == typeof(SheetDimension))
+                    {
+                        var dimension = (SheetDimension)reader.LoadCurrentElement();
+                        var reference = dimension.Reference != null ? dimension.Reference.Value : string.Empty;
+                        return ParseEstimatedRowsFromDimension(reference);
+                    }
+
+                    if (reader.ElementType == typeof(SheetData))
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        private static long ParseEstimatedRowsFromDimension(string reference)
+        {
             if (string.IsNullOrWhiteSpace(reference))
             {
-                return 1;
+                return 0;
             }
 
             var lastCellReference = reference;
@@ -521,7 +702,7 @@ namespace Excel2Tsv
                 return rowNumber;
             }
 
-            return 1;
+            return 0;
         }
 
         private static void ConvertSingleSheet(
@@ -861,6 +1042,11 @@ namespace Excel2Tsv
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
 
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            return elapsed.ToString(@"hh\:mm\:ss");
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version;
@@ -913,6 +1099,8 @@ namespace Excel2Tsv
 
             public long ProcessedRows { get; set; }
 
+            public bool IsIndeterminate { get; set; }
+
             public string Message { get; set; }
         }
 
@@ -926,7 +1114,7 @@ namespace Excel2Tsv
 
             public ProgressTracker(long totalEstimatedRows, int totalSheets, IProgress<ConversionProgress> progress)
             {
-                _totalEstimatedRows = Math.Max(1, totalEstimatedRows);
+                _totalEstimatedRows = totalEstimatedRows > 0 ? totalEstimatedRows : 0;
                 _totalSheets = Math.Max(1, totalSheets);
                 _progress = progress;
             }
@@ -968,7 +1156,10 @@ namespace Excel2Tsv
                     TotalSheets = _totalSheets,
                     CompletedSheets = Math.Max(0, Math.Min(_totalSheets, completedSheets)),
                     TotalEstimatedRows = _totalEstimatedRows,
-                    ProcessedRows = Math.Max(0, Math.Min(_totalEstimatedRows, processedRows)),
+                    ProcessedRows = _totalEstimatedRows > 0
+                        ? Math.Max(0, Math.Min(_totalEstimatedRows, processedRows))
+                        : Math.Max(0, processedRows),
+                    IsIndeterminate = false,
                     Message = message ?? string.Empty
                 });
             }

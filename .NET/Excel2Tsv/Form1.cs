@@ -129,6 +129,14 @@ namespace Excel2Tsv
 
         private void DataGridView1_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyCode == Keys.Delete)
+            {
+                ClearSelectedCells();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+
             if (e.Control && e.KeyCode == Keys.V)
             {
                 PasteClipboardToGrid();

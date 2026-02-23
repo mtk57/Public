@@ -466,17 +466,24 @@ namespace Excel2Tsv
                 return rawValue;
             }
 
-            switch (cell.DataType.Value)
+            var dataType = cell.DataType.Value;
+
+            if (dataType == CellValues.SharedString)
             {
-                case CellValues.SharedString:
-                    return GetSharedStringValue(sharedStringItems, rawValue);
-                case CellValues.Boolean:
-                    return rawValue == "1" ? "TRUE" : "FALSE";
-                case CellValues.InlineString:
-                    return cell.InnerText ?? string.Empty;
-                default:
-                    return rawValue;
+                return GetSharedStringValue(sharedStringItems, rawValue);
             }
+
+            if (dataType == CellValues.Boolean)
+            {
+                return rawValue == "1" ? "TRUE" : "FALSE";
+            }
+
+            if (dataType == CellValues.InlineString)
+            {
+                return cell.InnerText ?? string.Empty;
+            }
+
+            return rawValue;
         }
 
         private static string GetSharedStringValue(IReadOnlyList<SharedStringItem> sharedStringItems, string indexText)

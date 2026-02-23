@@ -57,7 +57,7 @@
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(187, 12);
             this.label1.TabIndex = 1;
-            this.label1.Text = "Excel ファイルパス (xlsはNG)　※必須";
+            this.label1.Text = "Excel ファイルパス (xlsx/xlsm) ※必須";
             // 
             // btnRefExcelFilePath
             // 

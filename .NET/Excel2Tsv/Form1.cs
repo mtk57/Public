@@ -16,8 +16,7 @@ namespace Excel2Tsv
         private static readonly HashSet<string> SupportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ".xlsx",
-            ".xlsm",
-            ".xlsb"
+            ".xlsm"
         };
 
         public Form1()
@@ -28,7 +27,7 @@ namespace Excel2Tsv
 
         private void InitializeUi()
         {
-            label1.Text = "Excel ファイルパス (xlsx/xlsm/xlsb) ※必須";
+            label1.Text = "Excel ファイルパス (xlsx/xlsm) ※必須";
 
             txtExcelFilePath.AllowDrop = true;
             txtTsvDirPath.AllowDrop = true;
@@ -75,7 +74,7 @@ namespace Excel2Tsv
             var excelPath = files.FirstOrDefault(IsSupportedExcelFile);
             if (excelPath == null)
             {
-                MessageBox.Show("xlsx / xlsm / xlsb のファイルをドロップしてください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("xlsx / xlsm のファイルをドロップしてください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -104,7 +103,7 @@ namespace Excel2Tsv
         {
             using (var dialog = new OpenFileDialog())
             {
-                dialog.Filter = "Excel ファイル (*.xlsx;*.xlsm;*.xlsb)|*.xlsx;*.xlsm;*.xlsb";
+                dialog.Filter = "Excel ファイル (*.xlsx;*.xlsm)|*.xlsx;*.xlsm";
                 dialog.CheckFileExists = true;
                 dialog.Multiselect = false;
                 if (dialog.ShowDialog(this) == DialogResult.OK)
@@ -261,7 +260,7 @@ namespace Excel2Tsv
 
             if (!IsSupportedExcelFile(excelFilePath))
             {
-                throw new InvalidOperationException("サポート対象の拡張子は .xlsx / .xlsm / .xlsb のみです。");
+                throw new InvalidOperationException("サポート対象の拡張子は .xlsx / .xlsm のみです。");
             }
 
             var mappings = GetSheetMappings();
@@ -271,7 +270,13 @@ namespace Excel2Tsv
             }
 
             var outputDirectory = ResolveOutputDirectory(excelFilePath, txtTsvDirPath.Text);
+            ConvertOpenXmlSheetsToTsv(excelFilePath, mappings, outputDirectory);
 
+            return outputDirectory;
+        }
+
+        private static void ConvertOpenXmlSheetsToTsv(string excelFilePath, IReadOnlyList<SheetMapping> mappings, string outputDirectory)
+        {
             using (var document = SpreadsheetDocument.Open(excelFilePath, false))
             {
                 var workbookPart = document.WorkbookPart;
@@ -310,8 +315,6 @@ namespace Excel2Tsv
                     WriteWorksheetAsTsv(worksheetPart, sharedStringItems, outputFilePath);
                 }
             }
-
-            return outputDirectory;
         }
 
         private string ResolveOutputDirectory(string excelFilePath, string tsvDirectoryPath)

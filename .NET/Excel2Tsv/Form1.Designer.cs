@@ -33,11 +33,11 @@
             this.label1 = new System.Windows.Forms.Label();
             this.btnRefExcelFilePath = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.txtTsvDirPath = new System.Windows.Forms.TextBox();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.label2 = new System.Windows.Forms.Label();
             this.btnRefTsvDirPath = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
-            this.txtTsvDirPath = new System.Windows.Forms.TextBox();
             this.btnStart = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
@@ -67,6 +67,14 @@
             this.btnRefExcelFilePath.TabIndex = 2;
             this.btnRefExcelFilePath.Text = "参照";
             this.btnRefExcelFilePath.UseVisualStyleBackColor = true;
+            // 
+            // txtTsvDirPath
+            // 
+            this.txtTsvDirPath.Location = new System.Drawing.Point(29, 94);
+            this.txtTsvDirPath.Name = "txtTsvDirPath";
+            this.txtTsvDirPath.Size = new System.Drawing.Size(624, 19);
+            this.txtTsvDirPath.TabIndex = 5;
+            this.toolTip1.SetToolTip(this.txtTsvDirPath, "ドラッグアンドドロップ可");
             // 
             // dataGridView1
             // 
@@ -104,14 +112,6 @@
             this.label3.TabIndex = 6;
             this.label3.Text = "TSV 出力フォルダパス　※任意";
             // 
-            // txtTsvDirPath
-            // 
-            this.txtTsvDirPath.Location = new System.Drawing.Point(29, 94);
-            this.txtTsvDirPath.Name = "txtTsvDirPath";
-            this.txtTsvDirPath.Size = new System.Drawing.Size(624, 19);
-            this.txtTsvDirPath.TabIndex = 5;
-            this.toolTip1.SetToolTip(this.txtTsvDirPath, "ドラッグアンドドロップ可");
-            // 
             // btnStart
             // 
             this.btnStart.Location = new System.Drawing.Point(278, 131);
@@ -137,6 +137,7 @@
             this.Controls.Add(this.txtExcelFilePath);
             this.Name = "Form1";
             this.Text = "Excel To Tsv";
+            this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

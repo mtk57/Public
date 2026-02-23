@@ -1,12 +1,13 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace Excel2Tsv
 {
@@ -514,6 +515,12 @@ namespace Excel2Tsv
             public string SheetName { get; set; }
 
             public string TsvFileName { get; set; }
+        }
+
+        private void Form1_Load ( object sender, EventArgs e )
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = $"{this.Text}  ver {version.Major}.{version.Minor}.{version.Build}";
         }
     }
 }

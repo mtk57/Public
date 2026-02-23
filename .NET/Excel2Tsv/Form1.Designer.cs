@@ -39,6 +39,9 @@
             this.btnRefTsvDirPath = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.btnStart = new System.Windows.Forms.Button();
+            this.btnAbort = new System.Windows.Forms.Button();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.lblProgress = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -55,7 +58,7 @@
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(27, 31);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(187, 12);
+            this.label1.Size = new System.Drawing.Size(193, 12);
             this.label1.TabIndex = 1;
             this.label1.Text = "Excel ファイルパス (xlsx/xlsm) ※必須";
             // 
@@ -79,16 +82,16 @@
             // dataGridView1
             // 
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(29, 175);
+            this.dataGridView1.Location = new System.Drawing.Point(29, 204);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowTemplate.Height = 21;
-            this.dataGridView1.Size = new System.Drawing.Size(674, 252);
+            this.dataGridView1.Size = new System.Drawing.Size(674, 223);
             this.dataGridView1.TabIndex = 3;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(27, 160);
+            this.label2.Location = new System.Drawing.Point(27, 189);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(151, 12);
             this.label2.TabIndex = 4;
@@ -114,18 +117,46 @@
             // 
             // btnStart
             // 
-            this.btnStart.Location = new System.Drawing.Point(278, 131);
+            this.btnStart.Location = new System.Drawing.Point(29, 133);
             this.btnStart.Name = "btnStart";
-            this.btnStart.Size = new System.Drawing.Size(176, 23);
+            this.btnStart.Size = new System.Drawing.Size(68, 23);
             this.btnStart.TabIndex = 8;
             this.btnStart.Text = "開始";
             this.btnStart.UseVisualStyleBackColor = true;
+            // 
+            // btnAbort
+            // 
+            this.btnAbort.Location = new System.Drawing.Point(585, 133);
+            this.btnAbort.Name = "btnAbort";
+            this.btnAbort.Size = new System.Drawing.Size(68, 23);
+            this.btnAbort.TabIndex = 9;
+            this.btnAbort.Text = "中止";
+            this.btnAbort.UseVisualStyleBackColor = true;
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(119, 142);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(454, 10);
+            this.progressBar1.TabIndex = 10;
+            // 
+            // lblProgress
+            // 
+            this.lblProgress.AutoSize = true;
+            this.lblProgress.Location = new System.Drawing.Point(324, 160);
+            this.lblProgress.Name = "lblProgress";
+            this.lblProgress.Size = new System.Drawing.Size(66, 12);
+            this.lblProgress.TabIndex = 11;
+            this.lblProgress.Text = "mmm/nnn %";
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(730, 450);
+            this.Controls.Add(this.lblProgress);
+            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.btnAbort);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnRefTsvDirPath);
             this.Controls.Add(this.label3);
@@ -156,6 +187,9 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox txtTsvDirPath;
         private System.Windows.Forms.Button btnStart;
+        private System.Windows.Forms.Button btnAbort;
+        private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.Label lblProgress;
     }
 }
 

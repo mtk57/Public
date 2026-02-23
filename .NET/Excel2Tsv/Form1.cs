@@ -568,16 +568,17 @@ namespace Excel2Tsv
                         throw new InvalidOperationException("TSVファイル名が重複しています: " + mapping.TsvFileName);
                     }
 
-                    ReportPreparationProgress(progress, request.Mappings.Count, i, "準備中: 行数見積り " + indexText + " " + mapping.SheetName);
-                    var estimatedRows = EstimateTotalRows(worksheetPart);
-                    totalEstimatedRows += estimatedRows;
+                    ReportPreparationProgress(progress, request.Mappings.Count, i, "準備中: 行数/列数見積り " + indexText + " " + mapping.SheetName);
+                    var dimension = GetWorksheetDimension(worksheetPart);
+                    totalEstimatedRows += dimension.RowCount;
 
                     workItems.Add(new SheetWorkItem
                     {
                         SheetName = mapping.SheetName,
                         RelationshipId = sheet.Id.Value,
                         OutputFilePath = outputPath,
-                        EstimatedRows = estimatedRows
+                        EstimatedRows = dimension.RowCount,
+                        ExpectedColumnCount = dimension.ColumnCount
                     });
                 }
             }
@@ -653,7 +654,7 @@ namespace Excel2Tsv
             return values;
         }
 
-        private static long EstimateTotalRows(WorksheetPart worksheetPart)
+        private static WorksheetDimensionInfo GetWorksheetDimension(WorksheetPart worksheetPart)
         {
             using (var reader = OpenXmlReader.Create(worksheetPart))
             {
@@ -668,7 +669,7 @@ namespace Excel2Tsv
                     {
                         var dimension = (SheetDimension)reader.LoadCurrentElement();
                         var reference = dimension.Reference != null ? dimension.Reference.Value : string.Empty;
-                        return ParseEstimatedRowsFromDimension(reference);
+                        return ParseWorksheetDimensionReference(reference);
                     }
 
                     if (reader.ElementType == typeof(SheetData))
@@ -678,14 +679,22 @@ namespace Excel2Tsv
                 }
             }
 
-            return 0;
+            return new WorksheetDimensionInfo
+            {
+                RowCount = 0,
+                ColumnCount = 0
+            };
         }
 
-        private static long ParseEstimatedRowsFromDimension(string reference)
+        private static WorksheetDimensionInfo ParseWorksheetDimensionReference(string reference)
         {
             if (string.IsNullOrWhiteSpace(reference))
             {
-                return 0;
+                return new WorksheetDimensionInfo
+                {
+                    RowCount = 0,
+                    ColumnCount = 0
+                };
             }
 
             var lastCellReference = reference;
@@ -695,14 +704,47 @@ namespace Excel2Tsv
                 lastCellReference = reference.Substring(separatorIndex + 1);
             }
 
-            var rowText = new string(lastCellReference.Where(char.IsDigit).ToArray());
+            var columnText = new string(lastCellReference.TakeWhile(char.IsLetter).ToArray());
+            var rowText = new string(lastCellReference.SkipWhile(char.IsLetter).TakeWhile(char.IsDigit).ToArray());
+
+            var columnNumber = GetColumnIndexFromColumnName(columnText);
             long rowNumber;
             if (long.TryParse(rowText, out rowNumber) && rowNumber > 0)
             {
-                return rowNumber;
+                return new WorksheetDimensionInfo
+                {
+                    RowCount = rowNumber,
+                    ColumnCount = columnNumber
+                };
             }
 
-            return 0;
+            return new WorksheetDimensionInfo
+            {
+                RowCount = 0,
+                ColumnCount = columnNumber
+            };
+        }
+
+        private static int GetColumnIndexFromColumnName(string columnName)
+        {
+            if (string.IsNullOrWhiteSpace(columnName))
+            {
+                return 0;
+            }
+
+            var sum = 0;
+            foreach (var character in columnName.ToUpperInvariant())
+            {
+                if (character < 'A' || character > 'Z')
+                {
+                    return 0;
+                }
+
+                sum *= 26;
+                sum += character - 'A' + 1;
+            }
+
+            return sum;
         }
 
         private static void ConvertSingleSheet(
@@ -732,6 +774,7 @@ namespace Excel2Tsv
                 WriteWorksheetAsTsv(
                     worksheetPart,
                     sharedStringValues,
+                    workItem.ExpectedColumnCount,
                     workItem.OutputFilePath,
                     token,
                     rows =>
@@ -877,6 +920,7 @@ namespace Excel2Tsv
         private static void WriteWorksheetAsTsv(
             WorksheetPart worksheetPart,
             IReadOnlyList<string> sharedStringValues,
+            int expectedColumnCount,
             string outputFilePath,
             CancellationToken token,
             Action<long> onRowsWritten)
@@ -885,6 +929,7 @@ namespace Excel2Tsv
             using (var reader = OpenXmlReader.Create(worksheetPart))
             {
                 uint expectedRowIndex = 1;
+                var outputColumnCount = Math.Max(0, expectedColumnCount);
 
                 while (reader.Read())
                 {
@@ -906,13 +951,54 @@ namespace Excel2Tsv
                     }
 
                     var rowValues = ReadRowValues(sharedStringValues, row);
-                    writer.Write(string.Join("\t", rowValues.Select(EscapeTsvValue)));
-                    writer.Write("\r\n");
+                    if (rowValues.Count > outputColumnCount)
+                    {
+                        outputColumnCount = rowValues.Count;
+                    }
+                    PadRowValues(rowValues, outputColumnCount);
+
+                    if (IsAllEmptyRow(rowValues))
+                    {
+                        writer.Write("\r\n");
+                    }
+                    else
+                    {
+                        writer.Write(string.Join("\t", rowValues.Select(EscapeTsvValue)));
+                        writer.Write("\r\n");
+                    }
+
                     onRowsWritten(1);
 
                     expectedRowIndex = rowIndex + 1;
                 }
             }
+        }
+
+        private static void PadRowValues(List<string> rowValues, int expectedColumnCount)
+        {
+            if (expectedColumnCount <= rowValues.Count)
+            {
+                return;
+            }
+
+            var paddingCount = expectedColumnCount - rowValues.Count;
+            for (var i = 0; i < paddingCount; i++)
+            {
+                rowValues.Add(string.Empty);
+            }
+        }
+
+        private static bool IsAllEmptyRow(List<string> rowValues)
+        {
+            for (var i = 0; i < rowValues.Count; i++)
+            {
+                if (!string.IsNullOrEmpty(rowValues[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void WriteBlankLines(StreamWriter writer, long count, CancellationToken token)
@@ -1080,6 +1166,15 @@ namespace Excel2Tsv
             public string OutputFilePath { get; set; }
 
             public long EstimatedRows { get; set; }
+
+            public int ExpectedColumnCount { get; set; }
+        }
+
+        private sealed class WorksheetDimensionInfo
+        {
+            public long RowCount { get; set; }
+
+            public int ColumnCount { get; set; }
         }
 
         private sealed class SheetMapping

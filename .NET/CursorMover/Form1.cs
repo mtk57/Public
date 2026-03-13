@@ -17,6 +17,7 @@ namespace CursorMover
         // 次にマウスカーソルを右に動かすかどうかのフラグ
         private bool moveRight = true;
         private readonly Stopwatch elapsedStopwatch = new Stopwatch();
+        private readonly Timer elapsedDisplayTimer;
         private string elapsedTimeBeforeTextBeforeEdit = string.Empty;
         private readonly string settingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CursorMoverSettings.json");
         private static readonly Regex ElapsedTimePattern = new Regex(@"^\d{2,}:[0-5]\d:[0-5]\d$", RegexOptions.Compiled);
@@ -36,6 +37,12 @@ namespace CursorMover
             this.txtElapsedTimeBefore.Enter += new System.EventHandler(this.txtElapsedTimeBefore_Enter);
             this.txtElapsedTimeBefore.Leave += new System.EventHandler(this.txtElapsedTimeBefore_Leave);
             this.FormClosing += new FormClosingEventHandler(this.MainForm_FormClosing);
+
+            this.elapsedDisplayTimer = new Timer(this.components)
+            {
+                Interval = 200
+            };
+            this.elapsedDisplayTimer.Tick += new System.EventHandler(this.elapsedDisplayTimer_Tick);
         }
 
         /// <summary>
@@ -53,6 +60,7 @@ namespace CursorMover
                 timer1.Start();
                 elapsedStopwatch.Restart();
                 lblElapsedTime.Text = "00:00:00";
+                elapsedDisplayTimer.Start();
 
                 // UIの状態を更新
                 btnStart.Enabled = false;
@@ -75,6 +83,7 @@ namespace CursorMover
             // タイマーを停止
             timer1.Stop();
             elapsedStopwatch.Stop();
+             elapsedDisplayTimer.Stop();
             lblElapsedTime.Text = FormatElapsedTime(elapsedStopwatch.Elapsed);
 
             // UIの状態を更新
@@ -97,6 +106,11 @@ namespace CursorMover
 
             // 次の移動方向を反転させる
             moveRight = !moveRight;
+        }
+
+        private void elapsedDisplayTimer_Tick(object sender, EventArgs e)
+        {
+            lblElapsedTime.Text = FormatElapsedTime(elapsedStopwatch.Elapsed);
         }
 
         /// <summary>

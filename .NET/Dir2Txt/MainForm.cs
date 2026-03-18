@@ -27,10 +27,32 @@ namespace Dir2Txt
             btnRefDirPath.Click += BtnRefDirPath_Click;
             btnRun.Click += BtnRun_Click;
             btnExtract.Click += BtnExtract_Click;
+            btnDivide.Click += BtnDivide_Click;
             txtOutput.TextChanged += TxtOutput_TextChanged;
             Load += MainForm_Load;
             FormClosed += MainForm_FormClosed;
             UpdateOutputLength();
+        }
+
+        private void BtnDivide_Click ( object sender, EventArgs e )
+        {
+            if ( string.IsNullOrEmpty( txtOutput.Text ) )
+            {
+                MessageBox.Show( this, "出力テキストがありません。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning );
+                return;
+            }
+
+            int divideLength;
+            if ( !int.TryParse( txtDivideLnegth.Text, out divideLength ) || divideLength <= 10 )
+            {
+                MessageBox.Show( this, "分割文字数には10より大きい数値を入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning );
+                return;
+            }
+
+            using ( var form = new DivideForm( txtOutput.Text, divideLength ) )
+            {
+                form.ShowDialog( this );
+            }
         }
 
         private void BtnExtract_Click ( object sender, EventArgs e )

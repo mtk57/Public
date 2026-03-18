@@ -43,6 +43,9 @@
             this.label4 = new System.Windows.Forms.Label();
             this.txtIgnoreExt = new System.Windows.Forms.TextBox();
             this.lblLength = new System.Windows.Forms.Label();
+            this.txtDivideLnegth = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.btnDivide = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txtDirPath
@@ -94,7 +97,7 @@
             // 
             // btnExtract
             // 
-            this.btnExtract.Location = new System.Drawing.Point(429, 204);
+            this.btnExtract.Location = new System.Drawing.Point(449, 204);
             this.btnExtract.Name = "btnExtract";
             this.btnExtract.Size = new System.Drawing.Size(44, 23);
             this.btnExtract.TabIndex = 5;
@@ -164,11 +167,40 @@
             this.lblLength.TabIndex = 12;
             this.toolTip1.SetToolTip(this.lblLength, "複数指定時は\"/\"で区切る");
             // 
+            // txtDivideLnegth
+            // 
+            this.txtDivideLnegth.Location = new System.Drawing.Point(265, 206);
+            this.txtDivideLnegth.Name = "txtDivideLnegth";
+            this.txtDivideLnegth.Size = new System.Drawing.Size(114, 19);
+            this.txtDivideLnegth.TabIndex = 13;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(263, 191);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(65, 12);
+            this.label5.TabIndex = 14;
+            this.label5.Text = "分割文字数";
+            this.toolTip1.SetToolTip(this.label5, "複数指定時は\"/\"で区切る");
+            // 
+            // btnDivide
+            // 
+            this.btnDivide.Location = new System.Drawing.Point(385, 206);
+            this.btnDivide.Name = "btnDivide";
+            this.btnDivide.Size = new System.Drawing.Size(44, 23);
+            this.btnDivide.TabIndex = 15;
+            this.btnDivide.Text = "分割";
+            this.btnDivide.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(522, 486);
+            this.Controls.Add(this.btnDivide);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.txtDivideLnegth);
             this.Controls.Add(this.lblLength);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.txtIgnoreExt);
@@ -205,6 +237,9 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox txtIgnoreExt;
         private System.Windows.Forms.Label lblLength;
+        private System.Windows.Forms.TextBox txtDivideLnegth;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Button btnDivide;
     }
 }
 

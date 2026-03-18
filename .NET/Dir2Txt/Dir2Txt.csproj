@@ -47,6 +47,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DivideForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DivideForm.Designer.cs">
+      <DependentUpon>DivideForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ExtractForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -61,6 +67,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="DivideForm.resx">
+      <DependentUpon>DivideForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ExtractForm.resx">
       <DependentUpon>ExtractForm.cs</DependentUpon>
     </EmbeddedResource>

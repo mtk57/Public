@@ -1,4 +1,4 @@
-// [マクロ] 選択行の "//@ " 以降を削除（修正版）
+// [マクロ] 選択行の "//@ " 以降を削除
 var nLineFrom = Editor.GetSelectLineFrom();
 var nLineTo = Editor.GetSelectLineTo();
 
@@ -44,6 +44,9 @@ for (var i = nLineFrom; i <= nLineTo; i++) {
         }
     }
 }
+
+// 処理結果に関係なく、次の行へ移動
+Editor.MoveCursor(nLineTo + 1, 1, 0);
 
 /* 以下はテストデータと期待値
 

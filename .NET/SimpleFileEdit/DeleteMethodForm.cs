@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 namespace SimpleFileSearch
@@ -11,19 +9,20 @@ namespace SimpleFileSearch
     public partial class DeleteMethodForm : Form
     {
         private readonly ILanguageProcessor _processor;
-        private readonly string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DeleteMethodForm.json");
 
         public string Keyword { get; private set; }
         public bool IsRegexEnabled { get; private set; }
         public bool IsNotEnabled { get; private set; }
 
-        public DeleteMethodForm(ILanguageProcessor processor)
+        public DeleteMethodForm(ILanguageProcessor processor, string keyword, bool regexEnabled, bool notEnabled)
         {
             InitializeComponent();
             _processor = processor;
+            txtKeywordForMethodSignature.Text = keyword ?? string.Empty;
+            chkEnabledRegExForMethodSignature.Checked = regexEnabled;
+            chkNot.Checked = notEnabled;
             btnDeleteStart.Click += BtnDeleteStart_Click;
             btnCloseForm.Click += BtnCloseForm_Click;
-            LoadSettings();
         }
 
         public Func<string, string> CreateTransformer()
@@ -70,7 +69,6 @@ namespace SimpleFileSearch
             Keyword = txtKeywordForMethodSignature.Text;
             IsRegexEnabled = chkEnabledRegExForMethodSignature.Checked;
             IsNotEnabled = chkNot.Checked;
-            SaveSettings();
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -79,53 +77,6 @@ namespace SimpleFileSearch
         {
             DialogResult = DialogResult.Cancel;
             Close();
-        }
-
-        private void LoadSettings()
-        {
-            if (!File.Exists(_settingsPath))
-            {
-                return;
-            }
-
-            try
-            {
-                var json = File.ReadAllText(_settingsPath, Encoding.UTF8);
-                var serializer = new JavaScriptSerializer();
-                var settings = serializer.Deserialize<FormSettings>(json);
-                if (settings == null)
-                {
-                    return;
-                }
-
-                txtKeywordForMethodSignature.Text = settings.Keyword ?? string.Empty;
-                chkEnabledRegExForMethodSignature.Checked = settings.IsRegexEnabled;
-                chkNot.Checked = settings.IsNotEnabled;
-            }
-            catch (Exception)
-            {
-                // 設定読み込み失敗時は既定値のまま
-            }
-        }
-
-        private void SaveSettings()
-        {
-            try
-            {
-                var settings = new FormSettings
-                {
-                    Keyword = txtKeywordForMethodSignature.Text,
-                    IsRegexEnabled = chkEnabledRegExForMethodSignature.Checked,
-                    IsNotEnabled = chkNot.Checked
-                };
-                var serializer = new JavaScriptSerializer();
-                var json = serializer.Serialize(settings);
-                File.WriteAllText(_settingsPath, json, Encoding.UTF8);
-            }
-            catch (Exception)
-            {
-                // 設定保存失敗時は無視
-            }
         }
 
         private static string RemoveMethodsAndImports(string content, string keyword, bool useRegex, bool negateMatch, ILanguageProcessor processor)
@@ -206,13 +157,6 @@ namespace SimpleFileSearch
             }
 
             return string.Join(lineEnding, collapsed);
-        }
-
-        private class FormSettings
-        {
-            public string Keyword { get; set; } = string.Empty;
-            public bool IsRegexEnabled { get; set; }
-            public bool IsNotEnabled { get; set; }
         }
     }
 }

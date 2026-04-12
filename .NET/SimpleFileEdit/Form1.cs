@@ -141,12 +141,20 @@ namespace SimpleFileEdit
                 return;
             }
 
-            using (var form = new DeleteMethodForm(processor))
+            using (var form = new DeleteMethodForm(processor,
+                _settings.DeleteMethodKeyword,
+                _settings.DeleteMethodRegexEnabled,
+                _settings.DeleteMethodNotEnabled))
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                 {
                     return;
                 }
+
+                _settings.DeleteMethodKeyword = form.Keyword;
+                _settings.DeleteMethodRegexEnabled = form.IsRegexEnabled;
+                _settings.DeleteMethodNotEnabled = form.IsNotEnabled;
+                SaveSettings();
 
                 ProcessFiles(form.CreateTransformer(), "メソッド、import削除");
             }
@@ -704,6 +712,9 @@ namespace SimpleFileEdit
             public List<string> FolderHistory { get; set; } = new List<string>();
             public string SelectedTarget { get; set; } = TargetJava;
             public bool SearchSubDirectories { get; set; } = true;
+            public string DeleteMethodKeyword { get; set; } = string.Empty;
+            public bool DeleteMethodRegexEnabled { get; set; }
+            public bool DeleteMethodNotEnabled { get; set; }
         }
 
         private static string ReadFilePreserveEncoding(string path, out Encoding encoding)

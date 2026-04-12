@@ -31,4 +31,29 @@ public class Main {
 
     public int deleteFunc2() {  //★DEL
     }
+
+    public static void sub(String[] args) {
+        
+        // 1. 変数の宣言と代入（ここで数字を1つ覚えさせます）
+        int maxNum = 5;
+        
+        // 2. 画面に出力（最初に説明を表示）
+        System.out.println("1から" + maxNum + "までの数字をチェックします！");
+        
+        // 3. for文（1からmaxNumまで順番に繰り返す）
+        for (int i = 1; i <= maxNum; i++) {
+            
+            // 4. if文（偶数か奇数かを判定）
+            if (i % 2 == 0) {
+                System.out.println(i + " は偶数です！");
+            } else {
+                System.out.println(i + " は奇数です。");
+            }
+        }
+        
+        // 全部終わったらメッセージ
+        System.out.println("チェック完了！");
+    }
+
+
 }

@@ -31,7 +31,8 @@
             this.label1 = new System.Windows.Forms.Label();
             this.txtKeywordForMethodSignature = new System.Windows.Forms.TextBox();
             this.chkEnabledRegExForMethodSignature = new System.Windows.Forms.CheckBox();
-            this.btnClose = new System.Windows.Forms.Button();
+            this.btnDeleteStart = new System.Windows.Forms.Button();
+            this.btnCloseForm = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -60,21 +61,31 @@
             this.chkEnabledRegExForMethodSignature.Text = "正規表現";
             this.chkEnabledRegExForMethodSignature.UseVisualStyleBackColor = true;
             // 
-            // btnClose
+            // btnDeleteStart
             // 
-            this.btnClose.Location = new System.Drawing.Point(153, 113);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(75, 23);
-            this.btnClose.TabIndex = 3;
-            this.btnClose.Text = "閉じる";
-            this.btnClose.UseVisualStyleBackColor = true;
+            this.btnDeleteStart.Location = new System.Drawing.Point(99, 113);
+            this.btnDeleteStart.Name = "btnDeleteStart";
+            this.btnDeleteStart.Size = new System.Drawing.Size(75, 23);
+            this.btnDeleteStart.TabIndex = 3;
+            this.btnDeleteStart.Text = "開始";
+            this.btnDeleteStart.UseVisualStyleBackColor = true;
+            // 
+            // btnCloseForm
+            // 
+            this.btnCloseForm.Location = new System.Drawing.Point(197, 113);
+            this.btnCloseForm.Name = "btnCloseForm";
+            this.btnCloseForm.Size = new System.Drawing.Size(75, 23);
+            this.btnCloseForm.TabIndex = 4;
+            this.btnCloseForm.Text = "閉じる";
+            this.btnCloseForm.UseVisualStyleBackColor = true;
             // 
             // DeleteMethodForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(376, 148);
-            this.Controls.Add(this.btnClose);
+            this.Controls.Add(this.btnCloseForm);
+            this.Controls.Add(this.btnDeleteStart);
             this.Controls.Add(this.chkEnabledRegExForMethodSignature);
             this.Controls.Add(this.txtKeywordForMethodSignature);
             this.Controls.Add(this.label1);
@@ -90,6 +101,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox txtKeywordForMethodSignature;
         private System.Windows.Forms.CheckBox chkEnabledRegExForMethodSignature;
-        private System.Windows.Forms.Button btnClose;
+        private System.Windows.Forms.Button btnDeleteStart;
+        private System.Windows.Forms.Button btnCloseForm;
     }
 }

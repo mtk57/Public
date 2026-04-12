@@ -698,5 +698,7 @@ namespace SimpleFileEdit
                 writer.Write(content);
             }
         }
+
+
     }
 }

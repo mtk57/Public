@@ -113,6 +113,8 @@ namespace SimpleFileSearch
         private static int FindDeclarationStart(string[] lines, int braceLineIndex)
         {
             int start = braceLineIndex;
+
+            // Phase 1: シグネチャ・アノテーション・直接隣接するコメントを含める
             for (int i = braceLineIndex - 1; i >= 0; i--)
             {
                 string trimmed = lines[i].Trim();
@@ -130,6 +132,26 @@ namespace SimpleFileSearch
                 }
                 start = i;
             }
+
+            // Phase 2: 空行を挟んだブロックコメント（Javadoc等）を含める
+            int searchIndex = start - 1;
+            while (searchIndex >= 0 && string.IsNullOrWhiteSpace(lines[searchIndex].Trim()))
+            {
+                searchIndex--;
+            }
+
+            if (searchIndex >= 0 && lines[searchIndex].Trim().EndsWith("*/", StringComparison.Ordinal))
+            {
+                for (int i = searchIndex; i >= 0; i--)
+                {
+                    start = i;
+                    if (lines[i].Trim().StartsWith("/*", StringComparison.Ordinal))
+                    {
+                        break;
+                    }
+                }
+            }
+
             return start;
         }
 

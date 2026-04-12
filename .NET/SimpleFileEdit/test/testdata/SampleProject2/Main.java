@@ -6,10 +6,6 @@ import aaa.bbb.ccc;
 // ファイル冒頭のコメント
 public class Main {
     
-
-    /**
-     *
-     */
     public static void main(String[] args) {
         String url = "http://example.com"; // URLコメント
         String tricky = "/* not comment */ // still string";
@@ -28,7 +24,8 @@ public class Main {
     }
 
     /**
-     *
+     * 削除対象メソッドのJavadocコメント
+     * @return 値
      */
     public int deleteFunc() {  //★DEL
 
@@ -49,20 +46,18 @@ public class Main {
 
     }
 
-    /**
-     *
-     */
+    // 削除対象外のメソッドコメント
     private int nonDeleteFunc() {
     }
 
-    /**
-     *
+    /*
+     * 削除対象のブロックコメント
      */
     public int deleteFunc2() {  //★DEL
     }
 
     /**
-     *
+     * 削除対象外のJavadocコメント
      */
     public static void sub(String[] args) {
         
@@ -94,7 +89,8 @@ public class Main {
     }
 
     /**
-     * 制御構文を多用するメソッド（否定モードで本体が消えないことを確認）
+     * 制御構文を多用するメソッド
+     * 否定モードで本体が消えないことを確認
      */
     public void controlFlowMethod() {  //★DEL
 
@@ -144,9 +140,7 @@ public class Main {
         return;
     }
 
-    /**
-     * 制御構文を多用するメソッド（削除対象外）
-     */
+    // 制御構文を多用するメソッド（削除対象外）
     public void controlFlowMethodNonDel() {
 
         // if文
@@ -194,5 +188,8 @@ public class Main {
         // return文
         return;
     }
+
+    // フィールド初期化（メソッドと誤検出しないこと）
+    String[] data = new String[] { "aa", "bb" };
 
 }

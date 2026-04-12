@@ -6,6 +6,10 @@ import aaa.bbb.ccc;
 // ファイル冒頭のコメント
 public class Main {
     
+
+    /**
+     *
+     */
     public static void main(String[] args) {
         String url = "http://example.com"; // URLコメント
         String tricky = "/* not comment */ // still string";
@@ -23,6 +27,9 @@ public class Main {
         String block = "文中の /* コメント */ も保持";
     }
 
+    /**
+     *
+     */
     public int deleteFunc() {  //★DEL
 
         if (aaaa == null) {
@@ -42,12 +49,21 @@ public class Main {
 
     }
 
+    /**
+     *
+     */
     private int nonDeleteFunc() {
     }
 
+    /**
+     *
+     */
     public int deleteFunc2() {  //★DEL
     }
 
+    /**
+     *
+     */
     public static void sub(String[] args) {
         
 
@@ -77,7 +93,9 @@ public class Main {
         System.out.println("チェック完了！");
     }
 
-    // 制御構文を多用するメソッド（否定モードで本体が消えないことを確認）
+    /**
+     * 制御構文を多用するメソッド（否定モードで本体が消えないことを確認）
+     */
     public void controlFlowMethod() {  //★DEL
 
         // if文
@@ -126,7 +144,9 @@ public class Main {
         return;
     }
 
-    // 制御構文を多用するメソッド（削除対象外）
+    /**
+     * 制御構文を多用するメソッド（削除対象外）
+     */
     public void controlFlowMethodNonDel() {
 
         // if文

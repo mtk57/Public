@@ -36,6 +36,7 @@
             this.cmbTarget = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
             this.btnDeleteEmptyRow = new System.Windows.Forms.Button();
+            this.btnDeleteMethodAndImport = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnRefDir
@@ -123,11 +124,22 @@
             this.btnDeleteEmptyRow.Text = "空行削除";
             this.btnDeleteEmptyRow.UseVisualStyleBackColor = true;
             // 
+            // btnDeleteMethodAndImport
+            // 
+            this.btnDeleteMethodAndImport.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnDeleteMethodAndImport.Location = new System.Drawing.Point(227, 160);
+            this.btnDeleteMethodAndImport.Name = "btnDeleteMethodAndImport";
+            this.btnDeleteMethodAndImport.Size = new System.Drawing.Size(123, 23);
+            this.btnDeleteMethodAndImport.TabIndex = 8;
+            this.btnDeleteMethodAndImport.Text = "メソッド、import削除";
+            this.btnDeleteMethodAndImport.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(679, 226);
+            this.Controls.Add(this.btnDeleteMethodAndImport);
             this.Controls.Add(this.btnDeleteEmptyRow);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.cmbTarget);
@@ -154,6 +166,7 @@
         private System.Windows.Forms.ComboBox cmbTarget;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnDeleteEmptyRow;
+        private System.Windows.Forms.Button btnDeleteMethodAndImport;
     }
 }
 

@@ -145,11 +145,12 @@ namespace SimpleFileEdit
 
                 var keyword = form.Keyword;
                 var useRegex = form.IsRegexEnabled;
-                ProcessFiles(content => RemoveMethodsAndImports(content, keyword, useRegex), "メソッド、import削除");
+                var negateMatch = form.IsNotEnabled;
+                ProcessFiles(content => RemoveMethodsAndImports(content, keyword, useRegex, negateMatch), "メソッド、import削除");
             }
         }
 
-        private static string RemoveMethodsAndImports(string content, string keyword, bool useRegex)
+        private static string RemoveMethodsAndImports(string content, string keyword, bool useRegex, bool negateMatch)
         {
             if (string.IsNullOrEmpty(content))
             {
@@ -172,11 +173,13 @@ namespace SimpleFileEdit
 
             foreach (var span in methodSpans)
             {
-                bool matches = useRegex
+                bool found = useRegex
                     ? Regex.IsMatch(span.RawSignature, keyword)
                     : span.RawSignature.IndexOf(keyword, StringComparison.Ordinal) >= 0;
 
-                if (matches)
+                bool shouldDelete = negateMatch ? !found : found;
+
+                if (shouldDelete)
                 {
                     for (int i = span.StartLine; i <= span.EndLine; i++)
                     {

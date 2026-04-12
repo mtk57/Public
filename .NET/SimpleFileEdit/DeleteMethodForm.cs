@@ -8,6 +8,7 @@ namespace SimpleFileSearch
     {
         public string Keyword { get; private set; }
         public bool IsRegexEnabled { get; private set; }
+        public bool IsNotEnabled { get; private set; }
 
         public DeleteMethodForm()
         {
@@ -50,6 +51,7 @@ namespace SimpleFileSearch
 
             Keyword = txtKeywordForMethodSignature.Text;
             IsRegexEnabled = chkEnabledRegExForMethodSignature.Checked;
+            IsNotEnabled = chkNot.Checked;
             DialogResult = DialogResult.OK;
             Close();
         }

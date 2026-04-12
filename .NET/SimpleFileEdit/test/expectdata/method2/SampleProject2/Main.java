@@ -3,6 +3,10 @@ package sample;
 // ファイル冒頭のコメント
 public class Main {
     
+    /**
+     * 削除対象メソッドのJavadocコメント
+     * @return 値
+     */
     public int deleteFunc() {  //★DEL
 
         if (aaaa == null) {
@@ -21,10 +25,16 @@ public class Main {
 
     }
 
+    /*
+     * 削除対象のブロックコメント
+     */
     public int deleteFunc2() {  //★DEL
     }
 
-    // 制御構文を多用するメソッド（否定モードで本体が消えないことを確認）
+    /**
+     * 制御構文を多用するメソッド
+     * 否定モードで本体が消えないことを確認
+     */
     public void controlFlowMethod() {  //★DEL
 
         // if文
@@ -73,5 +83,7 @@ public class Main {
         return;
     }
 
-    // 制御構文を多用するメソッド（削除対象外）
+    // フィールド初期化（メソッドと誤検出しないこと）
+    String[] data = new String[] { "aa", "bb" };
+
 }

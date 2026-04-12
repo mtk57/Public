@@ -20,9 +20,13 @@ public class Main {
         String block = "文中の /* コメント */ も保持";
     }
 
+    // 削除対象外のメソッドコメント
     private int nonDeleteFunc() {
     }
 
+    /**
+     * 削除対象外のJavadocコメント
+     */
     public static void sub(String[] args) {
         
         if (aaaa == null) {
@@ -50,7 +54,6 @@ public class Main {
         System.out.println("チェック完了！");
     }
 
-    // 制御構文を多用するメソッド（否定モードで本体が消えないことを確認）
     // 制御構文を多用するメソッド（削除対象外）
     public void controlFlowMethodNonDel() {
 
@@ -99,5 +102,8 @@ public class Main {
         // return文
         return;
     }
+
+    // フィールド初期化（メソッドと誤検出しないこと）
+    String[] data = new String[] { "aa", "bb" };
 
 }

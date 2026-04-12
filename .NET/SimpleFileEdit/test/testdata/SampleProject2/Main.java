@@ -77,5 +77,102 @@ public class Main {
         System.out.println("チェック完了！");
     }
 
+    // 制御構文を多用するメソッド（否定モードで本体が消えないことを確認）
+    public void controlFlowMethod() {  //★DEL
+
+        // if文
+        if (flag) {
+            System.out.println("flag is true");
+        } else {
+            System.out.println("flag is false");
+        }
+
+        // for文
+        for (int i = 0; i < 10; i++) {
+            System.out.println(i);
+        }
+
+        // while文
+        while (condition) {
+            doSomething();
+        }
+
+        // do-while文
+        do {
+            doSomething();
+        } while (condition);
+
+        // switch文
+        switch (value) {
+            case 1:
+                break;
+            default:
+                break;
+        }
+
+        // try-catch文
+        try {
+            riskyOperation();
+        } catch (Exception e) {
+            handleError(e);
+        }
+
+        // throw文
+        if (input == null) {
+            throw new IllegalArgumentException("input is null");
+        }
+
+        // return文
+        return;
+    }
+
+    // 制御構文を多用するメソッド（削除対象外）
+    public void controlFlowMethodNonDel() {
+
+        // if文
+        if (flag) {
+            System.out.println("flag is true");
+        } else {
+            System.out.println("flag is false");
+        }
+
+        // for文
+        for (int i = 0; i < 10; i++) {
+            System.out.println(i);
+        }
+
+        // while文
+        while (condition) {
+            doSomething();
+        }
+
+        // do-while文
+        do {
+            doSomething();
+        } while (condition);
+
+        // switch文
+        switch (value) {
+            case 1:
+                break;
+            default:
+                break;
+        }
+
+        // try-catch文
+        try {
+            riskyOperation();
+        } catch (Exception e) {
+            handleError(e);
+        }
+
+        // throw文
+        if (input == null) {
+            throw new IllegalArgumentException("input is null");
+        }
+
+        // return文
+        return;
+    }
 
 }

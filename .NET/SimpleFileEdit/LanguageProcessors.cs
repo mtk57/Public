@@ -32,6 +32,11 @@ namespace SimpleFileSearch
 
     public sealed class JavaLanguageProcessor : ILanguageProcessor
     {
+        private static readonly HashSet<string> ControlKeywords = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "if", "for", "while", "switch", "catch", "try", "return", "new", "else", "do", "throw"
+        };
+
         public bool IsImportLine(string line)
         {
             string trimmed = (line ?? string.Empty).TrimStart();
@@ -183,6 +188,18 @@ namespace SimpleFileSearch
                 before.EndsWith("enum", StringComparison.Ordinal))
             {
                 return false;
+            }
+
+            string beforeTrimmed = before.TrimStart();
+            foreach (var keyword in ControlKeywords)
+            {
+                if (beforeTrimmed.Equals(keyword, StringComparison.Ordinal) ||
+                    beforeTrimmed.StartsWith(keyword + " ", StringComparison.Ordinal) ||
+                    beforeTrimmed.StartsWith(keyword + "\t", StringComparison.Ordinal) ||
+                    beforeTrimmed.StartsWith(keyword + "(", StringComparison.Ordinal))
+                {
+                    return false;
+                }
             }
 
             return true;

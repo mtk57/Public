@@ -32,11 +32,6 @@ namespace SimpleFileSearch
 
     public sealed class JavaLanguageProcessor : ILanguageProcessor
     {
-        private static readonly HashSet<string> ControlKeywords = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "if", "for", "while", "switch", "catch", "try", "return", "new", "else", "do", "throw", "synchronized"
-        };
-
         public bool IsImportLine(string line)
         {
             string trimmed = (line ?? string.Empty).TrimStart();
@@ -46,168 +41,96 @@ namespace SimpleFileSearch
         public List<MethodSpanInfo> FindMethodSpans(string[] lines)
         {
             var spans = new List<MethodSpanInfo>();
-            var stack = new Stack<MethodBuildInfo>();
             bool inBlockComment = false;
-            bool capturing = false;
-            int sigStartLine = -1;
-            var sigBuilder = new StringBuilder();
-            var rawSigBuilder = new StringBuilder();
-            int braceDepth = 0;
-            int annotStartLine = -1;
+            int depth = 0;
+            int blockStartLine = -1;
+            string blockRawSignature = null;
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string rawLine = lines[i] ?? string.Empty;
                 string stripped = StripLineComments(rawLine, ref inBlockComment);
-                string braceSafe = StripStringLiterals(stripped);
-                string trimmed = stripped.Trim();
+                string safe = StripStringLiterals(stripped);
 
-                if (!capturing && IsAnnotationLine(trimmed))
-                {
-                    if (annotStartLine < 0)
-                    {
-                        annotStartLine = i;
-                    }
-                }
-                else
-                {
-                    if (!capturing && IsMethodCandidate(trimmed))
-                    {
-                        capturing = true;
-                        sigBuilder.Clear();
-                        sigBuilder.Append(trimmed);
-                        rawSigBuilder.Clear();
-                        rawSigBuilder.Append(rawLine);
-                        sigStartLine = i;
-                        if (annotStartLine < 0)
-                        {
-                            annotStartLine = i;
-                        }
-                    }
-                    else if (capturing && !string.IsNullOrWhiteSpace(trimmed))
-                    {
-                        sigBuilder.Append(" ").Append(trimmed);
-                        rawSigBuilder.AppendLine().Append(rawLine);
-                    }
-                    else if (!capturing)
-                    {
-                        if (!string.IsNullOrWhiteSpace(trimmed))
-                        {
-                            annotStartLine = -1;
-                        }
-                    }
+                int opens = CountOccurrences(safe, '{');
+                int closes = CountOccurrences(safe, '}');
+                int prevDepth = depth;
 
-                    if (capturing)
+                if (prevDepth == 1 && opens > 0)
+                {
+                    int bracePos = safe.IndexOf('{');
+                    string beforeBrace = bracePos >= 0 ? safe.Substring(0, bracePos) : string.Empty;
+
+                    if (!beforeBrace.Contains("="))
                     {
-                        string candidate = sigBuilder.ToString();
-                        if (candidate.Contains(";") && !candidate.Contains("{"))
+                        int declStart = FindDeclarationStart(lines, i);
+                        var sigBuilder = new StringBuilder();
+                        for (int k = declStart; k <= i; k++)
                         {
-                            capturing = false;
-                            annotStartLine = -1;
-                        }
-                        else if (candidate.Contains("{"))
-                        {
-                            stack.Push(new MethodBuildInfo
+                            if (k > declStart)
                             {
-                                StartLine = annotStartLine >= 0 ? annotStartLine : sigStartLine,
-                                StartDepth = braceDepth,
-                                RawSignature = rawSigBuilder.ToString()
-                            });
-                            capturing = false;
-                            annotStartLine = -1;
+                                sigBuilder.AppendLine();
+                            }
+                            sigBuilder.Append(lines[k]);
                         }
+                        blockStartLine = declStart;
+                        blockRawSignature = sigBuilder.ToString();
                     }
                 }
 
-                braceDepth += CountOccurrences(braceSafe, '{');
-                braceDepth -= CountOccurrences(braceSafe, '}');
-                if (braceDepth < 0)
+                depth += opens - closes;
+                if (depth < 0)
                 {
-                    braceDepth = 0;
+                    depth = 0;
                 }
 
-                while (stack.Count > 0 && braceDepth <= stack.Peek().StartDepth)
+                if (depth == 1 && blockStartLine >= 0 && closes > 0)
                 {
-                    var b = stack.Pop();
                     spans.Add(new MethodSpanInfo
                     {
-                        StartLine = b.StartLine,
+                        StartLine = blockStartLine,
                         EndLine = i,
-                        RawSignature = b.RawSignature
+                        RawSignature = blockRawSignature
                     });
+                    blockStartLine = -1;
+                    blockRawSignature = null;
                 }
             }
 
-            while (stack.Count > 0)
+            if (blockStartLine >= 0)
             {
-                var b = stack.Pop();
                 spans.Add(new MethodSpanInfo
                 {
-                    StartLine = b.StartLine,
+                    StartLine = blockStartLine,
                     EndLine = lines.Length - 1,
-                    RawSignature = b.RawSignature
+                    RawSignature = blockRawSignature
                 });
             }
 
             return spans;
         }
 
-        private static bool IsAnnotationLine(string trimmed)
+        private static int FindDeclarationStart(string[] lines, int braceLineIndex)
         {
-            return !string.IsNullOrWhiteSpace(trimmed) && trimmed[0] == '@';
-        }
-
-        private static bool IsMethodCandidate(string trimmed)
-        {
-            if (string.IsNullOrWhiteSpace(trimmed))
+            int start = braceLineIndex;
+            for (int i = braceLineIndex - 1; i >= 0; i--)
             {
-                return false;
-            }
-
-            if (trimmed.StartsWith("@", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            if (trimmed.StartsWith("}", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            int parenIndex = trimmed.IndexOf('(');
-            if (parenIndex < 0)
-            {
-                return false;
-            }
-
-            string before = trimmed.Substring(0, parenIndex);
-            if (before.IndexOf(" class ", StringComparison.Ordinal) >= 0 ||
-                before.IndexOf(" interface ", StringComparison.Ordinal) >= 0 ||
-                before.IndexOf(" enum ", StringComparison.Ordinal) >= 0)
-            {
-                return false;
-            }
-
-            if (before.EndsWith("class", StringComparison.Ordinal) ||
-                before.EndsWith("interface", StringComparison.Ordinal) ||
-                before.EndsWith("enum", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            string beforeTrimmed = before.TrimStart();
-            foreach (var keyword in ControlKeywords)
-            {
-                if (beforeTrimmed.Equals(keyword, StringComparison.Ordinal) ||
-                    beforeTrimmed.StartsWith(keyword + " ", StringComparison.Ordinal) ||
-                    beforeTrimmed.StartsWith(keyword + "\t", StringComparison.Ordinal) ||
-                    beforeTrimmed.StartsWith(keyword + "(", StringComparison.Ordinal))
+                string trimmed = lines[i].Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
                 {
-                    return false;
+                    break;
                 }
+                if (trimmed.EndsWith("}", StringComparison.Ordinal))
+                {
+                    break;
+                }
+                if (trimmed.EndsWith(";", StringComparison.Ordinal))
+                {
+                    break;
+                }
+                start = i;
             }
-
-            return true;
+            return start;
         }
 
         private static string StripLineComments(string line, ref bool inBlockComment)
@@ -333,13 +256,6 @@ namespace SimpleFileSearch
             }
 
             return count;
-        }
-
-        private sealed class MethodBuildInfo
-        {
-            public int StartLine { get; set; }
-            public int StartDepth { get; set; }
-            public string RawSignature { get; set; }
         }
     }
 }

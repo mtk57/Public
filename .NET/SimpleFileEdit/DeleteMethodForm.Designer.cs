@@ -33,6 +33,7 @@
             this.chkEnabledRegExForMethodSignature = new System.Windows.Forms.CheckBox();
             this.btnDeleteStart = new System.Windows.Forms.Button();
             this.btnCloseForm = new System.Windows.Forms.Button();
+            this.chkNot = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // label1
@@ -63,7 +64,7 @@
             // 
             // btnDeleteStart
             // 
-            this.btnDeleteStart.Location = new System.Drawing.Point(99, 113);
+            this.btnDeleteStart.Location = new System.Drawing.Point(109, 152);
             this.btnDeleteStart.Name = "btnDeleteStart";
             this.btnDeleteStart.Size = new System.Drawing.Size(75, 23);
             this.btnDeleteStart.TabIndex = 3;
@@ -72,18 +73,29 @@
             // 
             // btnCloseForm
             // 
-            this.btnCloseForm.Location = new System.Drawing.Point(197, 113);
+            this.btnCloseForm.Location = new System.Drawing.Point(207, 152);
             this.btnCloseForm.Name = "btnCloseForm";
             this.btnCloseForm.Size = new System.Drawing.Size(75, 23);
             this.btnCloseForm.TabIndex = 4;
             this.btnCloseForm.Text = "閉じる";
             this.btnCloseForm.UseVisualStyleBackColor = true;
             // 
+            // chkNot
+            // 
+            this.chkNot.AutoSize = true;
+            this.chkNot.Location = new System.Drawing.Point(26, 92);
+            this.chkNot.Name = "chkNot";
+            this.chkNot.Size = new System.Drawing.Size(228, 16);
+            this.chkNot.TabIndex = 5;
+            this.chkNot.Text = "否定 （キーワードがある場合は削除しない）";
+            this.chkNot.UseVisualStyleBackColor = true;
+            // 
             // DeleteMethodForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(376, 148);
+            this.ClientSize = new System.Drawing.Size(376, 198);
+            this.Controls.Add(this.chkNot);
             this.Controls.Add(this.btnCloseForm);
             this.Controls.Add(this.btnDeleteStart);
             this.Controls.Add(this.chkEnabledRegExForMethodSignature);
@@ -103,5 +115,6 @@
         private System.Windows.Forms.CheckBox chkEnabledRegExForMethodSignature;
         private System.Windows.Forms.Button btnDeleteStart;
         private System.Windows.Forms.Button btnCloseForm;
+        private System.Windows.Forms.CheckBox chkNot;
     }
 }

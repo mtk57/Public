@@ -24,6 +24,22 @@ public class Main {
     }
 
     public int deleteFunc() {  //★DEL
+
+        if (aaaa == null) {
+            throw new Exception();
+        }
+
+        for (int i = 1; i <= maxNum; i++) {
+            
+            // 4. if文（偶数か奇数かを判定）
+            if (i % 2 == 0) {
+                System.out.println(i + " は偶数です！");
+            } else {
+                System.out.println(i + " は奇数です。");
+            }
+        }
+
+
     }
 
     private int nonDeleteFunc() {

@@ -525,29 +525,49 @@ namespace SimpleFileSearch
 
         private void dataGridViewResults_CellDoubleClick ( object sender, DataGridViewCellEventArgs e )
         {
-            if (e.RowIndex >= 0 && dataGridViewResults.Rows[e.RowIndex].Cells[0].Value != null)
+            if (e.RowIndex >= 0)
             {
-                string filePath = dataGridViewResults.Rows[e.RowIndex].Cells[0].Value.ToString();
-                
-                if (File.Exists(filePath))
+                OpenFileAtRow(e.RowIndex);
+            }
+        }
+
+        private void dataGridViewResults_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter && dataGridViewResults.CurrentRow != null)
+            {
+                OpenFileAtRow(dataGridViewResults.CurrentRow.Index);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void OpenFileAtRow(int rowIndex)
+        {
+            if (rowIndex < 0 || dataGridViewResults.Rows[rowIndex].Cells[0].Value == null)
+            {
+                return;
+            }
+
+            string filePath = dataGridViewResults.Rows[rowIndex].Cells[0].Value.ToString();
+
+            if (File.Exists(filePath))
+            {
+                try
                 {
-                    try
+                    if (chkDblClickToOpen.Checked)
                     {
-                        if (chkDblClickToOpen.Checked)
-                        {
-                            // ファイルを開く
-                            Process.Start(filePath);
-                        }
-                        else
-                        {
-                            // エクスプローラーでフォルダを開いてファイルを選択
-                            Process.Start("explorer.exe", $"/select,\"{filePath}\"");
-                        }
+                        // ファイルを開く
+                        Process.Start(filePath);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        MessageBox.Show($"処理中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        // エクスプローラーでフォルダを開いてファイルを選択
+                        Process.Start("explorer.exe", $"/select,\"{filePath}\"");
                     }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"処理中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

@@ -148,6 +148,7 @@
             this.dataGridViewResults.Size = new System.Drawing.Size(655, 119);
             this.dataGridViewResults.TabIndex = 11;
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
+            this.dataGridViewResults.KeyDown += new System.Windows.Forms.KeyEventHandler(this.dataGridViewResults_KeyDown);
             // 
             // chkIncludeFolderNames
             // 

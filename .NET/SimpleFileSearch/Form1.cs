@@ -34,6 +34,7 @@ namespace SimpleFileSearch
             txtFilePathFilter.TextChanged += FilterTextBox_TextChanged;
             txtFileNameFilter.TextChanged += FilterTextBox_TextChanged;
             txtExtFilter.TextChanged += FilterTextBox_TextChanged;
+            chkUseRegex.CheckedChanged += (s, ev) => ApplyFilterAndSort();
 
             // 列ヘッダークリックでソート
             dataGridViewResults.ColumnHeaderMouseClick += dataGridViewResults_ColumnHeaderMouseClick;
@@ -363,23 +364,61 @@ namespace SimpleFileSearch
         {
             IEnumerable<SearchResult> query = _allResults ?? Enumerable.Empty<SearchResult>();
 
+            bool filterByRegex = chkUseRegex.Checked;
+
             string filePathFilter = txtFilePathFilter.Text.Trim();
             if (!string.IsNullOrEmpty(filePathFilter))
             {
-                query = query.Where(r => r.FilePath.IndexOf(filePathFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (filterByRegex)
+                {
+                    try
+                    {
+                        Regex rgxPath = new Regex(filePathFilter, RegexOptions.IgnoreCase);
+                        query = query.Where(r => rgxPath.IsMatch(r.FilePath));
+                    }
+                    catch (ArgumentException) { }
+                }
+                else
+                {
+                    query = query.Where(r => r.FilePath.IndexOf(filePathFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+                }
             }
 
             string fileNameFilter = txtFileNameFilter.Text.Trim();
             if (!string.IsNullOrEmpty(fileNameFilter))
             {
-                query = query.Where(r => r.FileName.IndexOf(fileNameFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (filterByRegex)
+                {
+                    try
+                    {
+                        Regex rgxName = new Regex(fileNameFilter, RegexOptions.IgnoreCase);
+                        query = query.Where(r => rgxName.IsMatch(r.FileName));
+                    }
+                    catch (ArgumentException) { }
+                }
+                else
+                {
+                    query = query.Where(r => r.FileName.IndexOf(fileNameFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+                }
             }
 
             string extFilter = txtExtFilter.Text.Trim();
             if (!string.IsNullOrEmpty(extFilter))
             {
-                string normalized = extFilter.TrimStart('.');
-                query = query.Where(r => (r.Extension ?? string.Empty).IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (filterByRegex)
+                {
+                    try
+                    {
+                        Regex rgxExt = new Regex(extFilter, RegexOptions.IgnoreCase);
+                        query = query.Where(r => rgxExt.IsMatch(r.Extension ?? string.Empty));
+                    }
+                    catch (ArgumentException) { }
+                }
+                else
+                {
+                    string normalized = extFilter.TrimStart('.');
+                    query = query.Where(r => (r.Extension ?? string.Empty).IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0);
+                }
             }
 
             if (string.IsNullOrEmpty(_currentSortColumn))

@@ -34,6 +34,12 @@ public class Main {
 
     public static void sub(String[] args) {
         
+
+        if (aaaa == null) {
+            throw new Exception();
+        }
+
+
         // 1. •Ï”‚ÌéŒ¾‚Æ‘ã“üi‚±‚±‚Å”š‚ğ1‚ÂŠo‚¦‚³‚¹‚Ü‚·j
         int maxNum = 5;
         

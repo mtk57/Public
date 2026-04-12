@@ -34,7 +34,7 @@ namespace SimpleFileSearch
     {
         private static readonly HashSet<string> ControlKeywords = new HashSet<string>(StringComparer.Ordinal)
         {
-            "if", "for", "while", "switch", "catch", "try", "return", "new", "else", "do", "throw"
+            "if", "for", "while", "switch", "catch", "try", "return", "new", "else", "do", "throw", "synchronized"
         };
 
         public bool IsImportLine(string line)
@@ -165,6 +165,11 @@ namespace SimpleFileSearch
             }
 
             if (trimmed.StartsWith("@", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (trimmed.StartsWith("}", StringComparison.Ordinal))
             {
                 return false;
             }

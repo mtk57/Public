@@ -328,6 +328,7 @@ namespace Dir2Txt
                     txtIgnoreDirs.Text = settings.IgnoreDirs ?? string.Empty;
                     txtIgnoreFiles.Text = settings.IgnoreFiles ?? string.Empty;
                     txtIgnoreExt.Text = settings.IgnoreExt ?? string.Empty;
+                    txtDivideLnegth.Text = settings.DivideLength ?? string.Empty;
                 }
             }
             catch
@@ -349,7 +350,8 @@ namespace Dir2Txt
                     DirPath = txtDirPath.Text ?? string.Empty,
                     IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty,
                     IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty,
-                    IgnoreExt = txtIgnoreExt.Text ?? string.Empty
+                    IgnoreExt = txtIgnoreExt.Text ?? string.Empty,
+                    DivideLength = txtDivideLnegth.Text ?? string.Empty
                 } );
             }
             catch
@@ -421,6 +423,9 @@ namespace Dir2Txt
 
             [DataMember]
             public string IgnoreExt { get; set; }
+
+            [DataMember]
+            public string DivideLength { get; set; }
         }
 
 

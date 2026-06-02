@@ -31,8 +31,9 @@
             this.btnRun = new System.Windows.Forms.Button();
             this.btnRefExtractDirPath = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
-            this.txtExtractDirPath = new System.Windows.Forms.TextBox();
+            this.cmbExtractDirPath = new System.Windows.Forms.ComboBox();
             this.txtOutput = new System.Windows.Forms.TextBox();
+            this.btnClearExtractDirPath = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnRun
@@ -46,7 +47,7 @@
             // 
             // btnRefExtractDirPath
             // 
-            this.btnRefExtractDirPath.Location = new System.Drawing.Point(437, 24);
+            this.btnRefExtractDirPath.Location = new System.Drawing.Point(391, 24);
             this.btnRefExtractDirPath.Name = "btnRefExtractDirPath";
             this.btnRefExtractDirPath.Size = new System.Drawing.Size(44, 23);
             this.btnRefExtractDirPath.TabIndex = 12;
@@ -62,12 +63,13 @@
             this.label2.TabIndex = 11;
             this.label2.Text = "復元フォルダパス";
             // 
-            // txtExtractDirPath
+            // cmbExtractDirPath
             // 
-            this.txtExtractDirPath.Location = new System.Drawing.Point(30, 27);
-            this.txtExtractDirPath.Name = "txtExtractDirPath";
-            this.txtExtractDirPath.Size = new System.Drawing.Size(400, 19);
-            this.txtExtractDirPath.TabIndex = 10;
+            this.cmbExtractDirPath.FormattingEnabled = true;
+            this.cmbExtractDirPath.Location = new System.Drawing.Point(30, 27);
+            this.cmbExtractDirPath.Name = "cmbExtractDirPath";
+            this.cmbExtractDirPath.Size = new System.Drawing.Size(354, 20);
+            this.cmbExtractDirPath.TabIndex = 10;
             // 
             // txtOutput
             // 
@@ -82,15 +84,25 @@
             this.txtOutput.Size = new System.Drawing.Size(476, 307);
             this.txtOutput.TabIndex = 13;
             // 
+            // btnClearExtractDirPath
+            // 
+            this.btnClearExtractDirPath.Location = new System.Drawing.Point(441, 24);
+            this.btnClearExtractDirPath.Name = "btnClearExtractDirPath";
+            this.btnClearExtractDirPath.Size = new System.Drawing.Size(44, 23);
+            this.btnClearExtractDirPath.TabIndex = 14;
+            this.btnClearExtractDirPath.Text = "クリア";
+            this.btnClearExtractDirPath.UseVisualStyleBackColor = true;
+            // 
             // ExtractForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(514, 427);
+            this.Controls.Add(this.btnClearExtractDirPath);
             this.Controls.Add(this.txtOutput);
             this.Controls.Add(this.btnRefExtractDirPath);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.txtExtractDirPath);
+            this.Controls.Add(this.cmbExtractDirPath);
             this.Controls.Add(this.btnRun);
             this.Name = "ExtractForm";
             this.Text = "復元";
@@ -104,7 +116,8 @@
         private System.Windows.Forms.Button btnRun;
         private System.Windows.Forms.Button btnRefExtractDirPath;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox txtExtractDirPath;
+        private System.Windows.Forms.ComboBox cmbExtractDirPath;
         private System.Windows.Forms.TextBox txtOutput;
+        private System.Windows.Forms.Button btnClearExtractDirPath;
     }
 }

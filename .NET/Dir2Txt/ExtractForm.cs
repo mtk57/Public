@@ -8,11 +8,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Diagnostics;
+using System.Runtime.Serialization.Json;
 
 namespace Dir2Txt
 {
     public partial class ExtractForm : Form
     {
+        private const int MaxExtractDirPathHistoryCount = 20;
+
         public ExtractForm () : this( string.Empty )
         {
         }
@@ -21,11 +25,15 @@ namespace Dir2Txt
         {
             InitializeComponent();
             txtOutput.Text = initialText ?? string.Empty;
-            txtExtractDirPath.AllowDrop = true;
-            txtExtractDirPath.DragEnter += PathTextBox_DragEnter;
-            txtExtractDirPath.DragDrop += TxtExtractDirPath_DragDrop;
+            cmbExtractDirPath.AllowDrop = true;
+            cmbExtractDirPath.DragEnter += PathTextBox_DragEnter;
+            cmbExtractDirPath.DragDrop += CmbExtractDirPath_DragDrop;
+            cmbExtractDirPath.Leave += CmbExtractDirPath_Leave;
+            cmbExtractDirPath.KeyDown += CmbExtractDirPath_KeyDown;
             btnRun.Click += BtnRun_Click;
             btnRefExtractDirPath.Click += BtnRefExtractDirPath_Click;
+            btnClearExtractDirPath.Click += BtnClearExtractDirPath_Click;
+            LoadExtractDirPathHistories();
         }
 
         private void BtnRefExtractDirPath_Click ( object sender, EventArgs e )
@@ -35,14 +43,14 @@ namespace Dir2Txt
                 dialog.Description = "復元先フォルダを選択してください";
                 if ( dialog.ShowDialog( this ) == DialogResult.OK )
                 {
-                    txtExtractDirPath.Text = dialog.SelectedPath;
+                    cmbExtractDirPath.Text = dialog.SelectedPath;
                 }
             }
         }
 
         private void BtnRun_Click ( object sender, EventArgs e )
         {
-            var targetDir = txtExtractDirPath.Text;
+            var targetDir = ( cmbExtractDirPath.Text ?? string.Empty ).Trim();
             if ( string.IsNullOrWhiteSpace( targetDir ) )
             {
                 MessageBox.Show( this, "復元フォルダパスを入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning );
@@ -61,18 +69,6 @@ namespace Dir2Txt
                 return;
             }
 
-            if ( Directory.Exists( targetDir ) )
-            {
-                if ( MessageBox.Show( this, "復元先フォルダは既に存在します。上書きしてもよろしいですか？", "上書き確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning ) != DialogResult.Yes )
-                {
-                    return;
-                }
-            }
-            else
-            {
-                Directory.CreateDirectory( targetDir );
-            }
-
             var firstPath = entries.First().OriginalPath;
             var baseRoot = Path.GetPathRoot( firstPath ) ?? string.Empty;
             if ( string.IsNullOrEmpty( baseRoot ) )
@@ -86,6 +82,18 @@ namespace Dir2Txt
 
             try
             {
+                if ( Directory.Exists( targetDir ) )
+                {
+                    if ( MessageBox.Show( this, "復元先フォルダは既に存在します。上書きしてもよろしいですか？", "上書き確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning ) != DialogResult.Yes )
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    Directory.CreateDirectory( targetDir );
+                }
+
                 foreach ( var entry in entries )
                 {
                     var relative = GetRelativePath( baseRoot, entry.OriginalPath );
@@ -109,11 +117,116 @@ namespace Dir2Txt
                 }
 
                 MessageBox.Show( this, "復元が完了しました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information );
+                OpenFolder( targetDir );
             }
             catch ( Exception ex )
             {
                 MessageBox.Show( this, $"復元に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error );
             }
+        }
+
+        private void BtnClearExtractDirPath_Click ( object sender, EventArgs e )
+        {
+            cmbExtractDirPath.Text = string.Empty;
+        }
+
+        private void CmbExtractDirPath_Leave ( object sender, EventArgs e )
+        {
+            AddExtractDirPathHistory();
+        }
+
+        private void CmbExtractDirPath_KeyDown ( object sender, KeyEventArgs e )
+        {
+            if ( e.KeyCode != Keys.Enter )
+            {
+                return;
+            }
+
+            AddExtractDirPathHistory();
+            e.SuppressKeyPress = true;
+        }
+
+        private void AddExtractDirPathHistory ()
+        {
+            var path = ( cmbExtractDirPath.Text ?? string.Empty ).Trim();
+            if ( string.IsNullOrEmpty( path ) )
+            {
+                return;
+            }
+
+            var histories = cmbExtractDirPath.Items.Cast<string>()
+                .Where( x => !string.IsNullOrWhiteSpace( x ) )
+                .Where( x => !string.Equals( x, path, StringComparison.OrdinalIgnoreCase ) )
+                .ToList();
+
+            histories.Insert( 0, path );
+            histories = histories.Take( MaxExtractDirPathHistoryCount ).ToList();
+            SetExtractDirPathHistories( histories );
+            SaveExtractDirPathHistories( histories );
+        }
+
+        private void LoadExtractDirPathHistories ()
+        {
+            var settings = LoadSettings();
+            var histories = settings?.ExtractDirPathHistories ?? new List<string>();
+            SetExtractDirPathHistories( histories );
+        }
+
+        private void SetExtractDirPathHistories ( IEnumerable<string> histories )
+        {
+            var currentText = cmbExtractDirPath.Text;
+            var items = histories
+                .Where( x => !string.IsNullOrWhiteSpace( x ) )
+                .Select( x => x.Trim() )
+                .Distinct( StringComparer.OrdinalIgnoreCase )
+                .Take( MaxExtractDirPathHistoryCount )
+                .ToList();
+
+            cmbExtractDirPath.Items.Clear();
+            cmbExtractDirPath.Items.AddRange( items.Cast<object>().ToArray() );
+            cmbExtractDirPath.Text = currentText;
+        }
+
+        private void SaveExtractDirPathHistories ( List<string> histories )
+        {
+            var settings = LoadSettings() ?? new AppSettings();
+            settings.ExtractDirPathHistories = histories;
+            SaveSettings( settings );
+        }
+
+        private string GetSettingsPath ()
+        {
+            return Path.Combine( AppDomain.CurrentDomain.BaseDirectory, "Dir2Txt.settings.json" );
+        }
+
+        private AppSettings LoadSettings ()
+        {
+            var path = GetSettingsPath();
+            if ( !File.Exists( path ) )
+            {
+                return null;
+            }
+
+            using ( var stream = File.OpenRead( path ) )
+            {
+                var serializer = new DataContractJsonSerializer( typeof( AppSettings ) );
+                return serializer.ReadObject( stream ) as AppSettings;
+            }
+        }
+
+        private void SaveSettings ( AppSettings settings )
+        {
+            var path = GetSettingsPath();
+            using ( var stream = File.Create( path ) )
+            {
+                var serializer = new DataContractJsonSerializer( typeof( AppSettings ) );
+                serializer.WriteObject( stream, settings );
+            }
+        }
+
+        private void OpenFolder ( string folderPath )
+        {
+            Process.Start( "explorer.exe", "\"" + folderPath + "\"" );
         }
 
         private List<FileEntry> ParseEntries ( string rawText )
@@ -182,7 +295,7 @@ namespace Dir2Txt
             e.Effect = e.Data.GetDataPresent( DataFormats.FileDrop ) ? DragDropEffects.Copy : DragDropEffects.None;
         }
 
-        private void TxtExtractDirPath_DragDrop ( object sender, DragEventArgs e )
+        private void CmbExtractDirPath_DragDrop ( object sender, DragEventArgs e )
         {
             var paths = e.Data.GetData( DataFormats.FileDrop ) as string[];
             var path = paths?.FirstOrDefault();
@@ -193,14 +306,14 @@ namespace Dir2Txt
 
             if ( Directory.Exists( path ) )
             {
-                txtExtractDirPath.Text = path;
+                cmbExtractDirPath.Text = path;
             }
             else if ( File.Exists( path ) )
             {
                 var dir = Path.GetDirectoryName( path );
                 if ( !string.IsNullOrEmpty( dir ) )
                 {
-                    txtExtractDirPath.Text = dir;
+                    cmbExtractDirPath.Text = dir;
                 }
             }
         }

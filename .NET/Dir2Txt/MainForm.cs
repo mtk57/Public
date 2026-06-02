@@ -6,7 +6,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
@@ -345,14 +344,14 @@ namespace Dir2Txt
         {
             try
             {
-                SaveSettings( new MainFormSettings
-                {
-                    DirPath = txtDirPath.Text ?? string.Empty,
-                    IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty,
-                    IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty,
-                    IgnoreExt = txtIgnoreExt.Text ?? string.Empty,
-                    DivideLength = txtDivideLnegth.Text ?? string.Empty
-                } );
+                var settings = LoadSettings() ?? new AppSettings();
+                settings.DirPath = txtDirPath.Text ?? string.Empty;
+                settings.IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty;
+                settings.IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty;
+                settings.IgnoreExt = txtIgnoreExt.Text ?? string.Empty;
+                settings.DivideLength = txtDivideLnegth.Text ?? string.Empty;
+
+                SaveSettings( settings );
             }
             catch
             {
@@ -364,7 +363,7 @@ namespace Dir2Txt
             return Path.Combine( AppDomain.CurrentDomain.BaseDirectory, "Dir2Txt.settings.json" );
         }
 
-        private MainFormSettings LoadSettings ()
+        private AppSettings LoadSettings ()
         {
             var path = GetSettingsPath();
             if ( !File.Exists( path ) )
@@ -374,17 +373,17 @@ namespace Dir2Txt
 
             using ( var stream = File.OpenRead( path ) )
             {
-                var serializer = new DataContractJsonSerializer( typeof( MainFormSettings ) );
-                return serializer.ReadObject( stream ) as MainFormSettings;
+                var serializer = new DataContractJsonSerializer( typeof( AppSettings ) );
+                return serializer.ReadObject( stream ) as AppSettings;
             }
         }
 
-        private void SaveSettings ( MainFormSettings settings )
+        private void SaveSettings ( AppSettings settings )
         {
             var path = GetSettingsPath();
             using ( var stream = File.Create( path ) )
             {
-                var serializer = new DataContractJsonSerializer( typeof( MainFormSettings ) );
+                var serializer = new DataContractJsonSerializer( typeof( AppSettings ) );
                 serializer.WriteObject( stream, settings );
             }
         }
@@ -408,26 +407,5 @@ namespace Dir2Txt
             var lengthText = ( text?.Length ?? 0 ).ToString( "#,0" );
             lblLength.Text = $"文字数: {lengthText}";
         }
-
-        [DataContract]
-        private class MainFormSettings
-        {
-            [DataMember]
-            public string DirPath { get; set; }
-
-            [DataMember]
-            public string IgnoreDirs { get; set; }
-
-            [DataMember]
-            public string IgnoreFiles { get; set; }
-
-            [DataMember]
-            public string IgnoreExt { get; set; }
-
-            [DataMember]
-            public string DivideLength { get; set; }
-        }
-
-
     }
 }

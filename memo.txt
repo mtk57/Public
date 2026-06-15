@@ -462,6 +462,14 @@ git clone https://github.com/mtk57/BatchH2MyBatisTest2.git
 git ls-tree -r --name-only HEAD | tree --fromfile .
 
 
+
+# 指定したフォルダの直近10コミットのログ
+git log -n 10 --pretty=format:"%h %an %ad %s" --date=format:"%Y-%m-%d %H:%M:%S" -- 対象フォルダ/
+
+# 指定したコミットをzipファイルで出力
+git archive --format=zip --output=出力ファイル名.zip コミットID
+
+
 ■Cloud Foundry/HANA Cloud
 
 # HANA Cloud Central に行く手順 (BTP Cokckpit)

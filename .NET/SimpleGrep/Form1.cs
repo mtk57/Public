@@ -23,7 +23,9 @@ namespace SimpleGrep
         private const string SettingsFileName = "SimpleGrep.settings.json";
         private const int MaxHistoryCount = 10;
         private CancellationTokenSource searchCancellationTokenSource;
+        private CancellationTokenSource filterCancellationTokenSource;
         private List<SearchResult> currentSearchResults = new List<SearchResult>();
+        private List<SearchResult> displayedSearchResults = new List<SearchResult>();
         private string multiKeywordsText = string.Empty;
 
         public MainForm()
@@ -53,6 +55,7 @@ namespace SimpleGrep
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
             this.btnMultiKeywords.Click += new System.EventHandler(this.btnMultiKeywords_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
+            InitializeResultsContextMenu();
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
             this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
             this.cmbKeyword.Leave += new EventHandler(this.HistoryComboBox_Leave);
@@ -79,8 +82,19 @@ namespace SimpleGrep
             btnCancel.Enabled = false;
         }
 
+        private void InitializeResultsContextMenu()
+        {
+            var contextMenu = new ContextMenuStrip();
+            var copyAllMenuItem = new ToolStripMenuItem("全てコピー");
+            copyAllMenuItem.Click += new EventHandler(this.CopyAllResultsMenuItem_Click);
+            contextMenu.Items.Add(copyAllMenuItem);
+            dataGridViewResults.ContextMenuStrip = contextMenu;
+        }
+
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            filterCancellationTokenSource?.Cancel();
+            filterCancellationTokenSource?.Dispose();
             SaveSettings();
         }
 
@@ -352,31 +366,39 @@ namespace SimpleGrep
                 var searchOption = searchSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
                 UpdateHistory(cmbExcludeFolder, cmbExcludeFolder.Text);
                 UpdateHistory(cmbExcludeExtension, cmbExcludeExtension.Text);
+
+                searchCancellationTokenSource?.Cancel();
+                searchCancellationTokenSource?.Dispose();
+
+                localCancellationTokenSource = new CancellationTokenSource();
+                searchCancellationTokenSource = localCancellationTokenSource;
+                var cancellationToken = localCancellationTokenSource.Token;
+
+                searchStarted = true;
                 string[] filesToSearch;
                 try
                 {
-                    filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
-                    if (excludeFolderPatterns.Count > 0)
-                    {
-                        filesToSearch = filesToSearch
-                            .Where(filePath => !ContainsExcludedFolder(filePath, excludeFolderPatterns, caseSensitive, useRegex))
-                            .ToArray();
-                    }
-                    if (excludeExtensions.Count > 0)
-                    {
-                        filesToSearch = filesToSearch
-                            .Where(filePath => !HasExcludedExtension(filePath, excludeExtensions, caseSensitive))
-                            .ToArray();
-                    }
-                    if (ignoreBinaryFile)
-                    {
-                        filesToSearch = filesToSearch
-                            .Where(filePath => !LooksLikeBinaryFile(filePath))
-                            .ToArray();
-                    }
+                    filesToSearch = await Task.Run(() =>
+                        GetFilesToSearch(
+                            folderPath,
+                            filePattern,
+                            searchOption,
+                            excludeFolderPatterns,
+                            excludeExtensions,
+                            caseSensitive,
+                            useRegex,
+                            ignoreBinaryFile,
+                            cancellationToken),
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    wasCancelled = true;
+                    return;
                 }
                 catch (Exception ex)
                 {
+                    searchStarted = false;
                     MessageBox.Show($"ファイル一覧の取得に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
@@ -388,19 +410,13 @@ namespace SimpleGrep
                     MessageBox.Show("対象ファイルが見つかりません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     progressBar.Value = 0;
                     lblPer.Text = "0 %";
+                    searchStarted = false;
                     return;
                 }
 
                 progressBar.Maximum = totalFiles;
                 progressBar.Value = 0;
                 lblPer.Text = "0 %";
-
-                searchCancellationTokenSource?.Cancel();
-                searchCancellationTokenSource?.Dispose();
-
-                localCancellationTokenSource = new CancellationTokenSource();
-                searchCancellationTokenSource = localCancellationTokenSource;
-                var cancellationToken = localCancellationTokenSource.Token;
 
                 var progress = new Progress<int>(processedCount =>
                 {
@@ -411,7 +427,6 @@ namespace SimpleGrep
                 });
 
                 List<SearchResult> searchResults = null;
-                searchStarted = true;
 
                 Action<Exception> errorHandler = ex =>
                 {
@@ -448,7 +463,7 @@ namespace SimpleGrep
                 if (!wasCancelled && searchResults != null)
                 {
                     currentSearchResults = searchResults ?? new List<SearchResult>();
-                    ApplyFilters();
+                    await ApplyFiltersAsync();
                 }
             }
             catch (OperationCanceledException)
@@ -567,16 +582,37 @@ namespace SimpleGrep
             UpdateHistory(comboBox, comboBox.Text);
         }
 
-        private void FilterTextChanged(object sender, EventArgs e)
+        private async void FilterTextChanged(object sender, EventArgs e)
         {
-            ApplyFilters();
+            await ApplyFiltersAsync();
         }
 
-        private void ApplyFilters()
+        private async Task ApplyFiltersAsync()
         {
-            var filtered = currentSearchResults?
-                .Where(MatchesFilters)
-                .ToList() ?? new List<SearchResult>();
+            filterCancellationTokenSource?.Cancel();
+            filterCancellationTokenSource?.Dispose();
+            filterCancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = filterCancellationTokenSource.Token;
+
+            var source = currentSearchResults?.ToList() ?? new List<SearchResult>();
+            var criteria = GetFilterCriteria();
+            List<SearchResult> filtered;
+
+            try
+            {
+                filtered = await Task.Run(() => source
+                    .Where(result => MatchesFilters(result, criteria, cancellationToken))
+                    .ToList(), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
 
             RenderResults(filtered);
         }
@@ -590,39 +626,47 @@ namespace SimpleGrep
             txtMethodFilter.Text = string.Empty;
         }
 
-        private bool MatchesFilters(SearchResult result)
+        private FilterCriteria GetFilterCriteria()
         {
+            return new FilterCriteria
+            {
+                FilePath = GetFilterText(txtFilePathFilter),
+                FileName = GetFilterText(txtFileNameFilter),
+                RowNumber = GetFilterText(txtRowNumFilter),
+                GrepResult = GetFilterText(txtGrepResultFilter),
+                Method = GetFilterText(txtMethodFilter)
+            };
+        }
+
+        private static bool MatchesFilters(SearchResult result, FilterCriteria criteria, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             if (result == null)
             {
                 return false;
             }
 
-            string filePathFilter = GetFilterText(txtFilePathFilter);
-            if (!string.IsNullOrEmpty(filePathFilter) && !ContainsText(result.FilePath, filePathFilter))
+            if (!string.IsNullOrEmpty(criteria.FilePath) && !ContainsText(result.FilePath, criteria.FilePath))
             {
                 return false;
             }
 
-            string fileNameFilter = GetFilterText(txtFileNameFilter);
-            if (!string.IsNullOrEmpty(fileNameFilter) && !ContainsText(result.FileName, fileNameFilter))
+            if (!string.IsNullOrEmpty(criteria.FileName) && !ContainsText(result.FileName, criteria.FileName))
             {
                 return false;
             }
 
-            string rowFilter = GetFilterText(txtRowNumFilter);
-            if (!string.IsNullOrEmpty(rowFilter) && !ContainsText(result.LineNumber.ToString(), rowFilter))
+            if (!string.IsNullOrEmpty(criteria.RowNumber) && !ContainsText(result.LineNumber.ToString(), criteria.RowNumber))
             {
                 return false;
             }
 
-            string grepResultFilter = GetFilterText(txtGrepResultFilter);
-            if (!string.IsNullOrEmpty(grepResultFilter) && !ContainsText(result.LineText, grepResultFilter))
+            if (!string.IsNullOrEmpty(criteria.GrepResult) && !ContainsText(result.LineText, criteria.GrepResult))
             {
                 return false;
             }
 
-            string methodFilter = GetFilterText(txtMethodFilter);
-            if (!string.IsNullOrEmpty(methodFilter) && !ContainsText(result.MethodSignature, methodFilter))
+            if (!string.IsNullOrEmpty(criteria.Method) && !ContainsText(result.MethodSignature, criteria.Method))
             {
                 return false;
             }
@@ -652,6 +696,7 @@ namespace SimpleGrep
 
         private void RenderResults(IReadOnlyList<SearchResult> results)
         {
+            displayedSearchResults = results?.ToList() ?? new List<SearchResult>();
             dataGridViewResults.SuspendLayout();
             dataGridViewResults.Rows.Clear();
 
@@ -665,6 +710,7 @@ namespace SimpleGrep
                     {
                         result.FilePath,
                         result.FileName,
+                        result.FileExtension,
                         result.LineNumber,
                         result.LineText,
                         result.MethodSignature,
@@ -680,6 +726,89 @@ namespace SimpleGrep
             }
 
             dataGridViewResults.ResumeLayout();
+        }
+
+        private async void CopyAllResultsMenuItem_Click(object sender, EventArgs e)
+        {
+            var rows = displayedSearchResults?.ToList() ?? new List<SearchResult>();
+            if (rows.Count == 0)
+            {
+                MessageBox.Show("コピーするデータがありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                var visibleColumns = dataGridViewResults.Columns
+                    .Cast<DataGridViewColumn>()
+                    .Where(column => column.Visible)
+                    .OrderBy(column => column.DisplayIndex)
+                    .Select(column => new ResultColumnInfo(column.Name, column.HeaderText))
+                    .ToList();
+
+                string clipboardText = await Task.Run(() => BuildResultsClipboardText(rows, visibleColumns));
+                Clipboard.SetText(clipboardText);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static string BuildResultsClipboardText(IReadOnlyList<SearchResult> rows, IReadOnlyList<ResultColumnInfo> visibleColumns)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine(string.Join("\t", visibleColumns.Select(column => NormalizeClipboardCell(column.HeaderText))));
+
+            foreach (var row in rows)
+            {
+                var values = visibleColumns.Select(column => NormalizeClipboardCell(GetResultColumnValue(row, column.Name)));
+                builder.AppendLine(string.Join("\t", values));
+            }
+
+            return builder.ToString();
+        }
+
+        private static string GetResultColumnValue(SearchResult result, string columnName)
+        {
+            if (result == null)
+            {
+                return string.Empty;
+            }
+
+            switch (columnName)
+            {
+                case "clmFilePath":
+                    return result.FilePath ?? string.Empty;
+                case "clmFileName":
+                    return result.FileName ?? string.Empty;
+                case "clmExtension":
+                    return result.FileExtension ?? string.Empty;
+                case "clmLine":
+                    return result.LineNumber.ToString();
+                case "clmGrepResult":
+                    return result.LineText ?? string.Empty;
+                case "clmMethodSignature":
+                    return result.MethodSignature ?? string.Empty;
+                case "Encoding":
+                    return result.EncodingName ?? string.Empty;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string NormalizeClipboardCell(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value
+                .Replace("\r\n", " ")
+                .Replace("\r", " ")
+                .Replace("\n", " ")
+                .Replace("\t", " ");
         }
 
         private void btnFileCopy_Click(object sender, EventArgs e)
@@ -748,9 +877,10 @@ namespace SimpleGrep
         }
 
         // ★★ここから修正★★
-        private void btnExportSakura_Click(object sender, EventArgs e)
+        private async void btnExportSakura_Click(object sender, EventArgs e)
         {
-            if (dataGridViewResults.Rows.Count == 0)
+            var results = displayedSearchResults?.ToList() ?? new List<SearchResult>();
+            if (results.Count == 0)
             {
                 MessageBox.Show("エクスポートするデータがありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -759,23 +889,7 @@ namespace SimpleGrep
             string fileName = Path.Combine(AppContext.BaseDirectory, DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".grep");
             try
             {
-                using (var writer = new StreamWriter(fileName, false, Encoding.UTF8))
-                {
-                    int filePathColumnIndex = dataGridViewResults.Columns["clmFilePath"].Index;
-                    int lineColumnIndex = dataGridViewResults.Columns["clmLine"].Index;
-                    int resultColumnIndex = dataGridViewResults.Columns["clmGrepResult"].Index;
-
-                    foreach (DataGridViewRow row in dataGridViewResults.Rows)
-                    {
-                        string filePath = row.Cells[filePathColumnIndex].Value?.ToString() ?? string.Empty;
-                        string lineNumber = row.Cells[lineColumnIndex].Value?.ToString() ?? string.Empty;
-                        string lineContent = row.Cells[resultColumnIndex].Value?.ToString() ?? string.Empty;
-                        var encodingCell = row.Cells["Encoding"];
-                        string encoding = encodingCell != null && encodingCell.Value != null ? encodingCell.Value.ToString() : "UTF-8";
-                        
-                        writer.WriteLine($"{filePath}({lineNumber},1)  [{encoding}]: {lineContent}");
-                    }
-                }
+                await Task.Run(() => WriteSakuraGrepFile(fileName, results));
                 
                 string sakuraPath = FindSakuraPath();
                 if (sakuraPath != null)
@@ -800,6 +914,22 @@ namespace SimpleGrep
             }
         }
         // ★★ここまで修正★★
+
+        private static void WriteSakuraGrepFile(string fileName, IReadOnlyList<SearchResult> results)
+        {
+            using (var writer = new StreamWriter(fileName, false, Encoding.UTF8))
+            {
+                foreach (var result in results)
+                {
+                    string filePath = result.FilePath ?? string.Empty;
+                    string lineNumber = result.LineNumber.ToString();
+                    string lineContent = result.LineText ?? string.Empty;
+                    string encoding = string.IsNullOrEmpty(result.EncodingName) ? "UTF-8" : result.EncodingName;
+
+                    writer.WriteLine($"{filePath}({lineNumber},1)  [{encoding}]: {lineContent}");
+                }
+            }
+        }
 
         private void cmbFolderPath_DragEnter(object sender, DragEventArgs e)
         {
@@ -828,6 +958,54 @@ namespace SimpleGrep
                     cmbFolderPath.Text = Path.GetDirectoryName(path);
                 }
             }
+        }
+
+        private static string[] GetFilesToSearch(
+            string folderPath,
+            string filePattern,
+            SearchOption searchOption,
+            IReadOnlyList<string> excludeFolderPatterns,
+            IReadOnlyList<string> excludeExtensions,
+            bool caseSensitive,
+            bool useRegex,
+            bool ignoreBinaryFile,
+            CancellationToken cancellationToken)
+        {
+            var files = Directory.EnumerateFiles(folderPath, filePattern, searchOption)
+                .Where(filePath =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return true;
+                });
+
+            if (excludeFolderPatterns != null && excludeFolderPatterns.Count > 0)
+            {
+                files = files.Where(filePath =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return !ContainsExcludedFolder(filePath, excludeFolderPatterns, caseSensitive, useRegex);
+                });
+            }
+
+            if (excludeExtensions != null && excludeExtensions.Count > 0)
+            {
+                files = files.Where(filePath =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return !HasExcludedExtension(filePath, excludeExtensions, caseSensitive);
+                });
+            }
+
+            if (ignoreBinaryFile)
+            {
+                files = files.Where(filePath =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return !LooksLikeBinaryFile(filePath);
+                });
+            }
+
+            return files.ToArray();
         }
 
         private static IReadOnlyList<string> ParseExcludeFolderPatterns(string excludeFoldersText)
@@ -956,6 +1134,27 @@ namespace SimpleGrep
             }
 
             return null;
+        }
+
+        private sealed class FilterCriteria
+        {
+            public string FilePath { get; set; } = string.Empty;
+            public string FileName { get; set; } = string.Empty;
+            public string RowNumber { get; set; } = string.Empty;
+            public string GrepResult { get; set; } = string.Empty;
+            public string Method { get; set; } = string.Empty;
+        }
+
+        private sealed class ResultColumnInfo
+        {
+            public ResultColumnInfo(string name, string headerText)
+            {
+                Name = name ?? string.Empty;
+                HeaderText = headerText ?? string.Empty;
+            }
+
+            public string Name { get; }
+            public string HeaderText { get; }
         }
 
         [DataContract]

@@ -39,6 +39,7 @@
             this.dataGridViewResults = new System.Windows.Forms.DataGridView();
             this.clmFilePath = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clmExtension = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmLine = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmGrepResult = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.clmMethodSignature = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -154,6 +155,7 @@
             this.dataGridViewResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.clmFilePath,
             this.clmFileName,
+            this.clmExtension,
             this.clmLine,
             this.clmGrepResult,
             this.clmMethodSignature});
@@ -176,6 +178,13 @@
             this.clmFileName.HeaderText = "ファイル名";
             this.clmFileName.Name = "clmFileName";
             this.clmFileName.ReadOnly = true;
+            // 
+            // clmExtension
+            // 
+            this.clmExtension.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.clmExtension.HeaderText = "拡張子";
+            this.clmExtension.Name = "clmExtension";
+            this.clmExtension.ReadOnly = true;
             // 
             // clmLine
             // 
@@ -536,6 +545,7 @@
         private System.Windows.Forms.CheckBox chkIgnoreComment;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFilePath;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmFileName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clmExtension;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmLine;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmGrepResult;
         private System.Windows.Forms.DataGridViewTextBoxColumn clmMethodSignature;

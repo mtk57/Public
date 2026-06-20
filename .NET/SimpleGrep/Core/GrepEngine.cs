@@ -59,6 +59,7 @@ namespace SimpleGrep.Core
                         try
                         {
                             string fileName = Path.GetFileName(filePath);
+                            string fileExtension = Path.GetExtension(filePath);
                             Encoding encoding = DetectEncoding(filePath);
                             string encodingName = GetEncodingName(encoding);
                             ICommentFilter commentFilter = ignoreComment ? CommentFilterFactory.Create(filePath) : null;
@@ -119,6 +120,7 @@ namespace SimpleGrep.Core
                                         {
                                             FilePath = filePath,
                                             FileName = fileName,
+                                            FileExtension = fileExtension,
                                             LineNumber = lineNumber,
                                             LineText = originalLine,
                                             EncodingName = encodingName

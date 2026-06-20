@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -28,6 +29,17 @@ namespace SimpleGrep
         public MainForm()
         {
             InitializeComponent();
+
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime || DesignMode)
+            {
+                return;
+            }
+
+            WireRuntimeEvents();
+        }
+
+        private void WireRuntimeEvents()
+        {
             this.cmbFolderPath.DragEnter += new DragEventHandler(cmbFolderPath_DragEnter);
             this.cmbFolderPath.DragDrop += new DragEventHandler(cmbFolderPath_DragDrop);
             this.cmbFolderPath.Leave += new EventHandler(this.HistoryComboBox_Leave);

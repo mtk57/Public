@@ -97,7 +97,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(46, 212);
+            this.label2.Location = new System.Drawing.Point(46, 131);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(77, 12);
             this.label2.TabIndex = 0;
@@ -108,7 +108,7 @@
             this.cmbKeyword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbKeyword.FormattingEnabled = true;
-            this.cmbKeyword.Location = new System.Drawing.Point(48, 227);
+            this.cmbKeyword.Location = new System.Drawing.Point(48, 146);
             this.cmbKeyword.Name = "cmbKeyword";
             this.cmbKeyword.Size = new System.Drawing.Size(631, 20);
             this.cmbKeyword.TabIndex = 8;
@@ -126,7 +126,7 @@
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(352, 283);
+            this.btnCancel.Location = new System.Drawing.Point(352, 202);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 33);
             this.btnCancel.TabIndex = 17;
@@ -136,7 +136,7 @@
             // chkUseRegex
             // 
             this.chkUseRegex.AutoSize = true;
-            this.chkUseRegex.Location = new System.Drawing.Point(51, 253);
+            this.chkUseRegex.Location = new System.Drawing.Point(51, 172);
             this.chkUseRegex.Name = "chkUseRegex";
             this.chkUseRegex.Size = new System.Drawing.Size(72, 16);
             this.chkUseRegex.TabIndex = 9;
@@ -157,10 +157,10 @@
             this.clmLine,
             this.clmGrepResult,
             this.clmMethodSignature});
-            this.dataGridViewResults.Location = new System.Drawing.Point(48, 394);
+            this.dataGridViewResults.Location = new System.Drawing.Point(48, 305);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(659, 168);
+            this.dataGridViewResults.Size = new System.Drawing.Size(659, 115);
             this.dataGridViewResults.TabIndex = 25;
             // 
             // clmFilePath
@@ -201,7 +201,7 @@
             // labelTime
             // 
             this.labelTime.AutoSize = true;
-            this.labelTime.Location = new System.Drawing.Point(433, 293);
+            this.labelTime.Location = new System.Drawing.Point(433, 212);
             this.labelTime.Name = "labelTime";
             this.labelTime.Size = new System.Drawing.Size(30, 12);
             this.labelTime.TabIndex = 0;
@@ -220,7 +220,7 @@
             // chkCase
             // 
             this.chkCase.AutoSize = true;
-            this.chkCase.Location = new System.Drawing.Point(141, 253);
+            this.chkCase.Location = new System.Drawing.Point(141, 172);
             this.chkCase.Name = "chkCase";
             this.chkCase.Size = new System.Drawing.Size(72, 16);
             this.chkCase.TabIndex = 10;
@@ -229,7 +229,7 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(271, 283);
+            this.button1.Location = new System.Drawing.Point(271, 202);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 33);
             this.button1.TabIndex = 16;
@@ -238,7 +238,7 @@
             // 
             // btnExportSakura
             // 
-            this.btnExportSakura.Location = new System.Drawing.Point(48, 293);
+            this.btnExportSakura.Location = new System.Drawing.Point(48, 212);
             this.btnExportSakura.Name = "btnExportSakura";
             this.btnExportSakura.Size = new System.Drawing.Size(96, 23);
             this.btnExportSakura.TabIndex = 15;
@@ -261,13 +261,13 @@
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Location = new System.Drawing.Point(48, 98);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(631, 20);
+            this.comboBox1.Size = new System.Drawing.Size(200, 20);
             this.comboBox1.TabIndex = 4;
             // 
             // chkTagJump
             // 
             this.chkTagJump.AutoSize = true;
-            this.chkTagJump.Location = new System.Drawing.Point(631, 371);
+            this.chkTagJump.Location = new System.Drawing.Point(632, 282);
             this.chkTagJump.Name = "chkTagJump";
             this.chkTagJump.Size = new System.Drawing.Size(77, 16);
             this.chkTagJump.TabIndex = 11;
@@ -276,7 +276,7 @@
             // 
             // progressBar
             // 
-            this.progressBar.Location = new System.Drawing.Point(271, 322);
+            this.progressBar.Location = new System.Drawing.Point(271, 241);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new System.Drawing.Size(156, 10);
             this.progressBar.TabIndex = 15;
@@ -284,7 +284,7 @@
             // lblPer
             // 
             this.lblPer.AutoSize = true;
-            this.lblPer.Location = new System.Drawing.Point(433, 320);
+            this.lblPer.Location = new System.Drawing.Point(433, 239);
             this.lblPer.Name = "lblPer";
             this.lblPer.Size = new System.Drawing.Size(21, 12);
             this.lblPer.TabIndex = 0;
@@ -293,7 +293,7 @@
             // chkMethod
             // 
             this.chkMethod.AutoSize = true;
-            this.chkMethod.Location = new System.Drawing.Point(231, 253);
+            this.chkMethod.Location = new System.Drawing.Point(231, 172);
             this.chkMethod.Name = "chkMethod";
             this.chkMethod.Size = new System.Drawing.Size(102, 16);
             this.chkMethod.TabIndex = 12;
@@ -304,7 +304,7 @@
             // chkIgnoreComment
             // 
             this.chkIgnoreComment.AutoSize = true;
-            this.chkIgnoreComment.Location = new System.Drawing.Point(351, 253);
+            this.chkIgnoreComment.Location = new System.Drawing.Point(351, 172);
             this.chkIgnoreComment.Name = "chkIgnoreComment";
             this.chkIgnoreComment.Size = new System.Drawing.Size(81, 16);
             this.chkIgnoreComment.TabIndex = 13;
@@ -314,7 +314,7 @@
             // 
             // btnFileCopy
             // 
-            this.btnFileCopy.Location = new System.Drawing.Point(605, 283);
+            this.btnFileCopy.Location = new System.Drawing.Point(605, 202);
             this.btnFileCopy.Name = "btnFileCopy";
             this.btnFileCopy.Size = new System.Drawing.Size(75, 33);
             this.btnFileCopy.TabIndex = 18;
@@ -323,35 +323,35 @@
             // 
             // txtFilePathFilter
             // 
-            this.txtFilePathFilter.Location = new System.Drawing.Point(48, 369);
+            this.txtFilePathFilter.Location = new System.Drawing.Point(49, 280);
             this.txtFilePathFilter.Name = "txtFilePathFilter";
             this.txtFilePathFilter.Size = new System.Drawing.Size(81, 19);
             this.txtFilePathFilter.TabIndex = 20;
             // 
             // txtFileNameFilter
             // 
-            this.txtFileNameFilter.Location = new System.Drawing.Point(135, 369);
+            this.txtFileNameFilter.Location = new System.Drawing.Point(136, 280);
             this.txtFileNameFilter.Name = "txtFileNameFilter";
             this.txtFileNameFilter.Size = new System.Drawing.Size(81, 19);
             this.txtFileNameFilter.TabIndex = 21;
             // 
             // txtRowNumFilter
             // 
-            this.txtRowNumFilter.Location = new System.Drawing.Point(222, 369);
+            this.txtRowNumFilter.Location = new System.Drawing.Point(223, 280);
             this.txtRowNumFilter.Name = "txtRowNumFilter";
             this.txtRowNumFilter.Size = new System.Drawing.Size(81, 19);
             this.txtRowNumFilter.TabIndex = 22;
             // 
             // txtGrepResultFilter
             // 
-            this.txtGrepResultFilter.Location = new System.Drawing.Point(309, 369);
+            this.txtGrepResultFilter.Location = new System.Drawing.Point(310, 280);
             this.txtGrepResultFilter.Name = "txtGrepResultFilter";
             this.txtGrepResultFilter.Size = new System.Drawing.Size(81, 19);
             this.txtGrepResultFilter.TabIndex = 23;
             // 
             // txtMethodFilter
             // 
-            this.txtMethodFilter.Location = new System.Drawing.Point(396, 369);
+            this.txtMethodFilter.Location = new System.Drawing.Point(397, 280);
             this.txtMethodFilter.Name = "txtMethodFilter";
             this.txtMethodFilter.Size = new System.Drawing.Size(81, 19);
             this.txtMethodFilter.TabIndex = 24;
@@ -359,7 +359,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(49, 354);
+            this.label4.Location = new System.Drawing.Point(50, 265);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(58, 12);
             this.label4.TabIndex = 0;
@@ -368,7 +368,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(139, 354);
+            this.label5.Location = new System.Drawing.Point(140, 265);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(51, 12);
             this.label5.TabIndex = 0;
@@ -377,7 +377,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(231, 354);
+            this.label6.Location = new System.Drawing.Point(232, 265);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(17, 12);
             this.label6.TabIndex = 0;
@@ -386,7 +386,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(307, 354);
+            this.label7.Location = new System.Drawing.Point(308, 265);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(53, 12);
             this.label7.TabIndex = 0;
@@ -395,7 +395,7 @@
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(394, 354);
+            this.label8.Location = new System.Drawing.Point(395, 265);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(38, 12);
             this.label8.TabIndex = 0;
@@ -404,7 +404,7 @@
             // btnMultiKeywords
             // 
             this.btnMultiKeywords.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnMultiKeywords.Location = new System.Drawing.Point(688, 227);
+            this.btnMultiKeywords.Location = new System.Drawing.Point(688, 146);
             this.btnMultiKeywords.Name = "btnMultiKeywords";
             this.btnMultiKeywords.Size = new System.Drawing.Size(45, 20);
             this.btnMultiKeywords.TabIndex = 26;
@@ -414,56 +414,56 @@
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(46, 126);
+            this.label9.Location = new System.Drawing.Point(252, 83);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(171, 12);
+            this.label9.Size = new System.Drawing.Size(176, 12);
             this.label9.TabIndex = 0;
             this.label9.Text = "除外フォルダ（/区切り、例: bin/obj）";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(459, 83);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(177, 12);
+            this.label10.TabIndex = 0;
+            this.label10.Text = "除外拡張子（/区切り、例: exe/dll）";
+            // 
+            // chkIgnoreBinaryFile
+            // 
+            this.chkIgnoreBinaryFile.AutoSize = true;
+            this.chkIgnoreBinaryFile.Location = new System.Drawing.Point(461, 172);
+            this.chkIgnoreBinaryFile.Name = "chkIgnoreBinaryFile";
+            this.chkIgnoreBinaryFile.Size = new System.Drawing.Size(127, 16);
+            this.chkIgnoreBinaryFile.TabIndex = 14;
+            this.chkIgnoreBinaryFile.Text = "バイナリファイルを無視";
+            this.chkIgnoreBinaryFile.UseVisualStyleBackColor = true;
             // 
             // cmbExcludeFolder
             // 
             this.cmbExcludeFolder.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbExcludeFolder.FormattingEnabled = true;
-            this.cmbExcludeFolder.Location = new System.Drawing.Point(48, 141);
+            this.cmbExcludeFolder.Location = new System.Drawing.Point(254, 98);
             this.cmbExcludeFolder.Name = "cmbExcludeFolder";
-            this.cmbExcludeFolder.Size = new System.Drawing.Size(631, 20);
+            this.cmbExcludeFolder.Size = new System.Drawing.Size(200, 20);
             this.cmbExcludeFolder.TabIndex = 5;
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(46, 169);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(187, 12);
-            this.label10.TabIndex = 0;
-            this.label10.Text = "除外拡張子（/区切り、例: exe/dll）";
             // 
             // cmbExcludeExtension
             // 
             this.cmbExcludeExtension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbExcludeExtension.FormattingEnabled = true;
-            this.cmbExcludeExtension.Location = new System.Drawing.Point(48, 184);
+            this.cmbExcludeExtension.Location = new System.Drawing.Point(461, 98);
             this.cmbExcludeExtension.Name = "cmbExcludeExtension";
-            this.cmbExcludeExtension.Size = new System.Drawing.Size(631, 20);
+            this.cmbExcludeExtension.Size = new System.Drawing.Size(200, 20);
             this.cmbExcludeExtension.TabIndex = 6;
-            // 
-            // chkIgnoreBinaryFile
-            // 
-            this.chkIgnoreBinaryFile.AutoSize = true;
-            this.chkIgnoreBinaryFile.Location = new System.Drawing.Point(461, 253);
-            this.chkIgnoreBinaryFile.Name = "chkIgnoreBinaryFile";
-            this.chkIgnoreBinaryFile.Size = new System.Drawing.Size(144, 16);
-            this.chkIgnoreBinaryFile.TabIndex = 14;
-            this.chkIgnoreBinaryFile.Text = "バイナリファイルを無視";
-            this.chkIgnoreBinaryFile.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(766, 574);
+            this.ClientSize = new System.Drawing.Size(766, 432);
             this.Controls.Add(this.chkIgnoreBinaryFile);
             this.Controls.Add(this.cmbExcludeExtension);
             this.Controls.Add(this.label10);

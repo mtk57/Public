@@ -21,6 +21,8 @@ namespace SimpleGrep
     public partial class MainForm : Form
     {
         private const string SettingsFileName = "SimpleGrep.settings.json";
+        private const string SakuraSearchConditionsBegin = "# SimpleGrep Search Conditions Begin";
+        private const string SakuraSearchConditionsEnd = "# SimpleGrep Search Conditions End";
         private const int MaxHistoryCount = 10;
         private CancellationTokenSource searchCancellationTokenSource;
         private CancellationTokenSource filterCancellationTokenSource;
@@ -51,6 +53,7 @@ namespace SimpleGrep
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
+            this.btnExportSettings.Click += new System.EventHandler(this.btnExportSettings_Click);
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
             this.btnMultiKeywords.Click += new System.EventHandler(this.btnMultiKeywords_Click);
@@ -72,6 +75,8 @@ namespace SimpleGrep
             this.txtRowNumFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtGrepResultFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtMethodFilter.TextChanged += new EventHandler(this.FilterTextChanged);
+            this.dataGridViewResults.DragEnter += new DragEventHandler(this.dataGridViewResults_DragEnter);
+            this.dataGridViewResults.DragDrop += new DragEventHandler(this.dataGridViewResults_DragDrop);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -222,7 +227,19 @@ namespace SimpleGrep
 
         private void SaveSettings()
         {
-            var settings = new AppSettings
+            try
+            {
+                WriteSettingsFile(SettingsFileName, GetCurrentSettings());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定ファイルの保存に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private AppSettings GetCurrentSettings()
+        {
+            return new AppSettings
             {
                 FolderPathHistory = GetHistory(cmbFolderPath),
                 FilePatternHistory = GetHistory(comboBox1),
@@ -240,18 +257,14 @@ namespace SimpleGrep
                 ExcludeExtensionsText = cmbExcludeExtension.Text,
                 IgnoreBinaryFile = chkIgnoreBinaryFile.Checked
             };
+        }
 
-            try
+        private static void WriteSettingsFile(string fileName, AppSettings settings)
+        {
+            using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
             {
-                using (var stream = new FileStream(SettingsFileName, FileMode.Create, FileAccess.Write))
-                {
-                    var serializer = new DataContractJsonSerializer(typeof(AppSettings));
-                    serializer.WriteObject(stream, settings);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"設定ファイルの保存に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                var serializer = new DataContractJsonSerializer(typeof(AppSettings));
+                serializer.WriteObject(stream, settings);
             }
         }
 
@@ -921,7 +934,8 @@ namespace SimpleGrep
             string fileName = Path.Combine(AppContext.BaseDirectory, DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".grep");
             try
             {
-                await Task.Run(() => WriteSakuraGrepFile(fileName, results));
+                var searchConditions = GetCurrentSakuraSearchConditions();
+                await Task.Run(() => WriteSakuraGrepFile(fileName, results, searchConditions));
                 
                 string sakuraPath = FindSakuraPath();
                 if (sakuraPath != null)
@@ -947,10 +961,49 @@ namespace SimpleGrep
         }
         // ★★ここまで修正★★
 
-        private static void WriteSakuraGrepFile(string fileName, IReadOnlyList<SearchResult> results)
+        private void btnExportSettings_Click(object sender, EventArgs e)
+        {
+            string fileName = Path.Combine(
+                AppContext.BaseDirectory,
+                "SimpleGrep.settings_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
+
+            try
+            {
+                WriteSettingsFile(fileName, GetCurrentSettings());
+                MessageBox.Show($"{fileName} に設定を保存しました。", "エクスポート完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定のエクスポートに失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private SakuraSearchConditions GetCurrentSakuraSearchConditions()
+        {
+            return new SakuraSearchConditions
+            {
+                ExportedAt = DateTime.Now,
+                SearchFolder = cmbFolderPath.Text,
+                FilePattern = comboBox1.Text,
+                Keyword = cmbKeyword.Text,
+                MultiKeywords = multiKeywordsText,
+                ExcludeFolders = cmbExcludeFolder.Text,
+                ExcludeExtensions = cmbExcludeExtension.Text,
+                SearchSubDir = chkSearchSubDir.Checked,
+                CaseSensitive = chkCase.Checked,
+                UseRegex = chkUseRegex.Checked,
+                DeriveMethod = chkMethod.Checked,
+                IgnoreComment = chkIgnoreComment.Checked,
+                IgnoreBinaryFile = chkIgnoreBinaryFile.Checked
+            };
+        }
+
+        private static void WriteSakuraGrepFile(string fileName, IReadOnlyList<SearchResult> results, SakuraSearchConditions searchConditions)
         {
             using (var writer = new StreamWriter(fileName, false, Encoding.UTF8))
             {
+                WriteSakuraSearchConditions(writer, searchConditions);
+
                 foreach (var result in results)
                 {
                     string filePath = result.FilePath ?? string.Empty;
@@ -961,6 +1014,294 @@ namespace SimpleGrep
                     writer.WriteLine($"{filePath}({lineNumber},1)  [{encoding}]: {lineContent}");
                 }
             }
+        }
+
+        private static void WriteSakuraSearchConditions(StreamWriter writer, SakuraSearchConditions searchConditions)
+        {
+            if (searchConditions == null)
+            {
+                searchConditions = new SakuraSearchConditions();
+            }
+
+            writer.WriteLine(SakuraSearchConditionsBegin);
+            writer.WriteLine("# ExportedAt: " + searchConditions.ExportedAt.ToString("yyyy-MM-dd HH:mm:ss"));
+            writer.WriteLine("# SearchFolder: " + EscapeSearchConditionValue(searchConditions.SearchFolder));
+            writer.WriteLine("# FilePattern: " + EscapeSearchConditionValue(searchConditions.FilePattern));
+            writer.WriteLine("# Keyword: " + EscapeSearchConditionValue(searchConditions.Keyword));
+            writer.WriteLine("# MultiKeywords: " + EscapeSearchConditionValue(searchConditions.MultiKeywords));
+            writer.WriteLine("# ExcludeFolders: " + EscapeSearchConditionValue(searchConditions.ExcludeFolders));
+            writer.WriteLine("# ExcludeExtensions: " + EscapeSearchConditionValue(searchConditions.ExcludeExtensions));
+            writer.WriteLine("# SearchSubDir: " + searchConditions.SearchSubDir);
+            writer.WriteLine("# CaseSensitive: " + searchConditions.CaseSensitive);
+            writer.WriteLine("# UseRegex: " + searchConditions.UseRegex);
+            writer.WriteLine("# DeriveMethod: " + searchConditions.DeriveMethod);
+            writer.WriteLine("# IgnoreComment: " + searchConditions.IgnoreComment);
+            writer.WriteLine("# IgnoreBinaryFile: " + searchConditions.IgnoreBinaryFile);
+            writer.WriteLine(SakuraSearchConditionsEnd);
+        }
+
+        private void dataGridViewResults_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        private void dataGridViewResults_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+            if (files == null || files.Length == 0)
+            {
+                return;
+            }
+
+            string fileName = files[0];
+            var dialogResult = MessageBox.Show(
+                $"{fileName}\n\n検索結果と検索条件をインポートしますか？",
+                "インポート確認",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (dialogResult != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                var importData = ReadSakuraGrepFile(fileName);
+                if (importData.Results.Count == 0)
+                {
+                    MessageBox.Show("復元できる検索結果が見つかりませんでした。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (importData.HasSearchConditions)
+                {
+                    ApplySakuraSearchConditions(importData.SearchConditions);
+                }
+
+                currentSearchResults = importData.Results;
+                ClearAllFilters();
+                RenderResults(currentSearchResults);
+                labelTime.Text = "Restored from file";
+                progressBar.Value = 0;
+                lblPer.Text = "0 %";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"検索結果の復元に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ApplySakuraSearchConditions(SakuraSearchConditions searchConditions)
+        {
+            if (searchConditions == null)
+            {
+                return;
+            }
+
+            cmbFolderPath.Text = searchConditions.SearchFolder ?? string.Empty;
+            comboBox1.Text = searchConditions.FilePattern ?? string.Empty;
+            cmbKeyword.Text = searchConditions.Keyword ?? string.Empty;
+            multiKeywordsText = searchConditions.MultiKeywords ?? string.Empty;
+            cmbExcludeFolder.Text = searchConditions.ExcludeFolders ?? string.Empty;
+            cmbExcludeExtension.Text = searchConditions.ExcludeExtensions ?? string.Empty;
+            chkSearchSubDir.Checked = searchConditions.SearchSubDir;
+            chkCase.Checked = searchConditions.CaseSensitive;
+            chkUseRegex.Checked = searchConditions.UseRegex;
+            chkMethod.Checked = searchConditions.DeriveMethod;
+            chkIgnoreComment.Checked = searchConditions.IgnoreComment;
+            chkIgnoreBinaryFile.Checked = searchConditions.IgnoreBinaryFile;
+            UpdateMethodColumnVisibility();
+        }
+
+        private static SakuraGrepImportData ReadSakuraGrepFile(string fileName)
+        {
+            var results = new List<SearchResult>();
+            var searchConditions = new SakuraSearchConditions();
+            bool hasSearchConditions = false;
+            bool skippingSearchConditions = false;
+
+            foreach (string line in File.ReadLines(fileName, Encoding.UTF8))
+            {
+                if (line == SakuraSearchConditionsBegin)
+                {
+                    hasSearchConditions = true;
+                    skippingSearchConditions = true;
+                    continue;
+                }
+
+                if (line == SakuraSearchConditionsEnd)
+                {
+                    skippingSearchConditions = false;
+                    continue;
+                }
+
+                if (skippingSearchConditions || string.IsNullOrWhiteSpace(line))
+                {
+                    if (skippingSearchConditions)
+                    {
+                        TryApplySakuraSearchConditionLine(line, searchConditions);
+                    }
+                    continue;
+                }
+
+                SearchResult result;
+                if (TryParseSakuraGrepLine(line, out result))
+                {
+                    results.Add(result);
+                }
+            }
+
+            return new SakuraGrepImportData
+            {
+                Results = results,
+                SearchConditions = searchConditions,
+                HasSearchConditions = hasSearchConditions
+            };
+        }
+
+        private static void TryApplySakuraSearchConditionLine(string line, SakuraSearchConditions searchConditions)
+        {
+            if (string.IsNullOrEmpty(line) || searchConditions == null || !line.StartsWith("# "))
+            {
+                return;
+            }
+
+            int separatorIndex = line.IndexOf(": ", StringComparison.Ordinal);
+            if (separatorIndex < 0)
+            {
+                return;
+            }
+
+            string key = line.Substring(2, separatorIndex - 2);
+            string value = line.Substring(separatorIndex + 2);
+            switch (key)
+            {
+                case "ExportedAt":
+                    DateTime exportedAt;
+                    if (DateTime.TryParse(value, out exportedAt))
+                    {
+                        searchConditions.ExportedAt = exportedAt;
+                    }
+                    break;
+                case "SearchFolder":
+                    searchConditions.SearchFolder = UnescapeSearchConditionValue(value);
+                    break;
+                case "FilePattern":
+                    searchConditions.FilePattern = UnescapeSearchConditionValue(value);
+                    break;
+                case "Keyword":
+                    searchConditions.Keyword = UnescapeSearchConditionValue(value);
+                    break;
+                case "MultiKeywords":
+                    searchConditions.MultiKeywords = UnescapeSearchConditionValue(value);
+                    break;
+                case "ExcludeFolders":
+                    searchConditions.ExcludeFolders = UnescapeSearchConditionValue(value);
+                    break;
+                case "ExcludeExtensions":
+                    searchConditions.ExcludeExtensions = UnescapeSearchConditionValue(value);
+                    break;
+                case "SearchSubDir":
+                    searchConditions.SearchSubDir = ParseBooleanSearchCondition(value);
+                    break;
+                case "CaseSensitive":
+                    searchConditions.CaseSensitive = ParseBooleanSearchCondition(value);
+                    break;
+                case "UseRegex":
+                    searchConditions.UseRegex = ParseBooleanSearchCondition(value);
+                    break;
+                case "DeriveMethod":
+                    searchConditions.DeriveMethod = ParseBooleanSearchCondition(value);
+                    break;
+                case "IgnoreComment":
+                    searchConditions.IgnoreComment = ParseBooleanSearchCondition(value);
+                    break;
+                case "IgnoreBinaryFile":
+                    searchConditions.IgnoreBinaryFile = ParseBooleanSearchCondition(value);
+                    break;
+            }
+        }
+
+        private static bool ParseBooleanSearchCondition(string value)
+        {
+            bool result;
+            return bool.TryParse(value, out result) && result;
+        }
+
+        private static string EscapeSearchConditionValue(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return "base64:" + Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        }
+
+        private static string UnescapeSearchConditionValue(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            const string Base64Prefix = "base64:";
+            if (!value.StartsWith(Base64Prefix, StringComparison.Ordinal))
+            {
+                return value;
+            }
+
+            try
+            {
+                byte[] bytes = Convert.FromBase64String(value.Substring(Base64Prefix.Length));
+                return Encoding.UTF8.GetString(bytes);
+            }
+            catch (FormatException)
+            {
+                return value;
+            }
+        }
+
+        private static bool TryParseSakuraGrepLine(string line, out SearchResult result)
+        {
+            result = null;
+            var match = Regex.Match(line ?? string.Empty, @"^(?<path>.+)\((?<line>\d+),\d+\)\s+\[(?<encoding>[^\]]*)\]:(?<text>.*)$");
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            int lineNumber;
+            if (!int.TryParse(match.Groups["line"].Value, out lineNumber))
+            {
+                return false;
+            }
+
+            string filePath = match.Groups["path"].Value;
+            string lineText = match.Groups["text"].Value;
+            if (lineText.StartsWith(" "))
+            {
+                lineText = lineText.Substring(1);
+            }
+
+            result = new SearchResult
+            {
+                FilePath = filePath,
+                FileName = Path.GetFileName(filePath),
+                FileExtension = Path.GetExtension(filePath),
+                LineNumber = lineNumber,
+                LineText = lineText,
+                MethodSignature = string.Empty,
+                EncodingName = match.Groups["encoding"].Value
+            };
+            return true;
         }
 
         private void cmbFolderPath_DragEnter(object sender, DragEventArgs e)
@@ -1188,6 +1529,30 @@ namespace SimpleGrep
 
             public string Name { get; }
             public string HeaderText { get; }
+        }
+
+        private sealed class SakuraGrepImportData
+        {
+            public List<SearchResult> Results { get; set; } = new List<SearchResult>();
+            public SakuraSearchConditions SearchConditions { get; set; } = new SakuraSearchConditions();
+            public bool HasSearchConditions { get; set; }
+        }
+
+        private sealed class SakuraSearchConditions
+        {
+            public DateTime ExportedAt { get; set; } = DateTime.Now;
+            public string SearchFolder { get; set; } = string.Empty;
+            public string FilePattern { get; set; } = string.Empty;
+            public string Keyword { get; set; } = string.Empty;
+            public string MultiKeywords { get; set; } = string.Empty;
+            public string ExcludeFolders { get; set; } = string.Empty;
+            public string ExcludeExtensions { get; set; } = string.Empty;
+            public bool SearchSubDir { get; set; }
+            public bool CaseSensitive { get; set; }
+            public bool UseRegex { get; set; }
+            public bool DeriveMethod { get; set; }
+            public bool IgnoreComment { get; set; }
+            public bool IgnoreBinaryFile { get; set; }
         }
 
         [DataContract]

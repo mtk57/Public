@@ -48,6 +48,7 @@
             this.chkCase = new System.Windows.Forms.CheckBox();
             this.button1 = new System.Windows.Forms.Button();
             this.btnExportSakura = new System.Windows.Forms.Button();
+            this.btnExportSettings = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.chkTagJump = new System.Windows.Forms.CheckBox();
@@ -151,6 +152,7 @@
             // 
             // dataGridViewResults
             // 
+            this.dataGridViewResults.AllowDrop = true;
             this.dataGridViewResults.AllowUserToAddRows = false;
             this.dataGridViewResults.AllowUserToDeleteRows = false;
             this.dataGridViewResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -258,6 +260,15 @@
             this.btnExportSakura.TabIndex = 15;
             this.btnExportSakura.Text = "Export sakura";
             this.btnExportSakura.UseVisualStyleBackColor = true;
+            // 
+            // btnExportSettings
+            // 
+            this.btnExportSettings.Location = new System.Drawing.Point(686, 202);
+            this.btnExportSettings.Name = "btnExportSettings";
+            this.btnExportSettings.Size = new System.Drawing.Size(72, 23);
+            this.btnExportSettings.TabIndex = 29;
+            this.btnExportSettings.Text = "設定Export";
+            this.btnExportSettings.UseVisualStyleBackColor = true;
             // 
             // label3
             // 
@@ -544,6 +555,7 @@
             this.Controls.Add(this.chkTagJump);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label3);
+            this.Controls.Add(this.btnExportSettings);
             this.Controls.Add(this.btnExportSakura);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.chkCase);
@@ -581,6 +593,7 @@
         private System.Windows.Forms.CheckBox chkCase;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button btnExportSakura;
+        private System.Windows.Forms.Button btnExportSettings;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.CheckBox chkTagJump;

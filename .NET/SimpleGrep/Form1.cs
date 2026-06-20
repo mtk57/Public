@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading; // Interlockedのために追加
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -29,6 +30,10 @@ namespace SimpleGrep
             InitializeComponent();
             this.cmbFolderPath.DragEnter += new DragEventHandler(cmbFolderPath_DragEnter);
             this.cmbFolderPath.DragDrop += new DragEventHandler(cmbFolderPath_DragDrop);
+            this.cmbFolderPath.Leave += new EventHandler(this.HistoryComboBox_Leave);
+            this.cmbFolderPath.KeyDown += new KeyEventHandler(this.HistoryComboBox_KeyDown);
+            this.comboBox1.Leave += new EventHandler(this.HistoryComboBox_Leave);
+            this.comboBox1.KeyDown += new KeyEventHandler(this.HistoryComboBox_KeyDown);
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             this.button1.Click += new System.EventHandler(this.btnGrep_Click);
             this.btnExportSakura.Click += new System.EventHandler(this.btnExportSakura_Click);
@@ -38,7 +43,12 @@ namespace SimpleGrep
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
             this.chkMethod.CheckedChanged += new System.EventHandler(this.chkMethod_CheckedChanged);
+            this.cmbKeyword.Leave += new EventHandler(this.HistoryComboBox_Leave);
             this.cmbKeyword.KeyDown += new KeyEventHandler(this.cmbKeyword_KeyDown);
+            this.cmbExcludeFolder.Leave += new EventHandler(this.HistoryComboBox_Leave);
+            this.cmbExcludeFolder.KeyDown += new KeyEventHandler(this.HistoryComboBox_KeyDown);
+            this.cmbExcludeExtension.Leave += new EventHandler(this.HistoryComboBox_Leave);
+            this.cmbExcludeExtension.KeyDown += new KeyEventHandler(this.HistoryComboBox_KeyDown);
             this.txtFilePathFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtFileNameFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtRowNumFilter.TextChanged += new EventHandler(this.FilterTextChanged);
@@ -162,6 +172,8 @@ namespace SimpleGrep
                     LoadHistory(cmbFolderPath, settings.FolderPathHistory);
                     LoadHistory(comboBox1, settings.FilePatternHistory);
                     LoadHistory(cmbKeyword, settings.GrepPatternHistory);
+                    LoadHistory(cmbExcludeFolder, MergeHistory(settings.ExcludeFolderHistory, settings.ExcludeFoldersText));
+                    LoadHistory(cmbExcludeExtension, MergeHistory(settings.ExcludeExtensionHistory, settings.ExcludeExtensionsText));
 
                     chkSearchSubDir.Checked = settings.SearchSubDir;
                     chkCase.Checked = settings.CaseSensitive;
@@ -170,6 +182,7 @@ namespace SimpleGrep
                     chkMethod.Checked = settings.DeriveMethod;
                     chkIgnoreComment.Checked = settings.IgnoreComment;
                     multiKeywordsText = settings.MultiKeywordsText ?? string.Empty;
+                    chkIgnoreBinaryFile.Checked = settings.IgnoreBinaryFile;
                 }
             }
             catch (Exception ex)
@@ -185,13 +198,18 @@ namespace SimpleGrep
                 FolderPathHistory = GetHistory(cmbFolderPath),
                 FilePatternHistory = GetHistory(comboBox1),
                 GrepPatternHistory = GetHistory(cmbKeyword),
+                ExcludeFolderHistory = GetHistory(cmbExcludeFolder),
+                ExcludeExtensionHistory = GetHistory(cmbExcludeExtension),
                 SearchSubDir = chkSearchSubDir.Checked,
                 CaseSensitive = chkCase.Checked,
                 UseRegex = chkUseRegex.Checked,
                 TagJump = chkTagJump.Checked,
                 DeriveMethod = chkMethod.Checked,
                 IgnoreComment = chkIgnoreComment.Checked,
-                MultiKeywordsText = multiKeywordsText
+                MultiKeywordsText = multiKeywordsText,
+                ExcludeFoldersText = cmbExcludeFolder.Text,
+                ExcludeExtensionsText = cmbExcludeExtension.Text,
+                IgnoreBinaryFile = chkIgnoreBinaryFile.Checked
             };
 
             try
@@ -226,6 +244,22 @@ namespace SimpleGrep
             }
             history.AddRange(comboBox.Items.Cast<string>().Where(item => item != comboBox.Text));
             return history.Distinct().Take(MaxHistoryCount).ToList();
+        }
+
+        private static List<string> MergeHistory(List<string> history, string currentText)
+        {
+            var merged = new List<string>();
+            if (!string.IsNullOrWhiteSpace(currentText))
+            {
+                merged.Add(currentText);
+            }
+
+            if (history != null)
+            {
+                merged.AddRange(history.Where(item => !string.IsNullOrWhiteSpace(item)));
+            }
+
+            return merged.Distinct().Take(MaxHistoryCount).ToList();
         }
 
 
@@ -290,12 +324,44 @@ namespace SimpleGrep
                 bool useRegex = chkUseRegex.Checked;
                 bool deriveMethod = chkMethod.Checked;
                 bool ignoreComment = chkIgnoreComment.Checked;
+                bool ignoreBinaryFile = chkIgnoreBinaryFile.Checked;
+                var excludeFolderPatterns = ParseExcludeFolderPatterns(cmbExcludeFolder.Text);
+                var excludeExtensions = ParseExcludeExtensions(cmbExcludeExtension.Text);
+                if (useRegex && excludeFolderPatterns.Count > 0)
+                {
+                    string invalidExcludePattern = GetInvalidRegexPattern(excludeFolderPatterns);
+                    if (invalidExcludePattern != null)
+                    {
+                        MessageBox.Show($"除外フォルダの正規表現が不正です: {invalidExcludePattern}", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
 
                 var searchOption = searchSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                UpdateHistory(cmbExcludeFolder, cmbExcludeFolder.Text);
+                UpdateHistory(cmbExcludeExtension, cmbExcludeExtension.Text);
                 string[] filesToSearch;
                 try
                 {
                     filesToSearch = Directory.GetFiles(folderPath, filePattern, searchOption);
+                    if (excludeFolderPatterns.Count > 0)
+                    {
+                        filesToSearch = filesToSearch
+                            .Where(filePath => !ContainsExcludedFolder(filePath, excludeFolderPatterns, caseSensitive, useRegex))
+                            .ToArray();
+                    }
+                    if (excludeExtensions.Count > 0)
+                    {
+                        filesToSearch = filesToSearch
+                            .Where(filePath => !HasExcludedExtension(filePath, excludeExtensions, caseSensitive))
+                            .ToArray();
+                    }
+                    if (ignoreBinaryFile)
+                    {
+                        filesToSearch = filesToSearch
+                            .Where(filePath => !LooksLikeBinaryFile(filePath))
+                            .ToArray();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -427,6 +493,11 @@ namespace SimpleGrep
         
         private void UpdateHistory(ComboBox comboBox, string newItem)
         {
+            if (comboBox == null || string.IsNullOrWhiteSpace(newItem))
+            {
+                return;
+            }
+
             var items = comboBox.Items.Cast<string>().ToList();
             items.Remove(newItem);
             items.Insert(0, newItem);
@@ -450,11 +521,38 @@ namespace SimpleGrep
             {
                 e.SuppressKeyPress = true;
                 e.Handled = true;
+                UpdateComboBoxHistory(sender);
                 if (button1.Enabled)
                 {
                     button1.PerformClick();
                 }
             }
+        }
+
+        private void HistoryComboBox_Leave(object sender, EventArgs e)
+        {
+            UpdateComboBoxHistory(sender);
+        }
+
+        private void HistoryComboBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                UpdateComboBoxHistory(sender);
+            }
+        }
+
+        private void UpdateComboBoxHistory(object sender)
+        {
+            var comboBox = sender as ComboBox;
+            if (comboBox == null)
+            {
+                return;
+            }
+
+            UpdateHistory(comboBox, comboBox.Text);
         }
 
         private void FilterTextChanged(object sender, EventArgs e)
@@ -720,6 +818,134 @@ namespace SimpleGrep
             }
         }
 
+        private static IReadOnlyList<string> ParseExcludeFolderPatterns(string excludeFoldersText)
+        {
+            if (string.IsNullOrWhiteSpace(excludeFoldersText))
+            {
+                return Array.Empty<string>();
+            }
+
+            return excludeFoldersText
+                .Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(pattern => pattern.Trim())
+                .Where(pattern => !string.IsNullOrEmpty(pattern))
+                .ToArray();
+        }
+
+        private static bool ContainsExcludedFolder(string filePath, IReadOnlyList<string> excludeFolderPatterns, bool caseSensitive, bool useRegex)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || excludeFolderPatterns == null || excludeFolderPatterns.Count == 0)
+            {
+                return false;
+            }
+
+            string directoryPath = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return false;
+            }
+
+            var folderNames = directoryPath
+                .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(Path.GetFileName)
+                .Where(folderName => !string.IsNullOrEmpty(folderName))
+                .ToArray();
+
+            if (useRegex)
+            {
+                var regexOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+                foreach (string pattern in excludeFolderPatterns)
+                {
+                    var regex = new Regex(pattern, regexOptions);
+                    if (folderNames.Any(folderName => regex.IsMatch(folderName)))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            var comparer = caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+            return folderNames.Any(folderName => excludeFolderPatterns.Contains(folderName, comparer));
+        }
+
+        private static IReadOnlyList<string> ParseExcludeExtensions(string excludeExtensionsText)
+        {
+            if (string.IsNullOrWhiteSpace(excludeExtensionsText))
+            {
+                return Array.Empty<string>();
+            }
+
+            return excludeExtensionsText
+                .Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(extension => extension.Trim())
+                .Where(extension => !string.IsNullOrEmpty(extension))
+                .Select(extension => extension.StartsWith(".") ? extension : "." + extension)
+                .ToArray();
+        }
+
+        private static bool HasExcludedExtension(string filePath, IReadOnlyList<string> excludeExtensions, bool caseSensitive)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || excludeExtensions == null || excludeExtensions.Count == 0)
+            {
+                return false;
+            }
+
+            string extension = Path.GetExtension(filePath);
+            if (string.IsNullOrEmpty(extension))
+            {
+                return false;
+            }
+
+            var comparer = caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+            return excludeExtensions.Contains(extension, comparer);
+        }
+
+        private static bool LooksLikeBinaryFile(string filePath)
+        {
+            const int BufferSize = 4096;
+
+            try
+            {
+                using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, BufferSize, FileOptions.SequentialScan))
+                {
+                    var buffer = new byte[Math.Min(BufferSize, Math.Max(1, (int)Math.Min(stream.Length, BufferSize)))];
+                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                    for (int i = 0; i < bytesRead; i++)
+                    {
+                        if (buffer[i] == 0)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            return false;
+        }
+
+        private static string GetInvalidRegexPattern(IEnumerable<string> patterns)
+        {
+            foreach (string pattern in patterns)
+            {
+                try
+                {
+                    new Regex(pattern);
+                }
+                catch (ArgumentException)
+                {
+                    return pattern;
+                }
+            }
+
+            return null;
+        }
+
         [DataContract]
         private class AppSettings
         {
@@ -729,6 +955,10 @@ namespace SimpleGrep
             public List<string> FilePatternHistory { get; set; } = new List<string>();
             [DataMember]
             public List<string> GrepPatternHistory { get; set; } = new List<string>();
+            [DataMember]
+            public List<string> ExcludeFolderHistory { get; set; } = new List<string>();
+            [DataMember]
+            public List<string> ExcludeExtensionHistory { get; set; } = new List<string>();
             [DataMember]
             public bool SearchSubDir { get; set; }
             [DataMember]
@@ -747,6 +977,15 @@ namespace SimpleGrep
 
             [DataMember]
             public string MultiKeywordsText { get; set; } = string.Empty;
+
+            [DataMember]
+            public string ExcludeFoldersText { get; set; } = string.Empty;
+
+            [DataMember]
+            public string ExcludeExtensionsText { get; set; } = string.Empty;
+
+            [DataMember]
+            public bool IgnoreBinaryFile { get; set; }
         }
     }
 }

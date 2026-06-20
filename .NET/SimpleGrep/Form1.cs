@@ -478,7 +478,7 @@ namespace SimpleGrep
                     wasCancelled = true;
                 }
 
-                if (!wasCancelled && searchResults != null)
+                if (searchResults != null)
                 {
                     currentSearchResults = SortSearchResults(searchResults);
                     await ApplyFiltersAsync();

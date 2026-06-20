@@ -12,8 +12,6 @@ namespace SimpleGrep.Core
 {
     internal static class GrepEngine
     {
-        private const int Utf8ProbeLength = 64 * 1024;
-
         public static IEnumerable<SearchResult> SearchFiles(
             string[] filePaths,
             IReadOnlyList<string> grepPatterns,
@@ -231,25 +229,9 @@ namespace SimpleGrep.Core
                     }
 
                     fs.Position = 0;
-                    int probeLength = (int)Math.Min(fs.Length, Utf8ProbeLength);
-                    if (probeLength > 0)
+                    if (IsUtf8(fs))
                     {
-                        var buffer = new byte[probeLength];
-                        int totalRead = 0;
-                        while (totalRead < probeLength)
-                        {
-                            int chunk = fs.Read(buffer, totalRead, probeLength - totalRead);
-                            if (chunk == 0)
-                            {
-                                break;
-                            }
-                            totalRead += chunk;
-                        }
-
-                        if (totalRead > 0 && IsUtf8(buffer, totalRead))
-                        {
-                            return new UTF8Encoding(false);
-                        }
+                        return new UTF8Encoding(false);
                     }
                 }
             }
@@ -281,45 +263,60 @@ namespace SimpleGrep.Core
             return null;
         }
 
-        private static bool IsUtf8(byte[] bytes, int length)
+        private static bool IsUtf8(Stream stream)
         {
-            int i = 0;
-            while (i < length)
+            const int BufferSize = 4096;
+            var buffer = new byte[BufferSize];
+            int expectedContinuationBytes = 0;
+            int bytesRead;
+
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
-                if (bytes[i] < 0x80)
+                for (int i = 0; i < bytesRead; i++)
                 {
-                    i++;
-                    continue;
-                }
+                    byte currentByte = buffer[i];
+                    if (expectedContinuationBytes > 0)
+                    {
+                        if (currentByte < 0x80 || currentByte > 0xBF)
+                        {
+                            return false;
+                        }
 
-                if (bytes[i] < 0xC2)
-                {
-                    return false;
-                }
+                        expectedContinuationBytes--;
+                        continue;
+                    }
 
-                int extraBytes = 0;
-                if (bytes[i] < 0xE0) extraBytes = 1;
-                else if (bytes[i] < 0xF0) extraBytes = 2;
-                else if (bytes[i] < 0xF5) extraBytes = 3;
-                else return false;
+                    if (currentByte < 0x80)
+                    {
+                        continue;
+                    }
 
-                if (i + extraBytes >= length)
-                {
-                    return false;
-                }
+                    if (currentByte < 0xC2)
+                    {
+                        return false;
+                    }
 
-                for (int j = 1; j <= extraBytes; j++)
-                {
-                    if (bytes[i + j] < 0x80 || bytes[i + j] > 0xBF)
+                    if (currentByte < 0xE0)
+                    {
+                        expectedContinuationBytes = 1;
+                    }
+                    else if (currentByte < 0xF0)
+                    {
+                        expectedContinuationBytes = 2;
+                    }
+                    else if (currentByte < 0xF5)
+                    {
+                        expectedContinuationBytes = 3;
+                    }
+                    else
                     {
                         return false;
                     }
                 }
-
-                i += (extraBytes + 1);
             }
 
-            return true;
+            return expectedContinuationBytes == 0;
         }
+
     }
 }

@@ -466,7 +466,7 @@ namespace SimpleGrep
 
                 if (!wasCancelled && searchResults != null)
                 {
-                    currentSearchResults = searchResults ?? new List<SearchResult>();
+                    currentSearchResults = SortSearchResults(searchResults);
                     await ApplyFiltersAsync();
                 }
             }
@@ -630,6 +630,15 @@ namespace SimpleGrep
             }
 
             RenderResults(filtered);
+        }
+
+        private static List<SearchResult> SortSearchResults(IEnumerable<SearchResult> results)
+        {
+            return (results ?? Enumerable.Empty<SearchResult>())
+                .OrderBy(result => result.FilePath ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(result => result.LineNumber)
+                .ThenBy(result => result.LineText ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private void ClearAllFilters()

@@ -54,6 +54,7 @@ namespace SimpleGrep
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
             this.btnMultiKeywords.Click += new System.EventHandler(this.btnMultiKeywords_Click);
+            this.btnCollectExtensions.Click += new System.EventHandler(this.btnCollectExtensions_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             InitializeResultsContextMenu();
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
@@ -518,6 +519,12 @@ namespace SimpleGrep
                     await RunSearchAsync(keywords, updateKeywordHistory: false);
                 }
             }
+        }
+
+        private void btnCollectExtensions_Click(object sender, EventArgs e)
+        {
+            var form = new ExtensionCollectorForm(cmbFolderPath.Text);
+            form.Show(this);
         }
         
         private void UpdateHistory(ComboBox comboBox, string newItem)

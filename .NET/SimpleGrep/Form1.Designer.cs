@@ -76,6 +76,7 @@
             this.cmbExcludeFolder = new System.Windows.Forms.ComboBox();
             this.cmbExcludeExtension = new System.Windows.Forms.ComboBox();
             this.lblResultCount = new System.Windows.Forms.Label();
+            this.btnCollectExtensions = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -495,11 +496,22 @@
             this.lblResultCount.Size = new System.Drawing.Size(0, 12);
             this.lblResultCount.TabIndex = 0;
             // 
+            // btnCollectExtensions
+            // 
+            this.btnCollectExtensions.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCollectExtensions.Location = new System.Drawing.Point(604, 54);
+            this.btnCollectExtensions.Name = "btnCollectExtensions";
+            this.btnCollectExtensions.Size = new System.Drawing.Size(126, 23);
+            this.btnCollectExtensions.TabIndex = 27;
+            this.btnCollectExtensions.Text = "全拡張子を収集";
+            this.btnCollectExtensions.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(766, 432);
+            this.Controls.Add(this.btnCollectExtensions);
             this.Controls.Add(this.lblResultCount);
             this.Controls.Add(this.chkIgnoreBinaryFile);
             this.Controls.Add(this.cmbExcludeExtension);
@@ -598,5 +610,6 @@
         private System.Windows.Forms.ComboBox cmbExcludeFolder;
         private System.Windows.Forms.ComboBox cmbExcludeExtension;
         private System.Windows.Forms.Label lblResultCount;
+        private System.Windows.Forms.Button btnCollectExtensions;
     }
 }

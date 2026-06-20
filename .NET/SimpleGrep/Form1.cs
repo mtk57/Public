@@ -66,6 +66,7 @@ namespace SimpleGrep
             this.cmbExcludeExtension.KeyDown += new KeyEventHandler(this.HistoryComboBox_KeyDown);
             this.txtFilePathFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtFileNameFilter.TextChanged += new EventHandler(this.FilterTextChanged);
+            this.txtExtensionFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtRowNumFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtGrepResultFilter.TextChanged += new EventHandler(this.FilterTextChanged);
             this.txtMethodFilter.TextChanged += new EventHandler(this.FilterTextChanged);
@@ -330,6 +331,7 @@ namespace SimpleGrep
             dataGridViewResults.Rows.Clear();
             currentSearchResults.Clear();
             ClearAllFilters();
+            lblResultCount.Text = string.Empty;
             button1.Enabled = false;
             btnMultiKeywords.Enabled = false;
             btnCancel.Enabled = true;
@@ -621,6 +623,7 @@ namespace SimpleGrep
         {
             txtFilePathFilter.Text = string.Empty;
             txtFileNameFilter.Text = string.Empty;
+            txtExtensionFilter.Text = string.Empty;
             txtRowNumFilter.Text = string.Empty;
             txtGrepResultFilter.Text = string.Empty;
             txtMethodFilter.Text = string.Empty;
@@ -632,6 +635,7 @@ namespace SimpleGrep
             {
                 FilePath = GetFilterText(txtFilePathFilter),
                 FileName = GetFilterText(txtFileNameFilter),
+                Extension = GetFilterText(txtExtensionFilter),
                 RowNumber = GetFilterText(txtRowNumFilter),
                 GrepResult = GetFilterText(txtGrepResultFilter),
                 Method = GetFilterText(txtMethodFilter)
@@ -652,6 +656,11 @@ namespace SimpleGrep
             }
 
             if (!string.IsNullOrEmpty(criteria.FileName) && !ContainsText(result.FileName, criteria.FileName))
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(criteria.Extension) && !ContainsText(result.FileExtension, criteria.Extension))
             {
                 return false;
             }
@@ -697,6 +706,7 @@ namespace SimpleGrep
         private void RenderResults(IReadOnlyList<SearchResult> results)
         {
             displayedSearchResults = results?.ToList() ?? new List<SearchResult>();
+            lblResultCount.Text = displayedSearchResults.Count > 0 ? $"{displayedSearchResults.Count} 件" : string.Empty;
             dataGridViewResults.SuspendLayout();
             dataGridViewResults.Rows.Clear();
 
@@ -1140,6 +1150,7 @@ namespace SimpleGrep
         {
             public string FilePath { get; set; } = string.Empty;
             public string FileName { get; set; } = string.Empty;
+            public string Extension { get; set; } = string.Empty;
             public string RowNumber { get; set; } = string.Empty;
             public string GrepResult { get; set; } = string.Empty;
             public string Method { get; set; } = string.Empty;

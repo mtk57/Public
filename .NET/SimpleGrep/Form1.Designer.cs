@@ -77,13 +77,14 @@
             this.cmbExcludeExtension = new System.Windows.Forms.ComboBox();
             this.lblResultCount = new System.Windows.Forms.Label();
             this.btnCollectExtensions = new System.Windows.Forms.Button();
+            this.btnClearFilters = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewResults)).BeginInit();
             this.SuspendLayout();
             // 
             // btnBrowse
             // 
             this.btnBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBrowse.Location = new System.Drawing.Point(685, 28);
+            this.btnBrowse.Location = new System.Drawing.Point(696, 28);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(45, 23);
             this.btnBrowse.TabIndex = 2;
@@ -115,7 +116,7 @@
             this.cmbKeyword.FormattingEnabled = true;
             this.cmbKeyword.Location = new System.Drawing.Point(48, 146);
             this.cmbKeyword.Name = "cmbKeyword";
-            this.cmbKeyword.Size = new System.Drawing.Size(631, 20);
+            this.cmbKeyword.Size = new System.Drawing.Size(642, 20);
             this.cmbKeyword.TabIndex = 8;
             // 
             // cmbFolderPath
@@ -126,7 +127,7 @@
             this.cmbFolderPath.FormattingEnabled = true;
             this.cmbFolderPath.Location = new System.Drawing.Point(48, 28);
             this.cmbFolderPath.Name = "cmbFolderPath";
-            this.cmbFolderPath.Size = new System.Drawing.Size(631, 20);
+            this.cmbFolderPath.Size = new System.Drawing.Size(642, 20);
             this.cmbFolderPath.TabIndex = 1;
             // 
             // btnCancel
@@ -163,10 +164,10 @@
             this.clmLine,
             this.clmGrepResult,
             this.clmMethodSignature});
-            this.dataGridViewResults.Location = new System.Drawing.Point(48, 305);
+            this.dataGridViewResults.Location = new System.Drawing.Point(12, 305);
             this.dataGridViewResults.Name = "dataGridViewResults";
             this.dataGridViewResults.ReadOnly = true;
-            this.dataGridViewResults.Size = new System.Drawing.Size(659, 115);
+            this.dataGridViewResults.Size = new System.Drawing.Size(753, 138);
             this.dataGridViewResults.TabIndex = 25;
             // 
             // clmFilePath
@@ -251,7 +252,7 @@
             // 
             // btnExportSakura
             // 
-            this.btnExportSakura.Location = new System.Drawing.Point(48, 212);
+            this.btnExportSakura.Location = new System.Drawing.Point(51, 202);
             this.btnExportSakura.Name = "btnExportSakura";
             this.btnExportSakura.Size = new System.Drawing.Size(96, 23);
             this.btnExportSakura.TabIndex = 15;
@@ -269,18 +270,16 @@
             // 
             // comboBox1
             // 
-            this.comboBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Location = new System.Drawing.Point(48, 98);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(200, 20);
+            this.comboBox1.Size = new System.Drawing.Size(167, 20);
             this.comboBox1.TabIndex = 4;
             // 
             // chkTagJump
             // 
             this.chkTagJump.AutoSize = true;
-            this.chkTagJump.Location = new System.Drawing.Point(632, 282);
+            this.chkTagJump.Location = new System.Drawing.Point(53, 231);
             this.chkTagJump.Name = "chkTagJump";
             this.chkTagJump.Size = new System.Drawing.Size(77, 16);
             this.chkTagJump.TabIndex = 11;
@@ -329,49 +328,49 @@
             // 
             this.btnFileCopy.Location = new System.Drawing.Point(605, 202);
             this.btnFileCopy.Name = "btnFileCopy";
-            this.btnFileCopy.Size = new System.Drawing.Size(75, 33);
+            this.btnFileCopy.Size = new System.Drawing.Size(75, 23);
             this.btnFileCopy.TabIndex = 18;
             this.btnFileCopy.Text = "ファイルコピー";
             this.btnFileCopy.UseVisualStyleBackColor = true;
             // 
             // txtFilePathFilter
             // 
-            this.txtFilePathFilter.Location = new System.Drawing.Point(49, 280);
+            this.txtFilePathFilter.Location = new System.Drawing.Point(11, 280);
             this.txtFilePathFilter.Name = "txtFilePathFilter";
             this.txtFilePathFilter.Size = new System.Drawing.Size(81, 19);
             this.txtFilePathFilter.TabIndex = 20;
             // 
             // txtFileNameFilter
             // 
-            this.txtFileNameFilter.Location = new System.Drawing.Point(136, 280);
+            this.txtFileNameFilter.Location = new System.Drawing.Point(98, 280);
             this.txtFileNameFilter.Name = "txtFileNameFilter";
             this.txtFileNameFilter.Size = new System.Drawing.Size(81, 19);
             this.txtFileNameFilter.TabIndex = 21;
             // 
             // txtExtensionFilter
             // 
-            this.txtExtensionFilter.Location = new System.Drawing.Point(223, 280);
+            this.txtExtensionFilter.Location = new System.Drawing.Point(185, 280);
             this.txtExtensionFilter.Name = "txtExtensionFilter";
             this.txtExtensionFilter.Size = new System.Drawing.Size(81, 19);
             this.txtExtensionFilter.TabIndex = 22;
             // 
             // txtRowNumFilter
             // 
-            this.txtRowNumFilter.Location = new System.Drawing.Point(310, 280);
+            this.txtRowNumFilter.Location = new System.Drawing.Point(272, 280);
             this.txtRowNumFilter.Name = "txtRowNumFilter";
             this.txtRowNumFilter.Size = new System.Drawing.Size(81, 19);
             this.txtRowNumFilter.TabIndex = 23;
             // 
             // txtGrepResultFilter
             // 
-            this.txtGrepResultFilter.Location = new System.Drawing.Point(397, 280);
+            this.txtGrepResultFilter.Location = new System.Drawing.Point(359, 280);
             this.txtGrepResultFilter.Name = "txtGrepResultFilter";
             this.txtGrepResultFilter.Size = new System.Drawing.Size(81, 19);
             this.txtGrepResultFilter.TabIndex = 24;
             // 
             // txtMethodFilter
             // 
-            this.txtMethodFilter.Location = new System.Drawing.Point(484, 280);
+            this.txtMethodFilter.Location = new System.Drawing.Point(446, 280);
             this.txtMethodFilter.Name = "txtMethodFilter";
             this.txtMethodFilter.Size = new System.Drawing.Size(81, 19);
             this.txtMethodFilter.TabIndex = 25;
@@ -379,7 +378,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(50, 265);
+            this.label4.Location = new System.Drawing.Point(12, 265);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(58, 12);
             this.label4.TabIndex = 0;
@@ -388,25 +387,16 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(140, 265);
+            this.label5.Location = new System.Drawing.Point(102, 265);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(51, 12);
             this.label5.TabIndex = 0;
             this.label5.Text = "ファイル名";
             // 
-            // label11
-            // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(222, 265);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(38, 12);
-            this.label11.TabIndex = 0;
-            this.label11.Text = "拡張子";
-            // 
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(319, 265);
+            this.label6.Location = new System.Drawing.Point(281, 265);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(17, 12);
             this.label6.TabIndex = 0;
@@ -415,7 +405,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(395, 265);
+            this.label7.Location = new System.Drawing.Point(357, 265);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(53, 12);
             this.label7.TabIndex = 0;
@@ -424,16 +414,25 @@
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(482, 265);
+            this.label8.Location = new System.Drawing.Point(444, 265);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(38, 12);
             this.label8.TabIndex = 0;
             this.label8.Text = "メソッド";
             // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(184, 265);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(41, 12);
+            this.label11.TabIndex = 0;
+            this.label11.Text = "拡張子";
+            // 
             // btnMultiKeywords
             // 
             this.btnMultiKeywords.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnMultiKeywords.Location = new System.Drawing.Point(688, 146);
+            this.btnMultiKeywords.Location = new System.Drawing.Point(699, 146);
             this.btnMultiKeywords.Name = "btnMultiKeywords";
             this.btnMultiKeywords.Size = new System.Drawing.Size(45, 20);
             this.btnMultiKeywords.TabIndex = 26;
@@ -470,22 +469,18 @@
             // 
             // cmbExcludeFolder
             // 
-            this.cmbExcludeFolder.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbExcludeFolder.FormattingEnabled = true;
             this.cmbExcludeFolder.Location = new System.Drawing.Point(254, 98);
             this.cmbExcludeFolder.Name = "cmbExcludeFolder";
-            this.cmbExcludeFolder.Size = new System.Drawing.Size(200, 20);
+            this.cmbExcludeFolder.Size = new System.Drawing.Size(177, 20);
             this.cmbExcludeFolder.TabIndex = 5;
             // 
             // cmbExcludeExtension
             // 
-            this.cmbExcludeExtension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.cmbExcludeExtension.FormattingEnabled = true;
             this.cmbExcludeExtension.Location = new System.Drawing.Point(461, 98);
             this.cmbExcludeExtension.Name = "cmbExcludeExtension";
-            this.cmbExcludeExtension.Size = new System.Drawing.Size(200, 20);
+            this.cmbExcludeExtension.Size = new System.Drawing.Size(195, 20);
             this.cmbExcludeExtension.TabIndex = 6;
             // 
             // lblResultCount
@@ -498,20 +493,30 @@
             // 
             // btnCollectExtensions
             // 
-            this.btnCollectExtensions.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCollectExtensions.Location = new System.Drawing.Point(604, 54);
+            this.btnCollectExtensions.Location = new System.Drawing.Point(662, 96);
             this.btnCollectExtensions.Name = "btnCollectExtensions";
-            this.btnCollectExtensions.Size = new System.Drawing.Size(126, 23);
+            this.btnCollectExtensions.Size = new System.Drawing.Size(102, 23);
             this.btnCollectExtensions.TabIndex = 27;
             this.btnCollectExtensions.Text = "全拡張子を収集";
             this.btnCollectExtensions.UseVisualStyleBackColor = true;
+            // 
+            // btnClearFilters
+            // 
+            this.btnClearFilters.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnClearFilters.Location = new System.Drawing.Point(716, 281);
+            this.btnClearFilters.Name = "btnClearFilters";
+            this.btnClearFilters.Size = new System.Drawing.Size(45, 21);
+            this.btnClearFilters.TabIndex = 28;
+            this.btnClearFilters.Text = "クリア";
+            this.btnClearFilters.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(766, 432);
+            this.ClientSize = new System.Drawing.Size(777, 455);
             this.Controls.Add(this.btnCollectExtensions);
+            this.Controls.Add(this.btnClearFilters);
             this.Controls.Add(this.lblResultCount);
             this.Controls.Add(this.chkIgnoreBinaryFile);
             this.Controls.Add(this.cmbExcludeExtension);
@@ -611,5 +616,6 @@
         private System.Windows.Forms.ComboBox cmbExcludeExtension;
         private System.Windows.Forms.Label lblResultCount;
         private System.Windows.Forms.Button btnCollectExtensions;
+        private System.Windows.Forms.Button btnClearFilters;
     }
 }

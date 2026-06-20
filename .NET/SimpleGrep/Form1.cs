@@ -55,6 +55,7 @@ namespace SimpleGrep
             this.btnFileCopy.Click += new System.EventHandler(this.btnFileCopy_Click);
             this.btnMultiKeywords.Click += new System.EventHandler(this.btnMultiKeywords_Click);
             this.btnCollectExtensions.Click += new System.EventHandler(this.btnCollectExtensions_Click);
+            this.btnClearFilters.Click += new System.EventHandler(this.btnClearFilters_Click);
             this.dataGridViewResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewResults_CellDoubleClick);
             InitializeResultsContextMenu();
             this.FormClosing += new FormClosingEventHandler(MainForm_FormClosing);
@@ -525,6 +526,11 @@ namespace SimpleGrep
         {
             var form = new ExtensionCollectorForm(cmbFolderPath.Text);
             form.Show(this);
+        }
+
+        private void btnClearFilters_Click(object sender, EventArgs e)
+        {
+            ClearAllFilters();
         }
         
         private void UpdateHistory(ComboBox comboBox, string newItem)

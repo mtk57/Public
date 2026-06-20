@@ -325,12 +325,13 @@ namespace SimpleGrep
         {
             string folderPath = cmbFolderPath.Text;
             string filePattern = comboBox1.Text;
+            var filePatterns = ParseFilePatterns(filePattern);
             var normalizedPatterns = (grepPatterns ?? Array.Empty<string>())
                 .Where(pattern => !string.IsNullOrWhiteSpace(pattern))
                 .ToList();
 
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath) ||
-                string.IsNullOrWhiteSpace(filePattern) || normalizedPatterns.Count == 0)
+                filePatterns.Count == 0 || normalizedPatterns.Count == 0)
             {
                 MessageBox.Show("検索フォルダー、ファイルパターン、検索パターンを正しく入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
@@ -398,7 +399,7 @@ namespace SimpleGrep
                     filesToSearch = await Task.Run(() =>
                         GetFilesToSearch(
                             folderPath,
-                            filePattern,
+                            filePatterns,
                             searchOption,
                             excludeFolderPatterns,
                             excludeExtensions,
@@ -1335,7 +1336,7 @@ namespace SimpleGrep
 
         private static string[] GetFilesToSearch(
             string folderPath,
-            string filePattern,
+            IReadOnlyList<string> filePatterns,
             SearchOption searchOption,
             IReadOnlyList<string> excludeFolderPatterns,
             IReadOnlyList<string> excludeExtensions,
@@ -1344,7 +1345,13 @@ namespace SimpleGrep
             bool ignoreBinaryFile,
             CancellationToken cancellationToken)
         {
-            var files = Directory.EnumerateFiles(folderPath, filePattern, searchOption)
+            var files = filePatterns
+                .SelectMany(filePattern =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return Directory.EnumerateFiles(folderPath, filePattern, searchOption);
+                })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Where(filePath =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1379,6 +1386,21 @@ namespace SimpleGrep
             }
 
             return files.ToArray();
+        }
+
+        private static IReadOnlyList<string> ParseFilePatterns(string filePatternsText)
+        {
+            if (string.IsNullOrWhiteSpace(filePatternsText))
+            {
+                return Array.Empty<string>();
+            }
+
+            return filePatternsText
+                .Split('/')
+                .Select(pattern => pattern.Trim())
+                .Where(pattern => !string.IsNullOrEmpty(pattern))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private static IReadOnlyList<string> ParseExcludeFolderPatterns(string excludeFoldersText)

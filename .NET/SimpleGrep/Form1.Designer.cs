@@ -275,9 +275,10 @@
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(49, 83);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(113, 12);
+            this.label3.Size = new System.Drawing.Size(148, 12);
             this.label3.TabIndex = 0;
-            this.label3.Text = "対象ファイル（例：*.cs）";
+            this.label3.Text = "対象ファイル（例：*.cs/*.java）";
+            this.toolTip1.SetToolTip(this.label3, "複数指定は / 区切りで入力できます。例: *.cs/*.java");
             // 
             // comboBox1
             // 
@@ -286,6 +287,7 @@
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(167, 20);
             this.comboBox1.TabIndex = 4;
+            this.toolTip1.SetToolTip(this.comboBox1, "複数指定は / 区切りで入力できます。例: *.cs/*.java");
             // 
             // chkTagJump
             // 

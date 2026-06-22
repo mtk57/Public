@@ -122,8 +122,8 @@ namespace Dir2Txt
             {
                 processedFiles.Add( file );
                 var read = ReadFileWithEncoding( file );
-                contentBuilder.Append( "@@" ).Append( file ).Append( "|" ).AppendLine( read.Encoding.WebName );
-                var content = read.Content;
+                contentBuilder.Append( "@@" ).Append( file ).Append( "|" ).Append( read.Encoding.WebName ).Append( "|" ).AppendLine( read.LineEnding );
+                var content = NormalizeLineEndings( read.Content, Environment.NewLine );
                 contentBuilder.Append( content );
                 if ( !content.EndsWith( Environment.NewLine ) )
                 {
@@ -203,12 +203,38 @@ namespace Dir2Txt
             return parts.Any( part => ignoreDirs.Contains( part ) );
         }
 
-        private (string Content, Encoding Encoding) ReadFileWithEncoding ( string path )
+        private (string Content, Encoding Encoding, string LineEnding) ReadFileWithEncoding ( string path )
         {
             var bytes = File.ReadAllBytes( path );
             var detected = DetectEncoding( bytes );
             var content = detected.GetString( bytes );
-            return ( content, detected );
+            return ( content, detected, DetectLineEnding( content ) );
+        }
+
+        private string DetectLineEnding ( string content )
+        {
+            if ( string.IsNullOrEmpty( content ) )
+            {
+                return "CRLF";
+            }
+
+            var crlfIndex = content.IndexOf( "\r\n", StringComparison.Ordinal );
+            if ( crlfIndex >= 0 )
+            {
+                return "CRLF";
+            }
+
+            return content.IndexOf( "\n", StringComparison.Ordinal ) >= 0 ? "LF" : "CRLF";
+        }
+
+        private string NormalizeLineEndings ( string text, string lineEnding )
+        {
+            if ( string.IsNullOrEmpty( text ) )
+            {
+                return text;
+            }
+
+            return text.Replace( "\r\n", "\n" ).Replace( "\r", "\n" ).Replace( "\n", lineEnding );
         }
 
         private Encoding DetectEncoding ( byte[] bytes )

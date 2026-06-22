@@ -112,7 +112,7 @@ namespace Dir2Txt
                     var encoding = GetEncodingOrDefault( entry.EncodingName );
                     using ( var writer = new StreamWriter( destination, false, encoding ) )
                     {
-                        writer.Write( entry.Content );
+                        writer.Write( NormalizeLineEndings( entry.Content, GetLineEndingText( entry.LineEndingName ) ) );
                     }
                 }
 
@@ -248,6 +248,7 @@ namespace Dir2Txt
                 string line;
                 string currentPath = null;
                 string currentEncoding = "utf-8";
+                string currentLineEnding = "CRLF";
                 var contentBuilder = new StringBuilder();
                 var started = !skipHeader;
 
@@ -266,14 +267,15 @@ namespace Dir2Txt
                     {
                         if ( currentPath != null )
                         {
-                            result.Add( new FileEntry( currentPath, currentEncoding, contentBuilder.ToString() ) );
+                            result.Add( new FileEntry( currentPath, currentEncoding, currentLineEnding, contentBuilder.ToString() ) );
                             contentBuilder.Clear();
                         }
 
                         var meta = line.Substring( 2 ).Trim();
-                        var parts = meta.Split( new[] { '|' }, 2 );
+                        var parts = meta.Split( new[] { '|' }, 3 );
                         currentPath = parts[0];
                         currentEncoding = parts.Length > 1 && !string.IsNullOrWhiteSpace( parts[1] ) ? parts[1].Trim() : "utf-8";
+                        currentLineEnding = parts.Length > 2 && !string.IsNullOrWhiteSpace( parts[2] ) ? parts[2].Trim() : "CRLF";
                     }
                     else if ( currentPath != null )
                     {
@@ -283,11 +285,26 @@ namespace Dir2Txt
 
                 if ( currentPath != null )
                 {
-                    result.Add( new FileEntry( currentPath, currentEncoding, contentBuilder.ToString() ) );
+                    result.Add( new FileEntry( currentPath, currentEncoding, currentLineEnding, contentBuilder.ToString() ) );
                 }
             }
 
             return result;
+        }
+
+        private string GetLineEndingText ( string name )
+        {
+            return string.Equals( name, "LF", StringComparison.OrdinalIgnoreCase ) ? "\n" : "\r\n";
+        }
+
+        private string NormalizeLineEndings ( string text, string lineEnding )
+        {
+            if ( string.IsNullOrEmpty( text ) )
+            {
+                return text;
+            }
+
+            return text.Replace( "\r\n", "\n" ).Replace( "\r", "\n" ).Replace( "\n", lineEnding );
         }
 
         private void PathTextBox_DragEnter ( object sender, DragEventArgs e )
@@ -420,15 +437,17 @@ namespace Dir2Txt
 
         private class FileEntry
         {
-            public FileEntry ( string originalPath, string encodingName, string content )
+            public FileEntry ( string originalPath, string encodingName, string lineEndingName, string content )
             {
                 OriginalPath = originalPath;
                 EncodingName = encodingName;
+                LineEndingName = lineEndingName;
                 Content = content;
             }
 
             public string OriginalPath { get; }
             public string EncodingName { get; }
+            public string LineEndingName { get; }
             public string Content { get; }
         }
     }

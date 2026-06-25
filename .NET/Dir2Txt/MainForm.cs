@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,6 +19,7 @@ namespace Dir2Txt
     public partial class MainForm : Form
     {
         private const string DELIMITER = "==========";
+        private CancellationTokenSource buildCancellation;
 
         public MainForm ()
         {
@@ -25,11 +29,13 @@ namespace Dir2Txt
             txtDirPath.DragDrop += TxtDirPath_DragDrop;
             btnRefDirPath.Click += BtnRefDirPath_Click;
             btnRun.Click += BtnRun_Click;
+            btnCancel.Click += BtnCancel_Click;
             btnExtract.Click += BtnExtract_Click;
             btnDivide.Click += BtnDivide_Click;
             txtOutput.TextChanged += TxtOutput_TextChanged;
             Load += MainForm_Load;
             FormClosed += MainForm_FormClosed;
+            SetBuildRunning( false );
             UpdateOutputLength();
         }
 
@@ -62,7 +68,7 @@ namespace Dir2Txt
             }
         }
 
-        private void BtnRun_Click ( object sender, EventArgs e )
+        private async void BtnRun_Click ( object sender, EventArgs e )
         {
             var dirPath = txtDirPath.Text;
             if ( string.IsNullOrWhiteSpace( dirPath ) )
@@ -81,13 +87,227 @@ namespace Dir2Txt
             {
                 var ignoreDirs = ParseIgnoreList( txtIgnoreDirs.Text );
                 var ignoreFiles = ParseIgnoreList( txtIgnoreFiles.Text );
-                var ignoreExts = ParseIgnoreList( txtIgnoreExt.Text );
-                txtOutput.Text = BuildDirectoryText( dirPath, ignoreDirs, ignoreFiles, ignoreExts );
+                var ignoreExts = ParseIgnoreList( txtIgnoreExt.Text ).ToList();
+                var ignoreExtNegated = chkIgnoreExtNegated.Checked;
+                var outputToFile = chkOutputToFile.Checked;
+                if ( ignoreExtNegated && !ignoreExts.Any() )
+                {
+                    MessageBox.Show( this, "否定指定時は対象にする拡張子を入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning );
+                    return;
+                }
+
+                buildCancellation = new CancellationTokenSource();
+                SetBuildRunning( true );
+                txtOutput.Text = string.Empty;
+
+                var token = buildCancellation.Token;
+                var progress = new Progress<BuildProgress>( UpdateBuildProgress );
+                var result = await Task.Run( () =>
+                    outputToFile
+                        ? BuildDirectoryFile( dirPath, ignoreDirs, ignoreFiles, ignoreExts, ignoreExtNegated, progress, token )
+                        : BuildDirectoryText( dirPath, ignoreDirs, ignoreFiles, ignoreExts, ignoreExtNegated, progress, token ) );
+                if ( token.IsCancellationRequested || result == null )
+                {
+                    lblProgress.Text = "中止しました";
+                    return;
+                }
+
+                if ( outputToFile )
+                {
+                    txtOutput.Clear();
+                    lblProgress.Text = $"完了 対象: {result.TargetCount} / 出力: {result.OutputCount} / スキップ: {result.SkippedCount} / 出力先: {result.OutputPath}";
+                    OpenOutputFolder( result.OutputPath );
+                }
+                else
+                {
+                    await PopulateOutputAsync( result );
+                    lblProgress.Text = $"完了 対象: {result.TargetCount} / 出力: {result.OutputCount} / スキップ: {result.SkippedCount}";
+                }
+            }
+            catch ( OperationCanceledException )
+            {
+                lblProgress.Text = "中止しました";
             }
             catch ( Exception ex )
             {
                 MessageBox.Show( this, $"テキスト化に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error );
             }
+            finally
+            {
+                buildCancellation?.Dispose();
+                buildCancellation = null;
+                SetBuildRunning( false );
+            }
+        }
+
+        private BuildResult BuildDirectoryFile ( string rootPath, IEnumerable<string> ignoreDirs, IEnumerable<string> ignoreFiles, IEnumerable<string> ignoreExts, bool ignoreExtNegated, IProgress<BuildProgress> progress, CancellationToken cancellationToken )
+        {
+            var ignoreDirSet = new HashSet<string>( ignoreDirs, StringComparer.OrdinalIgnoreCase );
+            var ignoreFileSet = new HashSet<string>( ignoreFiles, StringComparer.OrdinalIgnoreCase );
+            var ignoreExtSet = new HashSet<string>(
+                ignoreExts.Select( NormalizeExtension ).Where( x => !string.IsNullOrEmpty( x ) ),
+                StringComparer.OrdinalIgnoreCase );
+
+            progress?.Report( BuildProgress.Indeterminate( "ファイル一覧を取得中..." ) );
+            var targetFiles = EnumerateTargetFiles( rootPath, ignoreDirSet, ignoreFileSet, ignoreExtSet, ignoreExtNegated, cancellationToken )
+                                     .OrderBy( x => x )
+                                     .ToList();
+            if ( cancellationToken.IsCancellationRequested )
+            {
+                return null;
+            }
+
+            var outputPath = CreateOutputPath( rootPath );
+            var tempPath = outputPath + ".tmp";
+            var processedFiles = new List<string>();
+            var skippedCount = 0;
+            var processedCount = 0;
+
+            progress?.Report( BuildProgress.Determinate( 0, targetFiles.Count, $"ファイル出力中: 0 / {targetFiles.Count}" ) );
+            try
+            {
+                using ( var tempWriter = new StreamWriter( tempPath, false, new UTF8Encoding( false ) ) )
+                {
+                    foreach ( var file in targetFiles )
+                    {
+                        if ( cancellationToken.IsCancellationRequested )
+                        {
+                            return null;
+                        }
+
+                        try
+                        {
+                            if ( IsBinaryFile( file, cancellationToken ) )
+                            {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            var read = ReadFileWithEncoding( file, cancellationToken );
+                            if ( cancellationToken.IsCancellationRequested )
+                            {
+                                return null;
+                            }
+
+                            processedFiles.Add( file );
+                            tempWriter.Write( "@@" );
+                            tempWriter.Write( file );
+                            tempWriter.Write( "|" );
+                            tempWriter.Write( read.Encoding.WebName );
+                            tempWriter.Write( "|" );
+                            tempWriter.WriteLine( read.LineEnding );
+                            var endsWithLineEnding = WriteNormalizedLineEndings( tempWriter, read.Content, Environment.NewLine );
+                            if ( !endsWithLineEnding )
+                            {
+                                tempWriter.WriteLine();
+                            }
+                        }
+                        catch ( IOException )
+                        {
+                            skippedCount++;
+                        }
+                        catch ( UnauthorizedAccessException )
+                        {
+                            skippedCount++;
+                        }
+                        catch ( NotSupportedException )
+                        {
+                            skippedCount++;
+                        }
+                        finally
+                        {
+                            processedCount++;
+                            progress?.Report( BuildProgress.Determinate( processedCount, targetFiles.Count, $"ファイル出力中: {processedCount} / {targetFiles.Count}" ) );
+                        }
+                    }
+                }
+
+                if ( cancellationToken.IsCancellationRequested )
+                {
+                    return null;
+                }
+
+                progress?.Report( BuildProgress.Indeterminate( "出力ファイル作成中..." ) );
+                using ( var writer = new StreamWriter( outputPath, false, new UTF8Encoding( false ) ) )
+                {
+                    foreach ( var file in processedFiles )
+                    {
+                        writer.WriteLine( file );
+                    }
+                    writer.WriteLine( DELIMITER );
+
+                    using ( var reader = new StreamReader( tempPath, Encoding.UTF8 ) )
+                    {
+                        var buffer = new char[32768];
+                        int read;
+                        while ( ( read = reader.Read( buffer, 0, buffer.Length ) ) > 0 )
+                        {
+                            if ( cancellationToken.IsCancellationRequested )
+                            {
+                                return null;
+                            }
+
+                            writer.Write( buffer, 0, read );
+                        }
+                    }
+                }
+
+                return new BuildResult
+                {
+                    OutputPath = outputPath,
+                    TargetCount = targetFiles.Count,
+                    OutputCount = processedFiles.Count,
+                    SkippedCount = skippedCount
+                };
+            }
+            finally
+            {
+                try
+                {
+                    if ( File.Exists( tempPath ) )
+                    {
+                        File.Delete( tempPath );
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        private string CreateOutputPath ( string rootPath )
+        {
+            var fileName = "Dir2Txt_" + DateTime.Now.ToString( "yyyyMMdd_HHmmss" ) + ".txt";
+            var outputDir = AppDomain.CurrentDomain.BaseDirectory;
+            var outputPath = Path.Combine( outputDir, fileName );
+            var index = 1;
+            while ( File.Exists( outputPath ) )
+            {
+                outputPath = Path.Combine( outputDir, Path.GetFileNameWithoutExtension( fileName ) + "_" + index.ToString() + ".txt" );
+                index++;
+            }
+
+            return outputPath;
+        }
+
+        private void OpenOutputFolder ( string outputPath )
+        {
+            try
+            {
+                var directory = Path.GetDirectoryName( outputPath );
+                if ( !string.IsNullOrEmpty( directory ) && Directory.Exists( directory ) )
+                {
+                    Process.Start( "explorer.exe", directory );
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private void BtnCancel_Click ( object sender, EventArgs e )
+        {
+            buildCancellation?.Cancel();
         }
 
         private void BtnRefDirPath_Click ( object sender, EventArgs e )
@@ -102,7 +322,7 @@ namespace Dir2Txt
             }
         }
 
-        private string BuildDirectoryText ( string rootPath, IEnumerable<string> ignoreDirs, IEnumerable<string> ignoreFiles, IEnumerable<string> ignoreExts )
+        private BuildResult BuildDirectoryText ( string rootPath, IEnumerable<string> ignoreDirs, IEnumerable<string> ignoreFiles, IEnumerable<string> ignoreExts, bool ignoreExtNegated, IProgress<BuildProgress> progress, CancellationToken cancellationToken )
         {
             var ignoreDirSet = new HashSet<string>( ignoreDirs, StringComparer.OrdinalIgnoreCase );
             var ignoreFileSet = new HashSet<string>( ignoreFiles, StringComparer.OrdinalIgnoreCase );
@@ -110,36 +330,199 @@ namespace Dir2Txt
                 ignoreExts.Select( NormalizeExtension ).Where( x => !string.IsNullOrEmpty( x ) ),
                 StringComparer.OrdinalIgnoreCase );
 
-            var textFiles = Directory.GetFiles( rootPath, "*", SearchOption.AllDirectories )
+            progress?.Report( BuildProgress.Indeterminate( "ファイル一覧を取得中..." ) );
+            var targetFiles = EnumerateTargetFiles( rootPath, ignoreDirSet, ignoreFileSet, ignoreExtSet, ignoreExtNegated, cancellationToken )
                                      .OrderBy( x => x )
-                                     .Where( file => !ShouldIgnoreFile( file, ignoreDirSet, ignoreFileSet, ignoreExtSet ) )
-                                     .Where( file => !IsBinaryFile( file ) )
                                      .ToList();
-
-            var processedFiles = new List<string>();
-            var contentBuilder = new StringBuilder();
-            foreach ( var file in textFiles )
+            if ( cancellationToken.IsCancellationRequested )
             {
-                processedFiles.Add( file );
-                var read = ReadFileWithEncoding( file );
-                contentBuilder.Append( "@@" ).Append( file ).Append( "|" ).Append( read.Encoding.WebName ).Append( "|" ).AppendLine( read.LineEnding );
-                var content = NormalizeLineEndings( read.Content, Environment.NewLine );
-                contentBuilder.Append( content );
-                if ( !content.EndsWith( Environment.NewLine ) )
+                return null;
+            }
+
+            progress?.Report( BuildProgress.Determinate( 0, targetFiles.Count, $"処理中: 0 / {targetFiles.Count}" ) );
+
+            var processedCount = 0;
+            var skippedCount = 0;
+            var results = new ConcurrentBag<FileReadResult>();
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
+
+            Parallel.ForEach( targetFiles, options, ( file, state ) =>
+            {
+                if ( cancellationToken.IsCancellationRequested )
                 {
-                    contentBuilder.AppendLine();
+                    state.Stop();
+                    return;
+                }
+
+                try
+                {
+                    if ( !IsBinaryFile( file, cancellationToken ) && !cancellationToken.IsCancellationRequested )
+                    {
+                        try
+                        {
+                            var read = ReadFileWithEncoding( file, cancellationToken );
+                            if ( !cancellationToken.IsCancellationRequested )
+                            {
+                                results.Add( new FileReadResult
+                                {
+                                    FilePath = file,
+                                    Content = read.Content,
+                                    EncodingName = read.Encoding.WebName,
+                                    LineEnding = read.LineEnding
+                                } );
+                            }
+                        }
+                        catch ( IOException )
+                        {
+                            Interlocked.Increment( ref skippedCount );
+                        }
+                        catch ( UnauthorizedAccessException )
+                        {
+                            Interlocked.Increment( ref skippedCount );
+                        }
+                        catch ( NotSupportedException )
+                        {
+                            Interlocked.Increment( ref skippedCount );
+                        }
+                    }
+                    else
+                    {
+                        Interlocked.Increment( ref skippedCount );
+                    }
+                }
+                finally
+                {
+                    var current = Interlocked.Increment( ref processedCount );
+                    progress?.Report( BuildProgress.Determinate( current, targetFiles.Count, $"処理中: {current} / {targetFiles.Count}" ) );
+                }
+            } );
+
+            if ( cancellationToken.IsCancellationRequested )
+            {
+                return null;
+            }
+
+            progress?.Report( BuildProgress.Indeterminate( "出力データ作成中..." ) );
+            var orderedResults = results.OrderBy( x => x.FilePath ).ToList();
+
+            return new BuildResult
+            {
+                Files = orderedResults,
+                TargetCount = targetFiles.Count,
+                OutputCount = orderedResults.Count,
+                SkippedCount = skippedCount
+            };
+        }
+
+        private async Task PopulateOutputAsync ( BuildResult result )
+        {
+            lblProgress.Text = "出力テキスト表示中...";
+            progressBar1.Style = ProgressBarStyle.Blocks;
+            progressBar1.Maximum = Math.Max( 1, result.OutputCount );
+            progressBar1.Value = 0;
+
+            txtOutput.Clear();
+            foreach ( var file in result.Files )
+            {
+                txtOutput.AppendText( file.FilePath + Environment.NewLine );
+            }
+            txtOutput.AppendText( DELIMITER + Environment.NewLine );
+
+            var current = 0;
+            foreach ( var file in result.Files )
+            {
+                txtOutput.AppendText( "@@" + file.FilePath + "|" + file.EncodingName + "|" + file.LineEnding + Environment.NewLine );
+                var endsWithLineEnding = AppendNormalizedLineEndings( txtOutput, file.Content, Environment.NewLine );
+                file.Content = null;
+                if ( !endsWithLineEnding )
+                {
+                    txtOutput.AppendText( Environment.NewLine );
+                }
+
+                current++;
+                progressBar1.Value = Math.Min( current, progressBar1.Maximum );
+                lblProgress.Text = $"出力テキスト表示中: {current} / {result.OutputCount}";
+                if ( current % 10 == 0 )
+                {
+                    await Task.Yield();
                 }
             }
+        }
 
-            var builder = new StringBuilder();
-            foreach ( var file in processedFiles )
+        private IEnumerable<string> EnumerateTargetFiles ( string rootPath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles, HashSet<string> ignoreExts, bool ignoreExtNegated, CancellationToken cancellationToken )
+        {
+            foreach ( var file in EnumerateFilesSafely( rootPath, ignoreDirs, cancellationToken ) )
             {
-                builder.AppendLine( file );
-            }
-            builder.AppendLine( DELIMITER );
-            builder.Append( contentBuilder.ToString() );
+                if ( cancellationToken.IsCancellationRequested )
+                {
+                    yield break;
+                }
 
-            return builder.ToString();
+                if ( !ShouldIgnoreFile( file, ignoreDirs, ignoreFiles, ignoreExts, ignoreExtNegated ) )
+                {
+                    yield return file;
+                }
+            }
+        }
+
+        private IEnumerable<string> EnumerateFilesSafely ( string directory, HashSet<string> ignoreDirs, CancellationToken cancellationToken )
+        {
+            if ( cancellationToken.IsCancellationRequested )
+            {
+                yield break;
+            }
+
+            var dirName = Path.GetFileName( directory.TrimEnd( Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar ) );
+            if ( !string.IsNullOrEmpty( dirName ) && ignoreDirs.Contains( dirName ) )
+            {
+                yield break;
+            }
+
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles( directory );
+            }
+            catch
+            {
+                yield break;
+            }
+
+            foreach ( var file in files )
+            {
+                if ( cancellationToken.IsCancellationRequested )
+                {
+                    yield break;
+                }
+
+                yield return file;
+            }
+
+            string[] directories;
+            try
+            {
+                directories = Directory.GetDirectories( directory );
+            }
+            catch
+            {
+                yield break;
+            }
+
+            foreach ( var childDirectory in directories )
+            {
+                if ( cancellationToken.IsCancellationRequested )
+                {
+                    yield break;
+                }
+
+                foreach ( var file in EnumerateFilesSafely( childDirectory, ignoreDirs, cancellationToken ) )
+                {
+                    yield return file;
+                }
+            }
         }
 
         private IEnumerable<string> ParseIgnoreList ( string text )
@@ -171,7 +554,7 @@ namespace Dir2Txt
             return trimmed.StartsWith( "." ) ? trimmed.Substring( 1 ) : trimmed;
         }
 
-        private bool ShouldIgnoreFile ( string filePath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles, HashSet<string> ignoreExts )
+        private bool ShouldIgnoreFile ( string filePath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles, HashSet<string> ignoreExts, bool ignoreExtNegated )
         {
             var fileName = Path.GetFileName( filePath );
             if ( ignoreFiles.Contains( fileName ) )
@@ -179,10 +562,11 @@ namespace Dir2Txt
                 return true;
             }
 
-            if ( ignoreExts.Count > 0 )
+            if ( ignoreExts.Count > 0 || ignoreExtNegated )
             {
                 var ext = NormalizeExtension( Path.GetExtension( filePath ) );
-                if ( !string.IsNullOrEmpty( ext ) && ignoreExts.Contains( ext ) )
+                var containsExt = !string.IsNullOrEmpty( ext ) && ignoreExts.Contains( ext );
+                if ( ignoreExtNegated ? !containsExt : containsExt )
                 {
                     return true;
                 }
@@ -203,9 +587,14 @@ namespace Dir2Txt
             return parts.Any( part => ignoreDirs.Contains( part ) );
         }
 
-        private (string Content, Encoding Encoding, string LineEnding) ReadFileWithEncoding ( string path )
+        private (string Content, Encoding Encoding, string LineEnding) ReadFileWithEncoding ( string path, CancellationToken cancellationToken )
         {
             var bytes = File.ReadAllBytes( path );
+            if ( cancellationToken.IsCancellationRequested )
+            {
+                return ( string.Empty, Encoding.Default, "CRLF" );
+            }
+
             var detected = DetectEncoding( bytes );
             var content = detected.GetString( bytes );
             return ( content, detected, DetectLineEnding( content ) );
@@ -227,14 +616,102 @@ namespace Dir2Txt
             return content.IndexOf( "\n", StringComparison.Ordinal ) >= 0 ? "LF" : "CRLF";
         }
 
-        private string NormalizeLineEndings ( string text, string lineEnding )
+        private bool AppendNormalizedLineEndings ( TextBox textBox, string text, string lineEnding )
         {
             if ( string.IsNullOrEmpty( text ) )
             {
-                return text;
+                return false;
             }
 
-            return text.Replace( "\r\n", "\n" ).Replace( "\r", "\n" ).Replace( "\n", lineEnding );
+            const int chunkSize = 32768;
+            var chunk = new StringBuilder( chunkSize );
+            var endsWithLineEnding = false;
+            for ( int i = 0; i < text.Length; i++ )
+            {
+                var current = text[i];
+                if ( current == '\r' )
+                {
+                    if ( i + 1 < text.Length && text[i + 1] == '\n' )
+                    {
+                        i++;
+                    }
+
+                    chunk.Append( lineEnding );
+                    endsWithLineEnding = true;
+                }
+                else if ( current == '\n' )
+                {
+                    chunk.Append( lineEnding );
+                    endsWithLineEnding = true;
+                }
+                else
+                {
+                    chunk.Append( current );
+                    endsWithLineEnding = false;
+                }
+
+                if ( chunk.Length >= chunkSize )
+                {
+                    textBox.AppendText( chunk.ToString() );
+                    chunk.Clear();
+                }
+            }
+
+            if ( chunk.Length > 0 )
+            {
+                textBox.AppendText( chunk.ToString() );
+            }
+
+            return endsWithLineEnding;
+        }
+
+        private bool WriteNormalizedLineEndings ( TextWriter writer, string text, string lineEnding )
+        {
+            if ( string.IsNullOrEmpty( text ) )
+            {
+                return false;
+            }
+
+            const int chunkSize = 32768;
+            var chunk = new StringBuilder( chunkSize );
+            var endsWithLineEnding = false;
+            for ( int i = 0; i < text.Length; i++ )
+            {
+                var current = text[i];
+                if ( current == '\r' )
+                {
+                    if ( i + 1 < text.Length && text[i + 1] == '\n' )
+                    {
+                        i++;
+                    }
+
+                    chunk.Append( lineEnding );
+                    endsWithLineEnding = true;
+                }
+                else if ( current == '\n' )
+                {
+                    chunk.Append( lineEnding );
+                    endsWithLineEnding = true;
+                }
+                else
+                {
+                    chunk.Append( current );
+                    endsWithLineEnding = false;
+                }
+
+                if ( chunk.Length >= chunkSize )
+                {
+                    writer.Write( chunk.ToString() );
+                    chunk.Clear();
+                }
+            }
+
+            if ( chunk.Length > 0 )
+            {
+                writer.Write( chunk.ToString() );
+            }
+
+            return endsWithLineEnding;
         }
 
         private Encoding DetectEncoding ( byte[] bytes )
@@ -306,7 +783,7 @@ namespace Dir2Txt
             }
         }
 
-        private bool IsBinaryFile ( string path )
+        private bool IsBinaryFile ( string path, CancellationToken cancellationToken )
         {
             const int sampleSize = 8000;
             var buffer = new byte[sampleSize];
@@ -315,8 +792,18 @@ namespace Dir2Txt
                 using ( var stream = File.OpenRead( path ) )
                 {
                     var read = stream.Read( buffer, 0, buffer.Length );
+                    if ( HasTextBom( buffer, read ) )
+                    {
+                        return false;
+                    }
+
                     for ( int i = 0; i < read; i++ )
                     {
+                        if ( cancellationToken.IsCancellationRequested )
+                        {
+                            return true;
+                        }
+
                         var b = buffer[i];
                         if ( b == 0 )
                         {
@@ -339,6 +826,29 @@ namespace Dir2Txt
             return false;
         }
 
+        private bool HasTextBom ( byte[] bytes, int length )
+        {
+            if ( length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF )
+            {
+                return true;
+            }
+
+            if ( length >= 2 )
+            {
+                if ( bytes[0] == 0xFF && bytes[1] == 0xFE )
+                {
+                    return true;
+                }
+
+                if ( bytes[0] == 0xFE && bytes[1] == 0xFF )
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void MainForm_Load ( object sender, EventArgs e )
         {
             try
@@ -353,6 +863,8 @@ namespace Dir2Txt
                     txtIgnoreDirs.Text = settings.IgnoreDirs ?? string.Empty;
                     txtIgnoreFiles.Text = settings.IgnoreFiles ?? string.Empty;
                     txtIgnoreExt.Text = settings.IgnoreExt ?? string.Empty;
+                    chkIgnoreExtNegated.Checked = settings.IgnoreExtNegated;
+                    chkOutputToFile.Checked = settings.OutputToFile;
                     txtDivideLnegth.Text = settings.DivideLength ?? string.Empty;
                 }
             }
@@ -375,6 +887,8 @@ namespace Dir2Txt
                 settings.IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty;
                 settings.IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty;
                 settings.IgnoreExt = txtIgnoreExt.Text ?? string.Empty;
+                settings.IgnoreExtNegated = chkIgnoreExtNegated.Checked;
+                settings.OutputToFile = chkOutputToFile.Checked;
                 settings.DivideLength = txtDivideLnegth.Text ?? string.Empty;
 
                 SaveSettings( settings );
@@ -432,6 +946,70 @@ namespace Dir2Txt
 
             var lengthText = ( text?.Length ?? 0 ).ToString( "#,0" );
             lblLength.Text = $"文字数: {lengthText}";
+        }
+
+        private void SetBuildRunning ( bool running )
+        {
+            btnRun.Enabled = !running;
+            btnCancel.Enabled = running;
+            btnRefDirPath.Enabled = !running;
+            chkIgnoreExtNegated.Enabled = !running;
+            chkOutputToFile.Enabled = !running;
+            progressBar1.Style = ProgressBarStyle.Blocks;
+            if ( !running )
+            {
+                progressBar1.Value = 0;
+            }
+        }
+
+        private void UpdateBuildProgress ( BuildProgress progress )
+        {
+            if ( progress.IsIndeterminate )
+            {
+                progressBar1.Style = ProgressBarStyle.Marquee;
+                lblProgress.Text = progress.Message;
+                return;
+            }
+
+            progressBar1.Style = ProgressBarStyle.Blocks;
+            progressBar1.Maximum = Math.Max( 1, progress.Total );
+            progressBar1.Value = Math.Min( progress.Current, progressBar1.Maximum );
+            lblProgress.Text = progress.Message;
+        }
+
+        private class FileReadResult
+        {
+            public string FilePath { get; set; }
+            public string Content { get; set; }
+            public string EncodingName { get; set; }
+            public string LineEnding { get; set; }
+        }
+
+        private class BuildResult
+        {
+            public List<FileReadResult> Files { get; set; }
+            public string OutputPath { get; set; }
+            public int TargetCount { get; set; }
+            public int OutputCount { get; set; }
+            public int SkippedCount { get; set; }
+        }
+
+        private class BuildProgress
+        {
+            public bool IsIndeterminate { get; private set; }
+            public int Current { get; private set; }
+            public int Total { get; private set; }
+            public string Message { get; private set; }
+
+            public static BuildProgress Indeterminate ( string message )
+            {
+                return new BuildProgress { IsIndeterminate = true, Message = message };
+            }
+
+            public static BuildProgress Determinate ( int current, int total, string message )
+            {
+                return new BuildProgress { Current = current, Total = total, Message = message };
+            }
         }
     }
 }

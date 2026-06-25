@@ -46,6 +46,11 @@
             this.txtDivideLnegth = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.btnDivide = new System.Windows.Forms.Button();
+            this.chkIgnoreExtNegated = new System.Windows.Forms.CheckBox();
+            this.btnCancel = new System.Windows.Forms.Button();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.lblProgress = new System.Windows.Forms.Label();
+            this.chkOutputToFile = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // txtDirPath
@@ -78,17 +83,17 @@
             this.txtOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtOutput.Location = new System.Drawing.Point(12, 246);
+            this.txtOutput.Location = new System.Drawing.Point(12, 275);
             this.txtOutput.MaxLength = 0;
             this.txtOutput.Multiline = true;
             this.txtOutput.Name = "txtOutput";
             this.txtOutput.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtOutput.Size = new System.Drawing.Size(474, 228);
+            this.txtOutput.Size = new System.Drawing.Size(474, 199);
             this.txtOutput.TabIndex = 3;
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(22, 204);
+            this.btnRun.Location = new System.Drawing.Point(22, 229);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(44, 23);
             this.btnRun.TabIndex = 4;
@@ -97,7 +102,7 @@
             // 
             // btnExtract
             // 
-            this.btnExtract.Location = new System.Drawing.Point(449, 204);
+            this.btnExtract.Location = new System.Drawing.Point(449, 229);
             this.btnExtract.Name = "btnExtract";
             this.btnExtract.Size = new System.Drawing.Size(44, 23);
             this.btnExtract.TabIndex = 5;
@@ -161,7 +166,7 @@
             // lblLength
             // 
             this.lblLength.AutoSize = true;
-            this.lblLength.Location = new System.Drawing.Point(85, 209);
+            this.lblLength.Location = new System.Drawing.Point(130, 234);
             this.lblLength.Name = "lblLength";
             this.lblLength.Size = new System.Drawing.Size(0, 12);
             this.lblLength.TabIndex = 12;
@@ -169,7 +174,7 @@
             // 
             // txtDivideLnegth
             // 
-            this.txtDivideLnegth.Location = new System.Drawing.Point(265, 206);
+            this.txtDivideLnegth.Location = new System.Drawing.Point(265, 231);
             this.txtDivideLnegth.Name = "txtDivideLnegth";
             this.txtDivideLnegth.Size = new System.Drawing.Size(114, 19);
             this.txtDivideLnegth.TabIndex = 13;
@@ -177,7 +182,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(263, 191);
+            this.label5.Location = new System.Drawing.Point(263, 216);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(65, 12);
             this.label5.TabIndex = 14;
@@ -186,18 +191,70 @@
             // 
             // btnDivide
             // 
-            this.btnDivide.Location = new System.Drawing.Point(385, 206);
+            this.btnDivide.Location = new System.Drawing.Point(385, 231);
             this.btnDivide.Name = "btnDivide";
             this.btnDivide.Size = new System.Drawing.Size(44, 23);
             this.btnDivide.TabIndex = 15;
             this.btnDivide.Text = "分割";
             this.btnDivide.UseVisualStyleBackColor = true;
             // 
+            // chkIgnoreExtNegated
+            // 
+            this.chkIgnoreExtNegated.AutoSize = true;
+            this.chkIgnoreExtNegated.Location = new System.Drawing.Point(22, 177);
+            this.chkIgnoreExtNegated.Name = "chkIgnoreExtNegated";
+            this.chkIgnoreExtNegated.Size = new System.Drawing.Size(218, 16);
+            this.chkIgnoreExtNegated.TabIndex = 16;
+            this.chkIgnoreExtNegated.Text = "指定した拡張子だけを対象にする";
+            this.toolTip1.SetToolTip(this.chkIgnoreExtNegated, "チェック時は除外拡張子欄に指定した拡張子だけを処理対象にする");
+            this.chkIgnoreExtNegated.UseVisualStyleBackColor = true;
+            // 
+            // chkOutputToFile
+            // 
+            this.chkOutputToFile.AutoSize = true;
+            this.chkOutputToFile.Location = new System.Drawing.Point(265, 177);
+            this.chkOutputToFile.Name = "chkOutputToFile";
+            this.chkOutputToFile.Size = new System.Drawing.Size(80, 16);
+            this.chkOutputToFile.TabIndex = 20;
+            this.chkOutputToFile.Text = "ファイル出力";
+            this.toolTip1.SetToolTip(this.chkOutputToFile, "チェック時はテキストボックスに出力せず、選択フォルダにtxtファイルを出力する");
+            this.chkOutputToFile.UseVisualStyleBackColor = true;
+            // 
+            // btnCancel
+            // 
+            this.btnCancel.Enabled = false;
+            this.btnCancel.Location = new System.Drawing.Point(72, 229);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(44, 23);
+            this.btnCancel.TabIndex = 17;
+            this.btnCancel.Text = "中止";
+            this.btnCancel.UseVisualStyleBackColor = true;
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(22, 199);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(471, 12);
+            this.progressBar1.TabIndex = 18;
+            // 
+            // lblProgress
+            // 
+            this.lblProgress.AutoSize = true;
+            this.lblProgress.Location = new System.Drawing.Point(20, 258);
+            this.lblProgress.Name = "lblProgress";
+            this.lblProgress.Size = new System.Drawing.Size(0, 12);
+            this.lblProgress.TabIndex = 19;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(522, 486);
+            this.Controls.Add(this.chkOutputToFile);
+            this.Controls.Add(this.lblProgress);
+            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.chkIgnoreExtNegated);
             this.Controls.Add(this.btnDivide);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.txtDivideLnegth);
@@ -240,6 +297,11 @@
         private System.Windows.Forms.TextBox txtDivideLnegth;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button btnDivide;
+        private System.Windows.Forms.CheckBox chkIgnoreExtNegated;
+        private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.Label lblProgress;
+        private System.Windows.Forms.CheckBox chkOutputToFile;
     }
 }
 

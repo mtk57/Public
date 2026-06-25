@@ -19,6 +19,12 @@ namespace Dir2Txt
         public string IgnoreExt { get; set; }
 
         [DataMember]
+        public bool IgnoreExtNegated { get; set; }
+
+        [DataMember]
+        public bool OutputToFile { get; set; }
+
+        [DataMember]
         public string DivideLength { get; set; }
 
         [DataMember]

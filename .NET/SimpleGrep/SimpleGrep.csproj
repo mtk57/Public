@@ -63,6 +63,9 @@
     <Compile Include="ExtensionCollectorForm.Designer.cs">
       <DependentUpon>ExtensionCollectorForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ExportSelectedFilesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Core\CommentFilters.cs" />
     <Compile Include="Core\GrepEngine.cs" />
     <Compile Include="Core\MethodSignatureResolvers.cs" />

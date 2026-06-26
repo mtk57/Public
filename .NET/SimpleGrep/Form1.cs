@@ -29,6 +29,7 @@ namespace SimpleGrep
         private List<SearchResult> currentSearchResults = new List<SearchResult>();
         private List<SearchResult> displayedSearchResults = new List<SearchResult>();
         private string multiKeywordsText = string.Empty;
+        private string exportOutputFolderPath = string.Empty;
 
         public MainForm()
         {
@@ -93,6 +94,10 @@ namespace SimpleGrep
         private void InitializeResultsContextMenu()
         {
             var contextMenu = new ContextMenuStrip();
+            var exportSelectedMenuItem = new ToolStripMenuItem("選択行をエクスポート");
+            exportSelectedMenuItem.Click += new EventHandler(this.ExportSelectedResultsMenuItem_Click);
+            contextMenu.Items.Add(exportSelectedMenuItem);
+
             var copyAllMenuItem = new ToolStripMenuItem("全てコピー");
             copyAllMenuItem.Click += new EventHandler(this.CopyAllResultsMenuItem_Click);
             contextMenu.Items.Add(copyAllMenuItem);
@@ -217,6 +222,7 @@ namespace SimpleGrep
                     chkIgnoreComment.Checked = settings.IgnoreComment;
                     multiKeywordsText = settings.MultiKeywordsText ?? string.Empty;
                     chkIgnoreBinaryFile.Checked = settings.IgnoreBinaryFile;
+                    exportOutputFolderPath = settings.ExportOutputFolderPath ?? string.Empty;
                 }
             }
             catch (Exception ex)
@@ -255,7 +261,8 @@ namespace SimpleGrep
                 MultiKeywordsText = multiKeywordsText,
                 ExcludeFoldersText = cmbExcludeFolder.Text,
                 ExcludeExtensionsText = cmbExcludeExtension.Text,
-                IgnoreBinaryFile = chkIgnoreBinaryFile.Checked
+                IgnoreBinaryFile = chkIgnoreBinaryFile.Checked,
+                ExportOutputFolderPath = exportOutputFolderPath
             };
         }
 
@@ -857,13 +864,56 @@ namespace SimpleGrep
                 .Replace("\t", " ");
         }
 
-        private void btnFileCopy_Click(object sender, EventArgs e)
+        private void ExportSelectedResultsMenuItem_Click(object sender, EventArgs e)
         {
-            var selectedIndices = dataGridViewResults.SelectedCells.Cast<DataGridViewCell>()
+            var selectedResults = GetSelectedSearchResults();
+            if (selectedResults.Count == 0)
+            {
+                MessageBox.Show("エクスポートする行を選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dialog = new ExportSelectedFilesForm(selectedResults, exportOutputFolderPath))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    exportOutputFolderPath = dialog.OutputFolderPath;
+                    SaveSettings();
+                }
+            }
+        }
+
+        private IReadOnlyList<SearchResult> GetSelectedSearchResults()
+        {
+            var selectedIndices = GetSelectedResultRowIndices();
+            var results = new List<SearchResult>();
+            foreach (var index in selectedIndices)
+            {
+                if (index < 0 || index >= displayedSearchResults.Count)
+                {
+                    continue;
+                }
+
+                results.Add(displayedSearchResults[index]);
+            }
+
+            return results;
+        }
+
+        private IReadOnlyList<int> GetSelectedResultRowIndices()
+        {
+            return dataGridViewResults.SelectedCells.Cast<DataGridViewCell>()
                 .Select(cell => cell.RowIndex)
                 .Concat(dataGridViewResults.SelectedRows.Cast<DataGridViewRow>().Select(row => row.Index))
+                .Where(index => index >= 0)
                 .Distinct()
+                .OrderBy(index => index)
                 .ToList();
+        }
+
+        private void btnFileCopy_Click(object sender, EventArgs e)
+        {
+            var selectedIndices = GetSelectedResultRowIndices();
 
             if (selectedIndices.Count == 0)
             {
@@ -1628,6 +1678,9 @@ namespace SimpleGrep
 
             [DataMember]
             public bool IgnoreBinaryFile { get; set; }
+
+            [DataMember]
+            public string ExportOutputFolderPath { get; set; } = string.Empty;
         }
     }
 }

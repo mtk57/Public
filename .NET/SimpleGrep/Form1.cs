@@ -1243,7 +1243,18 @@ namespace SimpleGrep
                 return string.Empty;
             }
 
+            if (!ShouldEncodeSearchConditionValue(value))
+            {
+                return value;
+            }
+
             return "base64:" + Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        }
+
+        private static bool ShouldEncodeSearchConditionValue(string value)
+        {
+            return value.StartsWith("base64:", StringComparison.Ordinal)
+                || value.IndexOfAny(new[] { '\r', '\n' }) >= 0;
         }
 
         private static string UnescapeSearchConditionValue(string value)

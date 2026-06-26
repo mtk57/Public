@@ -19,6 +19,7 @@ namespace Dir2Txt
     public partial class MainForm : Form
     {
         private const string DELIMITER = "==========";
+        private static readonly Encoding OutputFileEncoding = new UTF8Encoding( true );
         private CancellationTokenSource buildCancellation;
 
         public MainForm ()
@@ -228,7 +229,7 @@ namespace Dir2Txt
                 }
 
                 progress?.Report( BuildProgress.Indeterminate( "出力ファイル作成中..." ) );
-                using ( var writer = new StreamWriter( outputPath, false, new UTF8Encoding( false ) ) )
+                using ( var writer = new StreamWriter( outputPath, false, OutputFileEncoding ) )
                 {
                     foreach ( var file in processedFiles )
                     {

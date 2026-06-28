@@ -51,6 +51,7 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.lblProgress = new System.Windows.Forms.Label();
             this.chkOutputToFile = new System.Windows.Forms.CheckBox();
+            this.btnHelp = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txtDirPath
@@ -77,6 +78,17 @@
             this.btnRefDirPath.TabIndex = 2;
             this.btnRefDirPath.Text = "ref";
             this.btnRefDirPath.UseVisualStyleBackColor = true;
+            // 
+            // btnHelp
+            // 
+            this.btnHelp.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnHelp.Location = new System.Drawing.Point(486, 19);
+            this.btnHelp.Name = "btnHelp";
+            this.btnHelp.Size = new System.Drawing.Size(24, 23);
+            this.btnHelp.TabIndex = 21;
+            this.btnHelp.Text = "?";
+            this.toolTip1.SetToolTip(this.btnHelp, "Dir2Txt形式の説明を表示");
+            this.btnHelp.UseVisualStyleBackColor = true;
             // 
             // txtOutput
             // 
@@ -250,6 +262,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(522, 486);
+            this.Controls.Add(this.btnHelp);
             this.Controls.Add(this.chkOutputToFile);
             this.Controls.Add(this.lblProgress);
             this.Controls.Add(this.progressBar1);
@@ -302,6 +315,7 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Label lblProgress;
         private System.Windows.Forms.CheckBox chkOutputToFile;
+        private System.Windows.Forms.Button btnHelp;
     }
 }
 

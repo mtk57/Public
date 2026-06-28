@@ -33,11 +33,112 @@ namespace Dir2Txt
             btnCancel.Click += BtnCancel_Click;
             btnExtract.Click += BtnExtract_Click;
             btnDivide.Click += BtnDivide_Click;
+            btnHelp.Click += BtnHelp_Click;
             txtOutput.TextChanged += TxtOutput_TextChanged;
             Load += MainForm_Load;
             FormClosed += MainForm_FormClosed;
             SetBuildRunning( false );
             UpdateOutputLength();
+        }
+
+        private void BtnHelp_Click ( object sender, EventArgs e )
+        {
+            ShowFormatHelpDialog();
+        }
+
+        private void ShowFormatHelpDialog ()
+        {
+            var helpText = GetFormatHelpText();
+            using ( var form = new Form() )
+            using ( var textBox = new TextBox() )
+            using ( var copyButton = new Button() )
+            using ( var closeButton = new Button() )
+            using ( var buttonPanel = new FlowLayoutPanel() )
+            {
+                form.Text = "Dir2Txt形式の説明";
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.MinimizeBox = false;
+                form.MaximizeBox = false;
+                form.ShowIcon = false;
+                form.Size = new Size( 640, 520 );
+
+                textBox.Dock = DockStyle.Fill;
+                textBox.Multiline = true;
+                textBox.ReadOnly = true;
+                textBox.ScrollBars = ScrollBars.Both;
+                textBox.WordWrap = false;
+                textBox.Text = helpText;
+
+                copyButton.Text = "コピー";
+                copyButton.AutoSize = true;
+                copyButton.Click += ( s, e ) =>
+                {
+                    Clipboard.SetText( helpText );
+                    MessageBox.Show( form, "説明文をコピーしました。", "コピー完了", MessageBoxButtons.OK, MessageBoxIcon.Information );
+                };
+
+                closeButton.Text = "閉じる";
+                closeButton.AutoSize = true;
+                closeButton.Click += ( s, e ) => form.Close();
+
+                buttonPanel.Dock = DockStyle.Bottom;
+                buttonPanel.FlowDirection = FlowDirection.RightToLeft;
+                buttonPanel.Height = 40;
+                buttonPanel.Padding = new Padding( 8 );
+                buttonPanel.Controls.Add( closeButton );
+                buttonPanel.Controls.Add( copyButton );
+
+                form.Controls.Add( textBox );
+                form.Controls.Add( buttonPanel );
+                form.AcceptButton = copyButton;
+                form.CancelButton = closeButton;
+                form.ShowDialog( this );
+            }
+        }
+
+        private string GetFormatHelpText ()
+        {
+            var nl = Environment.NewLine;
+            return string.Join( nl, new[]
+            {
+                "Dir2Txt形式の説明",
+                "",
+                "出力テキストは、複数ファイルを1つのテキストにまとめた独自形式です。",
+                "",
+                "全体構造",
+                "1. 先頭から「==========」の行までは、対象ファイルのパス一覧です。",
+                "2. 「==========」だけの行の次から、各ファイルの本文データが並びます。",
+                "3. 「復元」は「==========」より前を読み飛ばします。「==========」がない場合は先頭から本文データとして読みます。",
+                "",
+                "ファイル開始行",
+                "各ファイルは、次の形式の行で始まります。",
+                "@@<元ファイルパス>|<文字コード>|<改行種別>",
+                "",
+                "例:",
+                "@@C:\\work\\sample\\memo.txt|utf-8|CRLF",
+                "",
+                "意味:",
+                "- 「@@」で始まる行は新しいファイルの開始を表します。",
+                "- <元ファイルパス> はファイルの絶対パスです。",
+                "- <文字コード> は保存文字コードです。例: utf-8, shift_jis",
+                "- <改行種別> は改行コードです。CRLF または LF を使います。",
+                "",
+                "本文",
+                "ファイル開始行の次の行から、次の「@@」行の直前までがそのファイルの本文です。",
+                "本文を編集する場合は、通常は本文だけを変更し、「@@」行、「==========」行、パス、文字コード、改行種別は変更しないでください。",
+                "",
+                "注意",
+                "- 行頭が「@@」の行はファイル開始行として扱われます。",
+                "",
+                "最小例",
+                "C:\\work\\a.txt",
+                "C:\\work\\b.txt",
+                "==========",
+                "@@C:\\work\\a.txt|utf-8|CRLF",
+                "a.txt の本文",
+                "@@C:\\work\\b.txt|utf-8|LF",
+                "b.txt の本文"
+            } );
         }
 
         private void BtnDivide_Click ( object sender, EventArgs e )

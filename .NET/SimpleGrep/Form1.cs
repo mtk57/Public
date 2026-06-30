@@ -208,11 +208,11 @@ namespace SimpleGrep
                     var serializer = new DataContractJsonSerializer(typeof(AppSettings));
                     var settings = (AppSettings)serializer.ReadObject(stream);
 
-                    LoadHistory(cmbFolderPath, settings.FolderPathHistory);
-                    LoadHistory(comboBox1, settings.FilePatternHistory);
-                    LoadHistory(cmbKeyword, settings.GrepPatternHistory);
-                    LoadHistory(cmbExcludeFolder, MergeHistory(settings.ExcludeFolderHistory, settings.ExcludeFoldersText));
-                    LoadHistory(cmbExcludeExtension, MergeHistory(settings.ExcludeExtensionHistory, settings.ExcludeExtensionsText));
+                    LoadHistory(cmbFolderPath, settings.FolderPathHistory, settings.FolderPathText);
+                    LoadHistory(comboBox1, settings.FilePatternHistory, settings.FilePatternText);
+                    LoadHistory(cmbKeyword, settings.GrepPatternHistory, settings.GrepPatternText);
+                    LoadHistory(cmbExcludeFolder, settings.ExcludeFolderHistory, settings.ExcludeFoldersText);
+                    LoadHistory(cmbExcludeExtension, settings.ExcludeExtensionHistory, settings.ExcludeExtensionsText);
 
                     chkSearchSubDir.Checked = settings.SearchSubDir;
                     chkCase.Checked = settings.CaseSensitive;
@@ -252,6 +252,9 @@ namespace SimpleGrep
                 GrepPatternHistory = GetHistory(cmbKeyword),
                 ExcludeFolderHistory = GetHistory(cmbExcludeFolder),
                 ExcludeExtensionHistory = GetHistory(cmbExcludeExtension),
+                FolderPathText = cmbFolderPath.Text,
+                FilePatternText = comboBox1.Text,
+                GrepPatternText = cmbKeyword.Text,
                 SearchSubDir = chkSearchSubDir.Checked,
                 CaseSensitive = chkCase.Checked,
                 UseRegex = chkUseRegex.Checked,
@@ -275,13 +278,20 @@ namespace SimpleGrep
             }
         }
 
-        private void LoadHistory(ComboBox comboBox, List<string> history)
+        private void LoadHistory(ComboBox comboBox, List<string> history, string currentText)
         {
             if (history != null && history.Any())
             {
                 comboBox.Items.AddRange(history.ToArray());
-                comboBox.Text = history.First();
             }
+
+            if (currentText == null && history != null && history.Any())
+            {
+                comboBox.Text = history.First();
+                return;
+            }
+
+            comboBox.Text = currentText ?? string.Empty;
         }
 
         private List<string> GetHistory(ComboBox comboBox)
@@ -293,22 +303,6 @@ namespace SimpleGrep
             }
             history.AddRange(comboBox.Items.Cast<string>().Where(item => item != comboBox.Text));
             return history.Distinct().Take(MaxHistoryCount).ToList();
-        }
-
-        private static List<string> MergeHistory(List<string> history, string currentText)
-        {
-            var merged = new List<string>();
-            if (!string.IsNullOrWhiteSpace(currentText))
-            {
-                merged.Add(currentText);
-            }
-
-            if (history != null)
-            {
-                merged.AddRange(history.Where(item => !string.IsNullOrWhiteSpace(item)));
-            }
-
-            return merged.Distinct().Take(MaxHistoryCount).ToList();
         }
 
 
@@ -1651,6 +1645,12 @@ namespace SimpleGrep
             public List<string> ExcludeFolderHistory { get; set; } = new List<string>();
             [DataMember]
             public List<string> ExcludeExtensionHistory { get; set; } = new List<string>();
+            [DataMember]
+            public string FolderPathText { get; set; }
+            [DataMember]
+            public string FilePatternText { get; set; }
+            [DataMember]
+            public string GrepPatternText { get; set; }
             [DataMember]
             public bool SearchSubDir { get; set; }
             [DataMember]

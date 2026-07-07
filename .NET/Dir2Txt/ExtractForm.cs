@@ -184,6 +184,12 @@ namespace Dir2Txt
 
             cmbExtractDirPath.Items.Clear();
             cmbExtractDirPath.Items.AddRange( items.Cast<object>().ToArray() );
+            if ( string.IsNullOrWhiteSpace( currentText ) && items.Count > 0 )
+            {
+                cmbExtractDirPath.SelectedIndex = 0;
+                return;
+            }
+
             cmbExtractDirPath.Text = currentText;
         }
 

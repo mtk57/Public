@@ -19,6 +19,8 @@ namespace Dir2Txt
     public partial class MainForm : Form
     {
         private const string DELIMITER = "==========";
+        private const int WindowsMaxPathLength = 260;
+        private const string ErrorFileName = "Error.txt";
         private static readonly Encoding OutputFileEncoding = new UTF8Encoding( true );
         private CancellationTokenSource buildCancellation;
 
@@ -179,6 +181,12 @@ namespace Dir2Txt
                 return;
             }
 
+            if ( IsWindowsPathLengthExceeded( dirPath ) )
+            {
+                HandlePathLengthExceeded( dirPath );
+                return;
+            }
+
             if ( !Directory.Exists( dirPath ) )
             {
                 MessageBox.Show( this, "指定されたフォルダが見つかりません。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning );
@@ -211,6 +219,12 @@ namespace Dir2Txt
                 if ( token.IsCancellationRequested || result == null )
                 {
                     lblProgress.Text = "中止しました";
+                    return;
+                }
+
+                if ( !string.IsNullOrEmpty( result.PathLengthExceededPath ) )
+                {
+                    HandlePathLengthExceeded( result.PathLengthExceededPath );
                     return;
                 }
 
@@ -251,12 +265,17 @@ namespace Dir2Txt
                 StringComparer.OrdinalIgnoreCase );
 
             progress?.Report( BuildProgress.Indeterminate( "ファイル一覧を取得中..." ) );
-            var targetFiles = EnumerateTargetFiles( rootPath, ignoreDirSet, ignoreFileSet, ignoreExtSet, ignoreExtNegated, cancellationToken )
+            var pathScanState = new PathScanState();
+            var targetFiles = EnumerateTargetFiles( rootPath, ignoreDirSet, ignoreFileSet, ignoreExtSet, ignoreExtNegated, cancellationToken, pathScanState )
                                      .OrderBy( x => x )
                                      .ToList();
             if ( cancellationToken.IsCancellationRequested )
             {
                 return null;
+            }
+            if ( pathScanState.HasExceeded )
+            {
+                return BuildResult.PathLengthExceeded( pathScanState.ExceededPath );
             }
 
             var outputPath = CreateOutputPath( rootPath );
@@ -277,6 +296,10 @@ namespace Dir2Txt
                             return null;
                         }
 
+                        if ( IsWindowsPathLengthExceeded( file ) )
+                        {
+                            return BuildResult.PathLengthExceeded( file );
+                        }
                         try
                         {
                             if ( IsBinaryFile( file, cancellationToken ) )
@@ -303,6 +326,10 @@ namespace Dir2Txt
                             {
                                 tempWriter.WriteLine();
                             }
+                        }
+                        catch ( PathTooLongException )
+                        {
+                            return BuildResult.PathLengthExceeded( file );
                         }
                         catch ( IOException )
                         {
@@ -433,18 +460,24 @@ namespace Dir2Txt
                 StringComparer.OrdinalIgnoreCase );
 
             progress?.Report( BuildProgress.Indeterminate( "ファイル一覧を取得中..." ) );
-            var targetFiles = EnumerateTargetFiles( rootPath, ignoreDirSet, ignoreFileSet, ignoreExtSet, ignoreExtNegated, cancellationToken )
+            var pathScanState = new PathScanState();
+            var targetFiles = EnumerateTargetFiles( rootPath, ignoreDirSet, ignoreFileSet, ignoreExtSet, ignoreExtNegated, cancellationToken, pathScanState )
                                      .OrderBy( x => x )
                                      .ToList();
             if ( cancellationToken.IsCancellationRequested )
             {
                 return null;
             }
+            if ( pathScanState.HasExceeded )
+            {
+                return BuildResult.PathLengthExceeded( pathScanState.ExceededPath );
+            }
 
             progress?.Report( BuildProgress.Determinate( 0, targetFiles.Count, $"処理中: 0 / {targetFiles.Count}" ) );
 
             var processedCount = 0;
             var skippedCount = 0;
+            string pathLengthExceededPath = null;
             var results = new ConcurrentBag<FileReadResult>();
             var options = new ParallelOptions
             {
@@ -461,6 +494,13 @@ namespace Dir2Txt
 
                 try
                 {
+                    if ( IsWindowsPathLengthExceeded( file ) )
+                    {
+                        pathLengthExceededPath = file;
+                        state.Stop();
+                        return;
+                    }
+
                     if ( !IsBinaryFile( file, cancellationToken ) && !cancellationToken.IsCancellationRequested )
                     {
                         try
@@ -476,6 +516,11 @@ namespace Dir2Txt
                                     LineEnding = read.LineEnding
                                 } );
                             }
+                        }
+                        catch ( PathTooLongException )
+                        {
+                            pathLengthExceededPath = file;
+                            state.Stop();
                         }
                         catch ( IOException )
                         {
@@ -495,6 +540,11 @@ namespace Dir2Txt
                         Interlocked.Increment( ref skippedCount );
                     }
                 }
+                catch ( PathTooLongException )
+                {
+                    pathLengthExceededPath = file;
+                    state.Stop();
+                }
                 finally
                 {
                     var current = Interlocked.Increment( ref processedCount );
@@ -505,6 +555,10 @@ namespace Dir2Txt
             if ( cancellationToken.IsCancellationRequested )
             {
                 return null;
+            }
+            if ( !string.IsNullOrEmpty( pathLengthExceededPath ) )
+            {
+                return BuildResult.PathLengthExceeded( pathLengthExceededPath );
             }
 
             progress?.Report( BuildProgress.Indeterminate( "出力データ作成中..." ) );
@@ -554,11 +608,11 @@ namespace Dir2Txt
             }
         }
 
-        private IEnumerable<string> EnumerateTargetFiles ( string rootPath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles, HashSet<string> ignoreExts, bool ignoreExtNegated, CancellationToken cancellationToken )
+        private IEnumerable<string> EnumerateTargetFiles ( string rootPath, HashSet<string> ignoreDirs, HashSet<string> ignoreFiles, HashSet<string> ignoreExts, bool ignoreExtNegated, CancellationToken cancellationToken, PathScanState pathScanState )
         {
-            foreach ( var file in EnumerateFilesSafely( rootPath, ignoreDirs, cancellationToken ) )
+            foreach ( var file in EnumerateFilesSafely( rootPath, ignoreDirs, cancellationToken, pathScanState ) )
             {
-                if ( cancellationToken.IsCancellationRequested )
+                if ( cancellationToken.IsCancellationRequested || pathScanState.HasExceeded )
                 {
                     yield break;
                 }
@@ -570,10 +624,16 @@ namespace Dir2Txt
             }
         }
 
-        private IEnumerable<string> EnumerateFilesSafely ( string directory, HashSet<string> ignoreDirs, CancellationToken cancellationToken )
+        private IEnumerable<string> EnumerateFilesSafely ( string directory, HashSet<string> ignoreDirs, CancellationToken cancellationToken, PathScanState pathScanState )
         {
-            if ( cancellationToken.IsCancellationRequested )
+            if ( cancellationToken.IsCancellationRequested || pathScanState.HasExceeded )
             {
+                yield break;
+            }
+
+            if ( IsWindowsPathLengthExceeded( directory ) )
+            {
+                pathScanState.SetExceeded( directory );
                 yield break;
             }
 
@@ -588,6 +648,11 @@ namespace Dir2Txt
             {
                 files = Directory.GetFiles( directory );
             }
+            catch ( PathTooLongException )
+            {
+                pathScanState.SetExceeded( directory );
+                yield break;
+            }
             catch
             {
                 yield break;
@@ -595,8 +660,14 @@ namespace Dir2Txt
 
             foreach ( var file in files )
             {
-                if ( cancellationToken.IsCancellationRequested )
+                if ( cancellationToken.IsCancellationRequested || pathScanState.HasExceeded )
                 {
+                    yield break;
+                }
+
+                if ( IsWindowsPathLengthExceeded( file ) )
+                {
+                    pathScanState.SetExceeded( file );
                     yield break;
                 }
 
@@ -608,6 +679,11 @@ namespace Dir2Txt
             {
                 directories = Directory.GetDirectories( directory );
             }
+            catch ( PathTooLongException )
+            {
+                pathScanState.SetExceeded( directory );
+                yield break;
+            }
             catch
             {
                 yield break;
@@ -615,16 +691,54 @@ namespace Dir2Txt
 
             foreach ( var childDirectory in directories )
             {
-                if ( cancellationToken.IsCancellationRequested )
+                if ( cancellationToken.IsCancellationRequested || pathScanState.HasExceeded )
                 {
                     yield break;
                 }
 
-                foreach ( var file in EnumerateFilesSafely( childDirectory, ignoreDirs, cancellationToken ) )
+                if ( IsWindowsPathLengthExceeded( childDirectory ) )
                 {
+                    pathScanState.SetExceeded( childDirectory );
+                    yield break;
+                }
+
+                foreach ( var file in EnumerateFilesSafely( childDirectory, ignoreDirs, cancellationToken, pathScanState ) )
+                {
+                    if ( pathScanState.HasExceeded )
+                    {
+                        yield break;
+                    }
+
                     yield return file;
                 }
             }
+        }
+
+        private bool IsWindowsPathLengthExceeded ( string path )
+        {
+            return !string.IsNullOrEmpty( path ) && path.Length >= WindowsMaxPathLength;
+        }
+
+        private void HandlePathLengthExceeded ( string path )
+        {
+            var errorPath = WritePathLengthError( path );
+            lblProgress.Text = "パス長エラーで中止しました";
+            MessageBox.Show( this, $"Windowsの最大パス長を超えるパスを検出したため中止しました。{Environment.NewLine}詳細: {errorPath}", "パス長エラー", MessageBoxButtons.OK, MessageBoxIcon.Error );
+        }
+
+        private string WritePathLengthError ( string exceededPath )
+        {
+            var errorPath = Path.Combine( AppDomain.CurrentDomain.BaseDirectory, ErrorFileName );
+            using ( var writer = new StreamWriter( errorPath, false, OutputFileEncoding ) )
+            {
+                writer.WriteLine( "Windowsの最大パス長を超えるパスを検出したため、処理を中止しました。" );
+                writer.WriteLine( "最大パス長: " + WindowsMaxPathLength.ToString() );
+                writer.WriteLine( "検出したパス長: " + ( exceededPath?.Length ?? 0 ).ToString() );
+                writer.WriteLine( "パス:" );
+                writer.WriteLine( exceededPath ?? string.Empty );
+            }
+
+            return errorPath;
         }
 
         private IEnumerable<string> ParseIgnoreList ( string text )
@@ -691,6 +805,11 @@ namespace Dir2Txt
 
         private (string Content, Encoding Encoding, string LineEnding) ReadFileWithEncoding ( string path, CancellationToken cancellationToken )
         {
+            if ( IsWindowsPathLengthExceeded( path ) )
+            {
+                throw new PathTooLongException();
+            }
+
             var bytes = File.ReadAllBytes( path );
             if ( cancellationToken.IsCancellationRequested )
             {
@@ -887,6 +1006,11 @@ namespace Dir2Txt
 
         private bool IsBinaryFile ( string path, CancellationToken cancellationToken )
         {
+            if ( IsWindowsPathLengthExceeded( path ) )
+            {
+                throw new PathTooLongException();
+            }
+
             const int sampleSize = 8000;
             var buffer = new byte[sampleSize];
             try
@@ -919,6 +1043,10 @@ namespace Dir2Txt
                         }
                     }
                 }
+            }
+            catch ( PathTooLongException )
+            {
+                throw;
             }
             catch
             {
@@ -1091,9 +1219,29 @@ namespace Dir2Txt
         {
             public List<FileReadResult> Files { get; set; }
             public string OutputPath { get; set; }
+            public string PathLengthExceededPath { get; set; }
             public int TargetCount { get; set; }
             public int OutputCount { get; set; }
             public int SkippedCount { get; set; }
+
+            public static BuildResult PathLengthExceeded ( string path )
+            {
+                return new BuildResult { PathLengthExceededPath = path };
+            }
+        }
+
+        private class PathScanState
+        {
+            public string ExceededPath { get; private set; }
+            public bool HasExceeded => !string.IsNullOrEmpty( ExceededPath );
+
+            public void SetExceeded ( string path )
+            {
+                if ( string.IsNullOrEmpty( ExceededPath ) )
+                {
+                    ExceededPath = path;
+                }
+            }
         }
 
         private class BuildProgress

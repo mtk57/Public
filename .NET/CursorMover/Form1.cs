@@ -50,6 +50,8 @@ namespace CursorMover
         /// </summary>
         private void btnStart_Click(object sender, EventArgs e)
         {
+            MessageBox.Show("コンセントは抜かないこと！", "確認", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
             int intervalSeconds;
             // テキストボックスの値が正の整数であるか検証
             if (int.TryParse(textCursorMoveTimeSec.Text, out intervalSeconds) && intervalSeconds > 0)

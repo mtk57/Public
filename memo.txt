@@ -203,7 +203,7 @@ jar tf <JARファイル> \
 
 * 公開先：GitHub Packages（Maven Registry）
 * 例の座標（JARファイルA）：`com.example.batch:job-common:0.0.1-SNAPSHOT`
-* 公開先リポジトリ：`mtk57/job-common1`
+* 公開先リポジトリ：`hoge/job-common1`
 * GitHub Packages の Maven URL：`https://maven.pkg.github.com/OWNER/REPO`
 
 ---
@@ -218,7 +218,7 @@ jar tf <JARファイル> \
 <distributionManagement>
   <repository>
     <id>github</id>
-    <url>https://maven.pkg.github.com/mtk57/job-common1</url>
+    <url>https://maven.pkg.github.com/hoge/job-common1</url>
   </repository>
 </distributionManagement>
 ```
@@ -239,7 +239,7 @@ jar tf <JARファイル> \
   <servers>
     <server>
       <id>github</id>
-      <username>mtk57</username>
+      <username>hoge</username>
       <password>YOUR_TOKEN</password>
     </server>
   </servers>
@@ -256,7 +256,7 @@ mvn -DskipTests clean deploy
 
 ### 1-5. GitHub の Packages に出ていることを確認
 
-GitHub の `mtk57/job-common1` リポジトリの **Packages** に `job-common` が表示されればOK。
+GitHub の `hoge/job-common1` リポジトリの **Packages** に `job-common` が表示されればOK。
 
 ---
 
@@ -270,7 +270,7 @@ GitHub の `mtk57/job-common1` リポジトリの **Packages** に `job-common` 
 <repositories>
   <repository>
     <id>github</id>
-    <url>https://maven.pkg.github.com/mtk57/job-common1</url>
+    <url>https://maven.pkg.github.com/hoge/job-common1</url>
     <snapshots>
       <enabled>true</enabled>
     </snapshots>
@@ -448,7 +448,7 @@ rm -rf .git
 git init
 git add .
 git commit -m "first commit"
-git remote add origin https://github.com/mtk57/SoapServerTest2.git
+git remote add origin https://github.com/hoge/SoapServerTest2.git
 git branch -M main        # GitHub側が main ブランチの場合
 git push -u origin main
 
@@ -456,7 +456,7 @@ git push -u origin main
 1.左のSource ControlのCHANGESの...からclone
 2.githubのURLを入れる
 
-git clone https://github.com/mtk57/BatchH2MyBatisTest2.git
+git clone https://github.com/hoge/BatchH2MyBatisTest2.git
 
 # git管理対象をツリー表示
 git ls-tree -r --name-only HEAD | tree --fromfile .

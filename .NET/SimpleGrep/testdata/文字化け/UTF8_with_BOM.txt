@@ -1,1 +1,0 @@
-﻿ABC abc 123 テスト文章：全角ＡＢＣと半角ABC、Small small / LARGE LARGE。

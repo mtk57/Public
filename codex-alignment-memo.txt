@@ -1,0 +1,39 @@
+codex alignment memo
+
+
+### 推奨対策（即実践可能）
+1. **実行モードを安全側に固定**
+   - **Sandbox: workspace-write**（推奨） + **Approval: on-request**（ユーザー確認必須）。
+   - フルアクセス（danger-full-access）は避ける。Auto-reviewを有効化。
+   - Codex CLI/アプリの設定で確認を徹底。
+
+2. **WSL環境の隔離強化**
+   - **専用ディストリビューションを使う**：`wsl --import` でプロジェクト専用Ubuntuを作成。作業フォルダだけbind mount。
+     ```
+     # /etc/wsl.conf で自動マウント制限
+     [automount]
+     enabled = false
+     ```
+   - Docker内でCodexを実行（devcontainer推奨）。ホストの`/mnt/c`をマウントせず、コンテナ内のみ作業。
+   - 権限制限：非rootユーザーで実行。`sudo` 必要コマンドは最小限。
+
+3. **プロンプト/設定で防御**
+   - **AGENTS.md** やシステムプロンプトに明示的に追加：
+     ```
+     - 絶対に作業ディレクトリ（/workspace）外のファイルを読み書き/削除しない
+     - メール送信、curl/post、外部ネットワークアクセスは一切禁止（必要な場合のみユーザー確認）
+     - rm, rm -rf, del, format などの破壊コマンドは使わず、確認必須
+     ```
+   - `.codexignore` やignoreファイルで敏感パスを除外。
+
+4. **監視・バックアップ**
+   - **WSLファイル監視**：`inotifywait` やWindows側でファイル変更監視。
+   - 定期スナップショット：`wsl --snapshot` やWSLバックアップ。
+   - ネットワーク：WSLのファイアウォールでアウトバウンド制限（必要時のみ許可）。
+   - ログ確認：Codexの実行ログを必ずレビュー。
+
+5. **代替/補完策**
+   - ローカルモデル（Llamaなど）+ Ollama + 厳格サンドボックス。
+   - Cursor/Claude Codeなども同様リスクあり → 同じくsandbox優先。
+   - 重要なプロジェクトは**Git + 専用VM/コンテナ**で隔離。
+

@@ -1,0 +1,11 @@
+https://blog.flatt.tech/entry/keyv_compromise
+
+keyv 等 複数著名パッケージへのソフトウェアサプライチェーン攻撃の概要と対応指針
+
+# 例：lockfile に keyv@6.0.0 が含まれるか確認
+grep -r '"keyv".*"6.0.0"' package-lock.json pnpm-lock.yaml yarn.lock 2>/dev/null
+npm ls keyv 2>/dev/null | grep '6.0.0'
+
+# Bun ランタイムが残存していないか確認
+ls -la /usr/local/lib/node_modules/bun/ 2>/dev/null
+which bun 2>/dev/null

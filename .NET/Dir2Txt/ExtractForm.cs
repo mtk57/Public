@@ -13,7 +13,7 @@ using System.Runtime.Serialization.Json;
 
 namespace Dir2Txt
 {
-    public partial class ExtractForm : Form
+    public partial class ExtractForm : CloseWithCtrlWForm
     {
         private const int MaxExtractDirPathHistoryCount = 20;
 

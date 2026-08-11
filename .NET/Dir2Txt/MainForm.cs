@@ -16,7 +16,7 @@ using System.Windows.Forms;
 
 namespace Dir2Txt
 {
-    public partial class MainForm : Form
+    public partial class MainForm : CloseWithCtrlWForm
     {
         private const string DELIMITER = "==========";
         private const int WindowsMaxPathLength = 260;
@@ -51,7 +51,7 @@ namespace Dir2Txt
         private void ShowFormatHelpDialog ()
         {
             var helpText = GetFormatHelpText();
-            using ( var form = new Form() )
+            using ( var form = new CloseWithCtrlWForm() )
             using ( var textBox = new TextBox() )
             using ( var copyButton = new Button() )
             using ( var closeButton = new Button() )

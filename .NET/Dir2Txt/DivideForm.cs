@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace Dir2Txt
 {
-    public partial class DivideForm : Form
+    public partial class DivideForm : CloseWithCtrlWForm
     {
         private const int MARGIN = 10;
 

@@ -10,13 +10,25 @@ namespace Dir2Txt
         public string DirPath { get; set; }
 
         [DataMember]
+        public List<string> DirPathHistories { get; set; }
+
+        [DataMember]
         public string IgnoreDirs { get; set; }
+
+        [DataMember]
+        public List<string> IgnoreDirsHistories { get; set; }
 
         [DataMember]
         public string IgnoreFiles { get; set; }
 
         [DataMember]
+        public List<string> IgnoreFilesHistories { get; set; }
+
+        [DataMember]
         public string IgnoreExt { get; set; }
+
+        [DataMember]
+        public List<string> IgnoreExtHistories { get; set; }
 
         [DataMember]
         public bool IgnoreExtNegated { get; set; }

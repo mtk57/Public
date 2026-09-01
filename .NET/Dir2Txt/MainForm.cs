@@ -19,6 +19,7 @@ namespace Dir2Txt
     public partial class MainForm : CloseWithCtrlWForm
     {
         private const string DELIMITER = "==========";
+        private const int MaxHistoryCount = 20;
         private const int WindowsMaxPathLength = 260;
         private const string ErrorFileName = "Error.txt";
         private static readonly Encoding OutputFileEncoding = new UTF8Encoding( true );
@@ -27,9 +28,17 @@ namespace Dir2Txt
         public MainForm ()
         {
             InitializeComponent();
-            txtDirPath.AllowDrop = true;
-            txtDirPath.DragEnter += PathTextBox_DragEnter;
-            txtDirPath.DragDrop += TxtDirPath_DragDrop;
+            cmbDirPath.AllowDrop = true;
+            cmbDirPath.DragEnter += PathTextBox_DragEnter;
+            cmbDirPath.DragDrop += CmbDirPath_DragDrop;
+            cmbDirPath.Leave += CmbDirPath_Leave;
+            cmbDirPath.KeyDown += CmbDirPath_KeyDown;
+            cmbIgnoreDirs.Leave += HistoryComboBox_Leave;
+            cmbIgnoreDirs.KeyDown += HistoryComboBox_KeyDown;
+            cmbIgnoreFiles.Leave += HistoryComboBox_Leave;
+            cmbIgnoreFiles.KeyDown += HistoryComboBox_KeyDown;
+            cmbIgnoreExt.Leave += HistoryComboBox_Leave;
+            cmbIgnoreExt.KeyDown += HistoryComboBox_KeyDown;
             btnRefDirPath.Click += BtnRefDirPath_Click;
             btnRun.Click += BtnRun_Click;
             btnCancel.Click += BtnCancel_Click;
@@ -174,7 +183,7 @@ namespace Dir2Txt
 
         private async void BtnRun_Click ( object sender, EventArgs e )
         {
-            var dirPath = txtDirPath.Text;
+            var dirPath = cmbDirPath.Text;
             if ( string.IsNullOrWhiteSpace( dirPath ) )
             {
                 MessageBox.Show( this, "フォルダパスを入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning );
@@ -195,9 +204,9 @@ namespace Dir2Txt
 
             try
             {
-                var ignoreDirs = ParseIgnoreList( txtIgnoreDirs.Text );
-                var ignoreFiles = ParseIgnoreList( txtIgnoreFiles.Text );
-                var ignoreExts = ParseIgnoreList( txtIgnoreExt.Text ).ToList();
+                var ignoreDirs = ParseIgnoreList( cmbIgnoreDirs.Text );
+                var ignoreFiles = ParseIgnoreList( cmbIgnoreFiles.Text );
+                var ignoreExts = ParseIgnoreList( cmbIgnoreExt.Text ).ToList();
                 var ignoreExtNegated = chkIgnoreExtNegated.Checked;
                 var outputToFile = chkOutputToFile.Checked;
                 if ( ignoreExtNegated && !ignoreExts.Any() )
@@ -446,7 +455,7 @@ namespace Dir2Txt
                 dialog.Description = "フォルダを選択してください";
                 if ( dialog.ShowDialog( this ) == DialogResult.OK )
                 {
-                    txtDirPath.Text = dialog.SelectedPath;
+                    cmbDirPath.Text = dialog.SelectedPath;
                 }
             }
         }
@@ -981,7 +990,7 @@ namespace Dir2Txt
             e.Effect = e.Data.GetDataPresent( DataFormats.FileDrop ) ? DragDropEffects.Copy : DragDropEffects.None;
         }
 
-        private void TxtDirPath_DragDrop ( object sender, DragEventArgs e )
+        private void CmbDirPath_DragDrop ( object sender, DragEventArgs e )
         {
             var paths = e.Data.GetData( DataFormats.FileDrop ) as string[];
             var path = paths?.FirstOrDefault();
@@ -992,16 +1001,198 @@ namespace Dir2Txt
 
             if ( Directory.Exists( path ) )
             {
-                txtDirPath.Text = path;
+                cmbDirPath.Text = path;
             }
             else if ( File.Exists( path ) )
             {
                 var dir = Path.GetDirectoryName( path );
                 if ( !string.IsNullOrEmpty( dir ) )
                 {
-                    txtDirPath.Text = dir;
+                    cmbDirPath.Text = dir;
                 }
             }
+        }
+
+        private void CmbDirPath_Leave ( object sender, EventArgs e )
+        {
+            AddDirPathHistory();
+        }
+
+        private void CmbDirPath_KeyDown ( object sender, KeyEventArgs e )
+        {
+            if ( e.KeyCode != Keys.Enter )
+            {
+                return;
+            }
+
+            AddDirPathHistory();
+            e.SuppressKeyPress = true;
+        }
+
+        private void AddDirPathHistory ( bool save = true )
+        {
+            var path = ( cmbDirPath.Text ?? string.Empty ).Trim();
+            if ( string.IsNullOrEmpty( path ) )
+            {
+                return;
+            }
+
+            var histories = GetDirPathHistories()
+                .Where( x => !string.Equals( x, path, StringComparison.OrdinalIgnoreCase ) )
+                .ToList();
+
+            histories.Insert( 0, path );
+            SetDirPathHistories( histories );
+
+            if ( save )
+            {
+                SaveDirPathHistories( histories );
+            }
+        }
+
+        private List<string> GetDirPathHistories ()
+        {
+            return cmbDirPath.Items.Cast<string>()
+                .Where( x => !string.IsNullOrWhiteSpace( x ) )
+                .Select( x => x.Trim() )
+                .Distinct( StringComparer.OrdinalIgnoreCase )
+                .Take( MaxHistoryCount )
+                .ToList();
+        }
+
+        private void SetDirPathHistories ( IEnumerable<string> histories )
+        {
+            var currentText = cmbDirPath.Text;
+            var items = histories
+                .Where( x => !string.IsNullOrWhiteSpace( x ) )
+                .Select( x => x.Trim() )
+                .Distinct( StringComparer.OrdinalIgnoreCase )
+                .Take( MaxHistoryCount )
+                .ToList();
+
+            cmbDirPath.Items.Clear();
+            cmbDirPath.Items.AddRange( items.Cast<object>().ToArray() );
+            if ( string.IsNullOrWhiteSpace( currentText ) && items.Count > 0 )
+            {
+                cmbDirPath.SelectedIndex = 0;
+                return;
+            }
+
+            cmbDirPath.Text = currentText;
+        }
+
+        private void SaveDirPathHistories ( List<string> histories )
+        {
+            var settings = LoadSettings() ?? new AppSettings();
+            settings.DirPath = cmbDirPath.Text ?? string.Empty;
+            settings.DirPathHistories = histories;
+            SaveSettings( settings );
+        }
+
+        private void HistoryComboBox_Leave ( object sender, EventArgs e )
+        {
+            AddHistory( sender as ComboBox );
+        }
+
+        private void HistoryComboBox_KeyDown ( object sender, KeyEventArgs e )
+        {
+            if ( e.KeyCode != Keys.Enter )
+            {
+                return;
+            }
+
+            AddHistory( sender as ComboBox );
+            e.SuppressKeyPress = true;
+        }
+
+        private void AddHistory ( ComboBox comboBox, bool save = true )
+        {
+            if ( comboBox == null )
+            {
+                return;
+            }
+
+            var value = ( comboBox.Text ?? string.Empty ).Trim();
+            if ( string.IsNullOrEmpty( value ) )
+            {
+                return;
+            }
+
+            var histories = GetHistories( comboBox )
+                .Where( x => !string.Equals( x, value, StringComparison.OrdinalIgnoreCase ) )
+                .ToList();
+
+            histories.Insert( 0, value );
+            SetHistories( comboBox, histories );
+
+            if ( save )
+            {
+                SaveHistories( comboBox, histories );
+            }
+        }
+
+        private List<string> GetHistories ( ComboBox comboBox )
+        {
+            return comboBox.Items.Cast<string>()
+                .Where( x => !string.IsNullOrWhiteSpace( x ) )
+                .Select( x => x.Trim() )
+                .Distinct( StringComparer.OrdinalIgnoreCase )
+                .Take( MaxHistoryCount )
+                .ToList();
+        }
+
+        private void SetHistories ( ComboBox comboBox, IEnumerable<string> histories )
+        {
+            var currentText = comboBox.Text;
+            var items = histories
+                .Where( x => !string.IsNullOrWhiteSpace( x ) )
+                .Select( x => x.Trim() )
+                .Distinct( StringComparer.OrdinalIgnoreCase )
+                .Take( MaxHistoryCount )
+                .ToList();
+
+            comboBox.Items.Clear();
+            comboBox.Items.AddRange( items.Cast<object>().ToArray() );
+            if ( string.IsNullOrWhiteSpace( currentText ) && items.Count > 0 )
+            {
+                comboBox.SelectedIndex = 0;
+                return;
+            }
+
+            comboBox.Text = currentText;
+        }
+
+        private void LoadHistories ( ComboBox comboBox, string currentValue, IEnumerable<string> histories )
+        {
+            var items = histories ?? Enumerable.Empty<string>();
+            if ( !string.IsNullOrWhiteSpace( currentValue ) )
+            {
+                items = new[] { currentValue }.Concat( items );
+            }
+
+            SetHistories( comboBox, items );
+        }
+
+        private void SaveHistories ( ComboBox comboBox, List<string> histories )
+        {
+            var settings = LoadSettings() ?? new AppSettings();
+            if ( comboBox == cmbIgnoreDirs )
+            {
+                settings.IgnoreDirs = comboBox.Text ?? string.Empty;
+                settings.IgnoreDirsHistories = histories;
+            }
+            else if ( comboBox == cmbIgnoreFiles )
+            {
+                settings.IgnoreFiles = comboBox.Text ?? string.Empty;
+                settings.IgnoreFilesHistories = histories;
+            }
+            else if ( comboBox == cmbIgnoreExt )
+            {
+                settings.IgnoreExt = comboBox.Text ?? string.Empty;
+                settings.IgnoreExtHistories = histories;
+            }
+
+            SaveSettings( settings );
         }
 
         private bool IsBinaryFile ( string path, CancellationToken cancellationToken )
@@ -1089,10 +1280,15 @@ namespace Dir2Txt
                 var settings = LoadSettings();
                 if ( settings != null )
                 {
-                    txtDirPath.Text = settings.DirPath ?? string.Empty;
-                    txtIgnoreDirs.Text = settings.IgnoreDirs ?? string.Empty;
-                    txtIgnoreFiles.Text = settings.IgnoreFiles ?? string.Empty;
-                    txtIgnoreExt.Text = settings.IgnoreExt ?? string.Empty;
+                    var histories = settings.DirPathHistories ?? new List<string>();
+                    if ( !string.IsNullOrWhiteSpace( settings.DirPath ) )
+                    {
+                        histories.Insert( 0, settings.DirPath );
+                    }
+                    SetDirPathHistories( histories );
+                    LoadHistories( cmbIgnoreDirs, settings.IgnoreDirs, settings.IgnoreDirsHistories );
+                    LoadHistories( cmbIgnoreFiles, settings.IgnoreFiles, settings.IgnoreFilesHistories );
+                    LoadHistories( cmbIgnoreExt, settings.IgnoreExt, settings.IgnoreExtHistories );
                     chkIgnoreExtNegated.Checked = settings.IgnoreExtNegated;
                     chkOutputToFile.Checked = settings.OutputToFile;
                     txtDivideLnegth.Text = settings.DivideLength ?? string.Empty;
@@ -1113,10 +1309,18 @@ namespace Dir2Txt
             try
             {
                 var settings = LoadSettings() ?? new AppSettings();
-                settings.DirPath = txtDirPath.Text ?? string.Empty;
-                settings.IgnoreDirs = txtIgnoreDirs.Text ?? string.Empty;
-                settings.IgnoreFiles = txtIgnoreFiles.Text ?? string.Empty;
-                settings.IgnoreExt = txtIgnoreExt.Text ?? string.Empty;
+                AddDirPathHistory( false );
+                AddHistory( cmbIgnoreDirs, false );
+                AddHistory( cmbIgnoreFiles, false );
+                AddHistory( cmbIgnoreExt, false );
+                settings.DirPath = cmbDirPath.Text ?? string.Empty;
+                settings.DirPathHistories = GetDirPathHistories();
+                settings.IgnoreDirs = cmbIgnoreDirs.Text ?? string.Empty;
+                settings.IgnoreDirsHistories = GetHistories( cmbIgnoreDirs );
+                settings.IgnoreFiles = cmbIgnoreFiles.Text ?? string.Empty;
+                settings.IgnoreFilesHistories = GetHistories( cmbIgnoreFiles );
+                settings.IgnoreExt = cmbIgnoreExt.Text ?? string.Empty;
+                settings.IgnoreExtHistories = GetHistories( cmbIgnoreExt );
                 settings.IgnoreExtNegated = chkIgnoreExtNegated.Checked;
                 settings.OutputToFile = chkOutputToFile.Checked;
                 settings.DivideLength = txtDivideLnegth.Text ?? string.Empty;
@@ -1183,6 +1387,7 @@ namespace Dir2Txt
             btnRun.Enabled = !running;
             btnCancel.Enabled = running;
             btnRefDirPath.Enabled = !running;
+            cmbDirPath.Enabled = !running;
             chkIgnoreExtNegated.Enabled = !running;
             chkOutputToFile.Enabled = !running;
             progressBar1.Style = ProgressBarStyle.Blocks;

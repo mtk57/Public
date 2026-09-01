@@ -29,19 +29,19 @@
         private void InitializeComponent ()
         {
             this.components = new System.ComponentModel.Container();
-            this.txtDirPath = new System.Windows.Forms.TextBox();
+            this.cmbDirPath = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnRefDirPath = new System.Windows.Forms.Button();
             this.txtOutput = new System.Windows.Forms.TextBox();
             this.btnRun = new System.Windows.Forms.Button();
             this.btnExtract = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
-            this.txtIgnoreDirs = new System.Windows.Forms.TextBox();
+            this.cmbIgnoreDirs = new System.Windows.Forms.ComboBox();
             this.label3 = new System.Windows.Forms.Label();
-            this.txtIgnoreFiles = new System.Windows.Forms.TextBox();
+            this.cmbIgnoreFiles = new System.Windows.Forms.ComboBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.label4 = new System.Windows.Forms.Label();
-            this.txtIgnoreExt = new System.Windows.Forms.TextBox();
+            this.cmbIgnoreExt = new System.Windows.Forms.ComboBox();
             this.lblLength = new System.Windows.Forms.Label();
             this.txtDivideLnegth = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
@@ -54,12 +54,13 @@
             this.btnHelp = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // txtDirPath
+            // cmbDirPath
             // 
-            this.txtDirPath.Location = new System.Drawing.Point(22, 24);
-            this.txtDirPath.Name = "txtDirPath";
-            this.txtDirPath.Size = new System.Drawing.Size(400, 19);
-            this.txtDirPath.TabIndex = 0;
+            this.cmbDirPath.FormattingEnabled = true;
+            this.cmbDirPath.Location = new System.Drawing.Point(22, 24);
+            this.cmbDirPath.Name = "cmbDirPath";
+            this.cmbDirPath.Size = new System.Drawing.Size(400, 20);
+            this.cmbDirPath.TabIndex = 0;
             // 
             // label1
             // 
@@ -131,13 +132,14 @@
             this.label2.Text = "除外フォルダ";
             this.toolTip1.SetToolTip(this.label2, "複数指定時は\"/\"で区切る");
             // 
-            // txtIgnoreDirs
+            // cmbIgnoreDirs
             // 
-            this.txtIgnoreDirs.Location = new System.Drawing.Point(22, 68);
-            this.txtIgnoreDirs.Name = "txtIgnoreDirs";
-            this.txtIgnoreDirs.Size = new System.Drawing.Size(471, 19);
-            this.txtIgnoreDirs.TabIndex = 6;
-            this.toolTip1.SetToolTip(this.txtIgnoreDirs, "複数指定時は\"/\"で区切る");
+            this.cmbIgnoreDirs.FormattingEnabled = true;
+            this.cmbIgnoreDirs.Location = new System.Drawing.Point(22, 68);
+            this.cmbIgnoreDirs.Name = "cmbIgnoreDirs";
+            this.cmbIgnoreDirs.Size = new System.Drawing.Size(471, 20);
+            this.cmbIgnoreDirs.TabIndex = 6;
+            this.toolTip1.SetToolTip(this.cmbIgnoreDirs, "複数指定時は\"/\"で区切る");
             // 
             // label3
             // 
@@ -149,13 +151,14 @@
             this.label3.Text = "除外ファイル";
             this.toolTip1.SetToolTip(this.label3, "複数指定時は\"/\"で区切る");
             // 
-            // txtIgnoreFiles
+            // cmbIgnoreFiles
             // 
-            this.txtIgnoreFiles.Location = new System.Drawing.Point(22, 109);
-            this.txtIgnoreFiles.Name = "txtIgnoreFiles";
-            this.txtIgnoreFiles.Size = new System.Drawing.Size(471, 19);
-            this.txtIgnoreFiles.TabIndex = 8;
-            this.toolTip1.SetToolTip(this.txtIgnoreFiles, "複数指定時は\"/\"で区切る");
+            this.cmbIgnoreFiles.FormattingEnabled = true;
+            this.cmbIgnoreFiles.Location = new System.Drawing.Point(22, 109);
+            this.cmbIgnoreFiles.Name = "cmbIgnoreFiles";
+            this.cmbIgnoreFiles.Size = new System.Drawing.Size(471, 20);
+            this.cmbIgnoreFiles.TabIndex = 8;
+            this.toolTip1.SetToolTip(this.cmbIgnoreFiles, "複数指定時は\"/\"で区切る");
             // 
             // label4
             // 
@@ -167,13 +170,14 @@
             this.label4.Text = "除外拡張子";
             this.toolTip1.SetToolTip(this.label4, "複数指定時は\"/\"で区切る");
             // 
-            // txtIgnoreExt
+            // cmbIgnoreExt
             // 
-            this.txtIgnoreExt.Location = new System.Drawing.Point(22, 152);
-            this.txtIgnoreExt.Name = "txtIgnoreExt";
-            this.txtIgnoreExt.Size = new System.Drawing.Size(471, 19);
-            this.txtIgnoreExt.TabIndex = 10;
-            this.toolTip1.SetToolTip(this.txtIgnoreExt, "複数指定時は\"/\"で区切る");
+            this.cmbIgnoreExt.FormattingEnabled = true;
+            this.cmbIgnoreExt.Location = new System.Drawing.Point(22, 152);
+            this.cmbIgnoreExt.Name = "cmbIgnoreExt";
+            this.cmbIgnoreExt.Size = new System.Drawing.Size(471, 20);
+            this.cmbIgnoreExt.TabIndex = 10;
+            this.toolTip1.SetToolTip(this.cmbIgnoreExt, "複数指定時は\"/\"で区切る");
             // 
             // lblLength
             // 
@@ -273,17 +277,17 @@
             this.Controls.Add(this.txtDivideLnegth);
             this.Controls.Add(this.lblLength);
             this.Controls.Add(this.label4);
-            this.Controls.Add(this.txtIgnoreExt);
+            this.Controls.Add(this.cmbIgnoreExt);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.txtIgnoreFiles);
+            this.Controls.Add(this.cmbIgnoreFiles);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.txtIgnoreDirs);
+            this.Controls.Add(this.cmbIgnoreDirs);
             this.Controls.Add(this.btnExtract);
             this.Controls.Add(this.btnRun);
             this.Controls.Add(this.txtOutput);
             this.Controls.Add(this.btnRefDirPath);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.txtDirPath);
+            this.Controls.Add(this.cmbDirPath);
             this.Name = "MainForm";
             this.Text = "Directory To Text";
             this.ResumeLayout(false);
@@ -293,19 +297,19 @@
 
         #endregion
 
-        private System.Windows.Forms.TextBox txtDirPath;
+        private System.Windows.Forms.ComboBox cmbDirPath;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnRefDirPath;
         private System.Windows.Forms.TextBox txtOutput;
         private System.Windows.Forms.Button btnRun;
         private System.Windows.Forms.Button btnExtract;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox txtIgnoreDirs;
+        private System.Windows.Forms.ComboBox cmbIgnoreDirs;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.TextBox txtIgnoreFiles;
+        private System.Windows.Forms.ComboBox cmbIgnoreFiles;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox txtIgnoreExt;
+        private System.Windows.Forms.ComboBox cmbIgnoreExt;
         private System.Windows.Forms.Label lblLength;
         private System.Windows.Forms.TextBox txtDivideLnegth;
         private System.Windows.Forms.Label label5;

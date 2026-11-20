@@ -579,15 +579,26 @@ Private Sub MakeCalculation(ByVal wb As Excel.Workbook, ByVal edge As Boolean)
     End If
 End Sub
 
-' heavyはユーザー定義2100個、edgeは組み込み込みの総数2000個に合わせる。
+' 異なる見本セルに基づく名前付きスタイルを作り、実際に適用して保存時の保持を確実にする。
 Private Sub MakeStyles(ByVal wb As Excel.Workbook, ByVal edge As Boolean)
-    Dim i As Long, n As Long, style As Excel.Style
+    Dim ws As Excel.Worksheet, sample As Excel.Range, style As Excel.Style
+    Dim i As Long, n As Long, styleName As String
+    Set ws = AddSheet(wb, "スタイル見本")
+    ws.Range("A1:B1").Value2 = Array2D(Array(Array("スタイル名", "見本")))
     n = HEAVY_CUSTOM_STYLES
     If edge Then n = EDGE_STYLES - wb.Styles.Count
     If n < 0 Then Err.Raise 5, , "既存スタイル数が境界値を超えています。"
     For i = 1 To n
-        Set style = wb.Styles.Add("GeneratedStyle_" & Format$(i, "0000"))
-        style.NumberFormat = "0." & String$(1 + i Mod 5, "0")
+        styleName = "GeneratedStyle_" & Format$(i, "0000")
+        Set sample = ws.Cells(i + 1, 2)
+        sample.Value2 = i
+        sample.Interior.Color = RGB(i Mod 256, (i \ 256) Mod 256, 128)
+        Set style = wb.Styles.Add(Name:=styleName, BasedOn:=sample)
+        If StrComp(style.Name, styleName, vbBinaryCompare) <> 0 Then
+            Err.Raise vbObjectError + 4303, , "要求と異なるスタイル名が返されました: " & styleName & " / " & style.Name
+        End If
+        sample.Style = styleName
+        ws.Cells(i + 1, 1).Value2 = styleName
     Next i
 End Sub
 
@@ -614,13 +625,17 @@ Private Sub MakeNames(ByVal wb As Excel.Workbook, ByVal edge As Boolean)
     AddInternalHiddenName wb
 End Sub
 
-' Excelが予約名を拒否した場合でも、通常の問題名の作成を失敗扱いにしない。
+' 予約名を直接追加せず、AutoFilterにExcel自身の内部非表示名を作成させる。
 Private Sub AddInternalHiddenName(ByVal wb As Excel.Workbook)
+    Dim ws As Excel.Worksheet
     On Error GoTo Failed
-    wb.Names.Add Name:="_xlfn.GeneratedInternal", RefersTo:="=1", Visible:=False
+    Set ws = AddSheet(wb, "内部名")
+    ws.Range("A1:B3").Value2 = Array2D(Array(Array("Key", "Amount"), Array(1, 10), Array(2, 20)))
+    ws.Range("A1:B3").AutoFilter
+    ' _FilterDatabaseの存在と非表示状態は保存後のInspectNamesで確認する。
     Exit Sub
 Failed:
-    AddFailure gFile, "内部非表示名（Excelが予約名を拒否する場合あり）", Err.Number, Err.Description
+    AddFailure gFile, "内部非表示名（_FilterDatabaseの自動作成）", Err.Number, Err.Description
 End Sub
 
 ' シート種別と関数名に似た文字列・識別子を含む境界ケースを作る。
@@ -725,15 +740,15 @@ Private Sub InspectSheet(ByVal ws As Excel.Worksheet, ByVal fileName As String)
     Dim dataRow As Long, dataCol As Long, address As String, counts As Variant
     Dim shp As Excel.Shape, shapes As Long, hidden As Long, tiny As Long
     Dim total As Variant, threads As Variant, notes As Variant, i As Long
-    Dim labels As Variant, label As String
+    Dim labels As Variant, label As String, usedNote As String
     On Error GoTo Failed
     label = "表示状態"
     ExpectValue fileName, ws.Name, label, VisibilityText(ws.Visible)
     label = "使用範囲・実データ"
-    Set last = ws.Cells.SpecialCells(xlCellTypeLastCell)
+    Set last = ExpectedLastCell(ws, usedNote)
     usedRow = last.Row
     usedCol = last.Column
-    ExpectValue fileName, ws.Name, "使用範囲の最終セル(Ctrl+End)", last.Address(False, False, xlA1)
+    ExpectValue fileName, ws.Name, "使用範囲の最終セル(Ctrl+End)", last.Address(False, False, xlA1), -1, usedNote
     Set hit = ws.Cells.Find(What:="*", After:=ws.Cells(1, 1), LookIn:=xlFormulas, LookAt:=xlPart, _
         SearchOrder:=xlByRows, SearchDirection:=xlPrevious, MatchCase:=False, MatchByte:=False, SearchFormat:=False)
     If Not hit Is Nothing Then dataRow = hit.Row
@@ -801,10 +816,27 @@ Failed:
     ExpectValue fileName, ws.Name, label, FAILED, -1, "このシートの残りの取得は中断。ほかのシートは継続。"
 End Sub
 
+' 保護シートではSpecialCellsを使わず、UsedRangeの右下を読み取る。
+Private Function ExpectedLastCell(ByVal ws As Excel.Worksheet, ByRef note As String) As Excel.Range
+    Dim used As Excel.Range
+    If SheetIsProtected(ws) Then
+        Set used = ws.UsedRange
+        Set ExpectedLastCell = used.Cells(used.Rows.Count, used.Columns.Count)
+        note = "保護を解除せずUsedRangeの右下から取得。保護シートではSpecialCellsを使用しない。"
+    Else
+        Set ExpectedLastCell = ws.Cells.SpecialCells(xlCellTypeLastCell)
+    End If
+End Function
+
+' いずれかの保護が有効な場合、SpecialCellsを避ける読取り経路を使用する。
+Private Function SheetIsProtected(ByVal ws As Excel.Worksheet) As Boolean
+    SheetIsProtected = (ws.ProtectContents Or ws.ProtectDrawingObjects Or ws.ProtectScenarios)
+End Function
+
 ' 数式の範囲を配列で読み、実数と既知のテスト式ごとの関数フラグを集計する。
 Private Function InspectFormulas(ByVal ws As Excel.Worksheet, ByVal fileName As String) As Variant
     Dim result(0 To 9) As Variant, totals(1 To 9) As Double, formulas As Excel.Range
-    Dim area As Excel.Range, block As Excel.Range, has As Variant, data As Variant
+    Dim area As Excel.Range, block As Excel.Range, has As Variant, data As Variant, cell As Excel.Range
     Dim start As Long, rows As Long, batch As Long, columns As Long, r As Long, c As Long, i As Long
     On Error GoTo Failed
     For i = 0 To 9: result(i) = 0: Next i
@@ -814,6 +846,15 @@ Private Function InspectFormulas(ByVal ws As Excel.Worksheet, ByVal fileName As 
             InspectFormulas = result
             Exit Function
         End If
+    End If
+    If SheetIsProtected(ws) Then
+        For Each cell In ws.UsedRange.Cells
+            If cell.HasFormula Then
+                result(0) = CDbl(result(0)) + 1
+                AddFixtureFormula CStr(cell.Formula), totals
+            End If
+        Next cell
+        GoTo Counted
     End If
     Set formulas = ws.Cells.SpecialCells(xlCellTypeFormulas)
     result(0) = formulas.CountLarge
@@ -839,6 +880,7 @@ Private Function InspectFormulas(ByVal ws As Excel.Worksheet, ByVal fileName As 
             start = start + rows
         Loop
     Next area
+Counted:
     For i = 1 To 9: result(i) = totals(i): Next i
     InspectFormulas = result
     Exit Function
@@ -880,6 +922,10 @@ End Sub
 Private Function ValidationCount(ByVal ws As Excel.Worksheet, ByVal fileName As String) As Variant
     Dim cells As Excel.Range, querying As Boolean, number As Long, description As String
     On Error GoTo Failed
+    If SheetIsProtected(ws) Then
+        ValidationCount = ProtectedValidationCount(ws, fileName)
+        Exit Function
+    End If
     querying = True
     Set cells = ws.Cells.SpecialCells(xlCellTypeAllValidation)
     querying = False
@@ -894,6 +940,52 @@ Failed:
         AddFailure fileName & " / " & ws.Name, "入力規則の再集計", number, description
         ValidationCount = FAILED
     End If
+End Function
+
+' 保護された小規模テストシートは、UsedRangeの各セルの入力規則属性を読む。
+Private Function ProtectedValidationCount(ByVal ws As Excel.Worksheet, ByVal fileName As String) As Variant
+    Dim cell As Excel.Range, kind As Variant, count As Double
+    On Error GoTo Failed
+    For Each cell In ws.UsedRange.Cells
+        kind = ValidationTypeOrNone(cell, fileName, ws.Name)
+        If VarType(kind) = vbString Then
+            ProtectedValidationCount = FAILED
+            Exit Function
+        End If
+        If CLng(kind) >= 0 Then count = count + 1
+    Next cell
+    ProtectedValidationCount = count
+    Exit Function
+Failed:
+    AddFailure fileName & " / " & ws.Name, "保護シートの入力規則再集計", Err.Number, Err.Description
+    ProtectedValidationCount = FAILED
+End Function
+
+' 単一セルのValidation.Typeだけを読み、既知の規則なし1004は-1で返す。
+Private Function ValidationTypeOrNone(ByVal cell As Excel.Range, ByVal fileName As String, _
+    ByVal sheetName As String) As Variant
+    Dim number As Long, description As String
+    On Error GoTo Failed
+    ValidationTypeOrNone = cell.Validation.Type
+    Exit Function
+Failed:
+    number = Err.Number
+    description = Err.Description
+    If number = 1004 And NoValidationMessage(description) Then
+        ValidationTypeOrNone = -1
+    Else
+        AddFailure fileName & " / " & sheetName, "セルの入力規則種類 " & cell.Address(False, False), number, description
+        ValidationTypeOrNone = FAILED
+    End If
+End Function
+
+' Validation.Typeの規則なし時の既知メッセージのみ認め、保護エラー等は正常扱いしない。
+Private Function NoValidationMessage(ByVal text As String) As Boolean
+    text = LCase$(Trim$(text))
+    NoValidationMessage = (text = "application-defined or object-defined error" Or _
+        text = "application-defined or object-defined error." Or _
+        text = "アプリケーション定義またはオブジェクト定義のエラーです。" Or _
+        text = "アプリケーション定義またはオブジェクト定義のエラーです")
 End Function
 
 ' 日本語・英語の正常な該当なしだけを判定する。
@@ -922,7 +1014,7 @@ End Function
 
 ' 名前は生成後のRefersTo/Visibleを読む。構造化参照の角括弧だけでは外部扱いしない。
 Private Sub InspectNames(ByVal wb As Excel.Workbook, ByVal fileName As String)
-    Dim nm As Excel.Name, broken As Long, external As Long, hidden As Long
+    Dim nm As Excel.Name, broken As Long, external As Long, hidden As Long, internalHidden As Long
     Dim nameText As String, refers As String, internal As Boolean, visible As Boolean
     On Error GoTo Failed
     ExpectValue fileName, "ブック", "名前定義数", wb.Names.Count, 1000
@@ -933,7 +1025,13 @@ Private Sub InspectNames(ByVal wb As Excel.Workbook, ByVal fileName As String)
         internal = InternalName(nameText)
         If InStr(1, refers, "#REF!", vbTextCompare) > 0 Then broken = broken + 1
         If InStr(1, refers, "[link_target.xlsx]", vbTextCompare) > 0 Then external = external + 1
-        If Not visible And Not internal Then hidden = hidden + 1
+        If Not visible Then
+            If internal Then
+                internalHidden = internalHidden + 1
+            Else
+                hidden = hidden + 1
+            End If
+        End If
         If Not visible Or InStr(refers, "#REF!") > 0 Or InStr(1, refers, "[link_target.xlsx]", vbTextCompare) > 0 Then
             AddDetail fileName, "ブック", "名前定義", nameText, refers, _
                 "表示=" & CStr(visible) & "; 内部名=" & CStr(internal)
@@ -942,6 +1040,8 @@ Private Sub InspectNames(ByVal wb As Excel.Workbook, ByVal fileName As String)
     ExpectValue fileName, "ブック", "うち #REF! の名前定義", broken, 0
     ExpectValue fileName, "ブック", "うち外部参照の名前定義", external, 0
     ExpectValue fileName, "ブック", "うち非表示の名前定義", hidden, 0, "内部名は除外。詳細シートを参照。"
+    ExpectValue fileName, "ブック", "内部非表示の名前定義(除外対象)", internalHidden, -1, _
+        "heavyではAutoFilterが作成する_FilterDatabaseを含む。実際の名前と表示状態は詳細シートを参照。"
     Exit Sub
 Failed:
     AddFailure fileName, "名前定義の再集計", Err.Number, Err.Description
@@ -1103,6 +1203,9 @@ Private Function RelatedFailure(ByVal fileName As String, ByVal sheetName As Str
         If sheetName = "コメント" And CStr(row(0)) = fileName Then
             matches = (CStr(row(1)) = "メモ" Or CStr(row(1)) = "スレッドコメント")
         End If
+        If sheetName = "ブック" And InStr(item, "内部非表示") > 0 And CStr(row(0)) = fileName Then
+            If Left$(CStr(row(1)), Len("内部非表示名")) = "内部非表示名" Then matches = True
+        End If
         If matches Then
             If RelatedFailure <> "" Then RelatedFailure = RelatedFailure & "; "
             RelatedFailure = RelatedFailure & CStr(row(1)) & " / " & CStr(row(2)) & " / " & CStr(row(3))
@@ -1123,6 +1226,7 @@ Private Function GoalDifference(ByVal fileName As String, ByVal sheetName As Str
             Case "ブック/うち #REF! の名前定義": target = 3: exact = True
             Case "ブック/うち外部参照の名前定義": target = 2: exact = True
             Case "ブック/うち非表示の名前定義": target = 4: exact = True
+            Case "ブック/内部非表示の名前定義(除外対象)": target = 1
             Case "ブック/ピボットキャッシュ数": target = HEAVY_CACHES
             Case "ブック/Excel外部リンク数", "ブック/データ接続数": target = 1
             Case "余分な行/余分な行数": target = 59900

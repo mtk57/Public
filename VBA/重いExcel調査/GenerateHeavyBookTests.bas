@@ -288,6 +288,7 @@ Private Sub CreateTestBook(ByVal fileName As String)
             ' スタイルと名前の総数を最後にちょうどに合わせる。
             TryFeature wb, 14, True
             TryFeature wb, 15, True
+            ProtectEdgeSheet wb
     End Select
     If fileName = "test_legacy.xls" Then
         SaveNewBook wb, fileName, xlExcel8
@@ -593,7 +594,9 @@ Private Sub MakeStyles(ByVal wb As Excel.Workbook, ByVal edge As Boolean)
         Set sample = ws.Cells(i + 1, 2)
         sample.Value2 = i
         sample.Interior.Color = RGB(i Mod 256, (i \ 256) Mod 256, 128)
-        Set style = wb.Styles.Add(Name:=styleName, BasedOn:=sample)
+        ' Addの返り値は使わず、追加後のコレクションから名前で取り直す。
+        wb.Styles.Add Name:=styleName, BasedOn:=sample
+        Set style = wb.Styles.Item(styleName)
         If StrComp(style.Name, styleName, vbBinaryCompare) <> 0 Then
             Err.Raise vbObjectError + 4303, , "要求と異なるスタイル名が返されました: " & styleName & " / " & style.Name
         End If
@@ -648,7 +651,7 @@ Private Sub MakeEdgeCases(ByVal wb As Excel.Workbook)
     ws.Visible = xlSheetVeryHidden
     Set ws = AddSheet(wb, "保護")
     ws.Range("A1").Value2 = 1
-    ws.Protect Password:="test"
+    ' スタイル追加はブック内に保護シートがあると失敗するため、保護は作成の最後に行う。
     Set named = AddSheet(wb, "OFFSET(")
     named.Range("A1").Value2 = 10
     Set ws = AddSheet(wb, "誤検出")
@@ -666,6 +669,16 @@ Private Sub MakeEdgeCases(ByVal wb As Excel.Workbook)
     Set chart = wb.Charts.Add(After:=wb.Sheets(wb.Sheets.Count))
     chart.Name = "グラフシート"
     chart.SetSourceData wb.Worksheets("基本").Range("A1:B3")
+End Sub
+
+
+' スタイル・名前をすべて作成した後、保存前に境界テスト用シートを保護する。
+Private Sub ProtectEdgeSheet(ByVal wb As Excel.Workbook)
+    On Error GoTo Failed
+    wb.Worksheets("保護").Protect Password:="test"
+    Exit Sub
+Failed:
+    AddFailure gFile, "保護シートの保護適用", Err.Number, Err.Description
 End Sub
 
 ' 保存の直前にも存在を確認し、マクロを含まない形式を明示する。

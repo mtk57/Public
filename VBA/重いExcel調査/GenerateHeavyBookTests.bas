@@ -285,12 +285,16 @@ Private Sub CreateTestBook(ByVal fileName As String)
             Next feature
             TryFeature wb, 13, True
             TryFeature wb, 17, True
-            ' スタイルと名前の総数を最後にちょうどに合わせる。
+            ' 再オープンで追加される組み込みを先に確定してから、境界値に合わせる。
+            WarmEdgeStyles wb, fileName
             TryFeature wb, 14, True
             TryFeature wb, 15, True
             ProtectEdgeSheet wb
     End Select
-    If fileName = "test_legacy.xls" Then
+    If fileName = "test_edge.xlsx" Then
+        ' WarmEdgeStylesで新規作成した自身のファイルだけを最終状態に更新する。
+        wb.Save
+    ElseIf fileName = "test_legacy.xls" Then
         SaveNewBook wb, fileName, xlExcel8
     Else
         SaveNewBook wb, fileName, xlOpenXMLWorkbook
@@ -590,6 +594,10 @@ Private Sub MakeStyles(ByVal wb As Excel.Workbook, ByVal edge As Boolean)
     If edge Then n = EDGE_STYLES - wb.Styles.Count
     If n < 0 Then Err.Raise 5, , "既存スタイル数が境界値を超えています。"
     For i = 1 To n
+        ' edgeは追加のたびに実総数を確認する。
+        If edge Then
+            If wb.Styles.Count >= EDGE_STYLES Then Exit For
+        End If
         styleName = "GeneratedStyle_" & Format$(i, "0000")
         Set sample = ws.Cells(i + 1, 2)
         sample.Value2 = i
@@ -603,6 +611,11 @@ Private Sub MakeStyles(ByVal wb As Excel.Workbook, ByVal edge As Boolean)
         sample.Style = styleName
         ws.Cells(i + 1, 1).Value2 = styleName
     Next i
+    If edge Then
+        If wb.Styles.Count <> EDGE_STYLES Then
+            Err.Raise vbObjectError + 4304, , "保存前のスタイル実総数が境界値と一致しません: " & CStr(wb.Styles.Count)
+        End If
+    End If
 End Sub
 
 ' 通常名と問題名を生成する。edgeはMYOFFSET等を含む総数1000に合わせる。
@@ -679,6 +692,22 @@ Private Sub ProtectEdgeSheet(ByVal wb As Excel.Workbook)
     Exit Sub
 Failed:
     AddFailure gFile, "保護シートの保護適用", Err.Number, Err.Description
+End Sub
+
+
+' 自分で新規作成したedgeを一度開き直し、遅延追加の組み込みを先に確定する。
+Private Sub WarmEdgeStyles(ByRef wb As Excel.Workbook, ByVal fileName As String)
+    If fileName <> "test_edge.xlsx" Or Len(wb.Path) <> 0 Then
+        Err.Raise 5, , "組み込みスタイルの初期化は未保存の新規edgeブックだけが対象です。"
+    End If
+    ' 初回は既存チェック付きで新規保存する。他のファイルや一時コピーは作らない。
+    SaveNewBook wb, fileName, xlOpenXMLWorkbook
+    wb.Close SaveChanges:=False
+    Set wb = gExcel.Workbooks.Open(Filename:=gFolder & fileName, UpdateLinks:=0, ReadOnly:=False, _
+        IgnoreReadOnlyRecommended:=True, AddToMru:=False, Notify:=False)
+    If wb.ReadOnly Then
+        Err.Raise vbObjectError + 4305, , "生成中のedgeブックを更新可能な状態で開けませんでした。"
+    End If
 End Sub
 
 ' 保存の直前にも存在を確認し、マクロを含まない形式を明示する。

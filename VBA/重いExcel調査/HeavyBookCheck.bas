@@ -1,7 +1,7 @@
 Attribute VB_Name = "HeavyBookCheck"
 Option Explicit
 
-Private Const VERSION As String = "1.1.0"
+Private Const VERSION As String = "1.2.0"
 
 ' 重いExcelブックの調査。対象は保存せず、結果も自動保存しない。
 ' Windows版 Excel 2019以降。追加の参照設定・外部ライブラリは不要。
@@ -87,7 +87,7 @@ Public Sub AnalyzeHeavyWorkbook()
     Dim data As Variant, outputRow As Long, i As Long, calcTotal As Variant
     Dim styles As Variant, customStyles As Variant
     Dim number As Long, description As String, message As String
-    Dim formatValue As Variant
+    Dim formatValue As Variant, surveyStarted As Double, surveySeconds As Double
 
     If mRunning Then
         MsgBox "調査は既に実行中です。", vbExclamation
@@ -97,6 +97,7 @@ Public Sub AnalyzeHeavyWorkbook()
         "Excelブック (*.xlsx;*.xlsm;*.xlsb;*.xls),*.xlsx;*.xlsm;*.xlsb;*.xls", _
         , "調査するExcelブックを選択")
     If VarType(chosen) = vbBoolean Then Exit Sub
+    surveyStarted = Timer
     doCalc = (MsgBox("再計算時間を計測しますか？" & vbCrLf & vbCrLf & _
         "再計算では、外部データ参照が実行され、通信が発生する可能性があります。" & vbCrLf & _
         "調査対象の各シートとブック全体を別インスタンスで計算します。" & vbCrLf & _
@@ -185,6 +186,11 @@ Failed:
 
 Finish:
     On Error Resume Next
+    surveySeconds = ElapsedSeconds(surveyStarted)
+    If Not mSummary Is Nothing Then
+        AddSummary "調査時間(秒)", Round(surveySeconds, 3), "", _
+            "ファイル選択直後から後始末開始直前まで。再計算確認の待ち時間を含みます。"
+    End If
     ' Failedへの再入を防ぐ。個々の後始末は独立したハンドラーでエラーを記録する。
     targetClosed = CloseTarget()
     If settingsSaved Then
@@ -276,7 +282,7 @@ Private Sub InitializeReport()
         "INDIRECT", "OFFSET", "TODAY", "NOW", "RAND", "RANDBETWEEN", "CELL", "INFO", _
         "条件付き書式数", "入力規則セル数", "図形数", "うち非表示", "うち1pt未満", _
         "コメント合計", "従来のコメント(メモ)", "スレッドコメント", "ピボットテーブル数", _
-        "グラフ数", "テーブル数", "ハイパーリンク数", "再計算秒", "判定", "判定の理由")
+        "グラフ数", "テーブル数", "ハイパーリンク数", "再計算秒", "判定", "判定の理由", "調査秒")
 End Sub
 
 ' 値を行単位で書く。文字列は数式・リンクとして評価させない。
@@ -420,9 +426,10 @@ End Function
 
 ' ワークシート1枚分の項目を独立して取得する。配列は0始まり。
 Private Function AnalyzeSheet(ByVal ws As Excel.Worksheet, ByVal doCalc As Boolean) As Variant
-    Dim values(0 To 30) As Variant, formulas As Excel.Range, counts As Variant
+    Dim values(0 To 31) As Variant, formulas As Excel.Range, counts As Variant
     Dim i As Long, total As Variant, hidden As Variant, tiny As Variant
-    Dim reason As String
+    Dim reason As String, started As Double
+    started = Timer
     values(0) = ws.Name
     values(1) = SheetVisibility(ws)
     GetExtent ws, values(2), values(3), values(4), values(5)
@@ -483,6 +490,7 @@ Private Function AnalyzeSheet(ByVal ws As Excel.Worksheet, ByVal doCalc As Boole
     Next i
     If reason <> "" Then values(29) = "要確認"
     values(30) = reason
+    values(31) = Round(ElapsedSeconds(started), 3)
     AnalyzeSheet = values
 End Function
 
@@ -511,6 +519,9 @@ Private Sub GetExtent(ByVal ws As Excel.Worksheet, ByRef usedAddress As Variant,
         Set last = used.Cells(used.Rows.Count, used.Columns.Count)
     Else
         Set last = ws.Cells.SpecialCells(xlCellTypeLastCell)
+    End If
+    If last.Rows.Count > 1 Or last.Columns.Count > 1 Then
+        Set last = last.Cells(last.Rows.Count, last.Columns.Count)
     End If
     usedRow = last.Row
     usedCol = last.Column
@@ -576,6 +587,14 @@ Failed:
     LastDataIndex = NG
 End Function
 
+' 32ビット版でも扱えるよう、Areasごとの行数×列数をDoubleで合計する。
+Private Function CellCount(ByVal target As Excel.Range) As Double
+    Dim area As Excel.Range
+    For Each area In target.Areas
+        CellCount = CellCount + CDbl(area.Rows.Count) * CDbl(area.Columns.Count)
+    Next area
+End Function
+
 ' 数式の存在を先に調べ、SpecialCellsの1004を一律0とすることを避ける。
 Private Sub GetFormulas(ByVal ws As Excel.Worksheet, ByRef formulas As Excel.Range, ByRef count As Variant)
     Dim used As Excel.Range, has As Variant
@@ -596,7 +615,7 @@ Private Sub GetFormulas(ByVal ws As Excel.Worksheet, ByRef formulas As Excel.Ran
     If formulas Is Nothing Then
         count = 0
     Else
-        count = formulas.CountLarge
+        count = CellCount(formulas)
     End If
     Exit Sub
 Failed:
@@ -663,7 +682,7 @@ Private Function CountVolatile(ByVal formulas As Excel.Range, ByVal formulaCount
                 If rows > batchRows Then rows = batchRows
                 Set block = area.Cells(startRow, 1).Resize(rows, columns)
                 buffer = block.Formula
-                If block.CountLarge = 1 Then
+                If block.Count = 1 Then
                     formulaText = UCase$(CStr(buffer))
                     If HasVolatileName(formulaText) Then CountFormulaText formulaText, totals
                 Else
@@ -822,7 +841,7 @@ Private Function CountValidation(ByVal ws As Excel.Worksheet) As Variant
     querying = True
     Set cells = ws.Cells.SpecialCells(xlCellTypeAllValidation)
     querying = False
-    CountValidation = cells.CountLarge
+    CountValidation = CellCount(cells)
     Exit Function
 Failed:
     number = Err.Number

@@ -875,6 +875,14 @@ Private Function SheetIsProtected(ByVal ws As Excel.Worksheet) As Boolean
     SheetIsProtected = (ws.ProtectContents Or ws.ProtectDrawingObjects Or ws.ProtectScenarios)
 End Function
 
+' 32ビット版でも扱えるよう、Areasごとの行数×列数をDoubleで合計する。
+Private Function CellCount(ByVal target As Excel.Range) As Double
+    Dim area As Excel.Range
+    For Each area In target.Areas
+        CellCount = CellCount + CDbl(area.Rows.Count) * CDbl(area.Columns.Count)
+    Next area
+End Function
+
 ' 数式の範囲を配列で読み、実数と既知のテスト式ごとの関数フラグを集計する。
 Private Function InspectFormulas(ByVal ws As Excel.Worksheet, ByVal fileName As String) As Variant
     Dim result(0 To 9) As Variant, totals(1 To 9) As Double, formulas As Excel.Range
@@ -899,7 +907,7 @@ Private Function InspectFormulas(ByVal ws As Excel.Worksheet, ByVal fileName As 
         GoTo Counted
     End If
     Set formulas = ws.Cells.SpecialCells(xlCellTypeFormulas)
-    result(0) = formulas.CountLarge
+    result(0) = CellCount(formulas)
     For Each area In formulas.Areas
         columns = area.Columns.Count
         batch = 8192 \ columns
@@ -910,7 +918,7 @@ Private Function InspectFormulas(ByVal ws As Excel.Worksheet, ByVal fileName As 
             If rows > batch Then rows = batch
             Set block = area.Cells(start, 1).Resize(rows, columns)
             data = block.Formula
-            If block.CountLarge = 1 Then
+            If block.Count = 1 Then
                 AddFixtureFormula CStr(data), totals
             Else
                 For r = 1 To rows
@@ -971,7 +979,7 @@ Private Function ValidationCount(ByVal ws As Excel.Worksheet, ByVal fileName As 
     querying = True
     Set cells = ws.Cells.SpecialCells(xlCellTypeAllValidation)
     querying = False
-    ValidationCount = cells.CountLarge
+    ValidationCount = CellCount(cells)
     Exit Function
 Failed:
     number = Err.Number

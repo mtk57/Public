@@ -1,7 +1,7 @@
 Attribute VB_Name = "HeavyBookCheck"
 Option Explicit
 
-Private Const VESION As String = "1.1.0"
+Private Const VERSION As String = "1.1.0"
 
 ' 重いExcelブックの調査。対象は保存せず、結果も自動保存しない。
 ' Windows版 Excel 2019以降。追加の参照設定・外部ライブラリは不要。

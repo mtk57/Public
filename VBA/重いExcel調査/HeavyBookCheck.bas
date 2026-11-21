@@ -1,6 +1,8 @@
 Attribute VB_Name = "HeavyBookCheck"
 Option Explicit
 
+Private Const VESION As String = "1.1.0"
+
 ' 重いExcelブックの調査。対象は保存せず、結果も自動保存しない。
 ' Windows版 Excel 2019以降。追加の参照設定・外部ライブラリは不要。
 ' ファイル末尾の文字コード・改行はShift-JIS(CP932)・CRLFとする。
@@ -34,6 +36,7 @@ Private Const MAX_NAME_ROWS As Long = 10000
 Private Const FORMULA_BATCH As Long = 8192
 Private Const NG As String = "取得失敗"
 Private Const NOT_MEASURED As String = "未計測"
+Private Const PROTECTED_NOT_RETRIEVED As String = "保護のため未取得"
 
 ' Windows標準API。属性だけを読み、2GBを超えるファイルサイズにも対応する。
 Private Type FileAttributeData
@@ -460,6 +463,9 @@ Private Function AnalyzeSheet(ByVal ws As Excel.Worksheet, ByVal doCalc As Boole
     AddReason reason, values(7), TH_VOLATILE, "揮発性関数"
     AddReason reason, values(16), TH_CF, "条件付き書式"
     AddReason reason, values(17), TH_VALIDATION, "入力規則"
+    If CStr(values(17)) = PROTECTED_NOT_RETRIEVED Then
+        AppendReason reason, "入力規則：" & PROTECTED_NOT_RETRIEVED
+    End If
     AddReason reason, values(18), TH_SHAPES, "図形"
     AddReason reason, values(19), TH_HIDDEN_SHAPES, "非表示の図形"
     AddReason reason, values(20), TH_TINY_SHAPES, "微小な図形"
@@ -497,10 +503,15 @@ End Function
 ' Ctrl+End相当をUsedRange取得より先に読み、実データの矩形の右下と比較する。
 Private Sub GetExtent(ByVal ws As Excel.Worksheet, ByRef usedAddress As Variant, _
     ByRef dataAddress As Variant, ByRef extraRows As Variant, ByRef extraCols As Variant)
-    Dim last As Excel.Range, lastRow As Variant, lastCol As Variant
+    Dim last As Excel.Range, lastRow As Variant, lastCol As Variant, used As Excel.Range
     Dim usedRow As Long, usedCol As Long, usedOK As Boolean
     On Error GoTo UsedFailed
-    Set last = ws.Cells.SpecialCells(xlCellTypeLastCell)
+    If IsProtectedWorksheet(ws) Then
+        Set used = ws.UsedRange
+        Set last = used.Cells(used.Rows.Count, used.Columns.Count)
+    Else
+        Set last = ws.Cells.SpecialCells(xlCellTypeLastCell)
+    End If
     usedRow = last.Row
     usedCol = last.Column
     usedAddress = last.Address(False, False, xlA1)
@@ -577,13 +588,55 @@ Private Sub GetFormulas(ByVal ws As Excel.Worksheet, ByRef formulas As Excel.Ran
             Exit Sub
         End If
     End If
-    Set formulas = ws.Cells.SpecialCells(xlCellTypeFormulas)
-    count = formulas.CountLarge
+    If IsProtectedWorksheet(ws) Then
+        CollectProtectedFormulas used, formulas
+    Else
+        Set formulas = ws.Cells.SpecialCells(xlCellTypeFormulas)
+    End If
+    If formulas Is Nothing Then
+        count = 0
+    Else
+        count = formulas.CountLarge
+    End If
     Exit Sub
 Failed:
     RecordError ws.Name, "数式セル数", Err.Number, Err.Description
     Set formulas = Nothing
     count = NG
+End Sub
+
+' 保護中はSpecialCellsを使わない読取り経路にする。
+Private Function IsProtectedWorksheet(ByVal ws As Excel.Worksheet) As Boolean
+    IsProtectedWorksheet = (ws.ProtectContents Or ws.ProtectDrawingObjects Or ws.ProtectScenarios)
+End Function
+
+' HasFormulaが混在する範囲だけを分割し、保護された数式セルを変更せず集約する。
+Private Sub CollectProtectedFormulas(ByVal part As Excel.Range, ByRef formulas As Excel.Range)
+    Dim has As Variant, half As Long, columns As Long, rows As Long
+    has = part.HasFormula
+    If Not IsNull(has) Then
+        If CBool(has) Then
+            If formulas Is Nothing Then
+                Set formulas = part
+            Else
+                Set formulas = part.Application.Union(formulas, part)
+            End If
+        End If
+        Exit Sub
+    End If
+    columns = part.Columns.Count
+    rows = part.Rows.Count
+    If columns > 1 Then
+        half = columns \ 2
+        CollectProtectedFormulas part.Resize(rows, half), formulas
+        CollectProtectedFormulas part.Cells(1, half + 1).Resize(rows, columns - half), formulas
+    ElseIf rows > 1 Then
+        half = rows \ 2
+        CollectProtectedFormulas part.Resize(half, columns), formulas
+        CollectProtectedFormulas part.Cells(half + 1, 1).Resize(rows - half, columns), formulas
+    Else
+        Err.Raise vbObjectError + 2008, , "単一セルの数式有無を確定できませんでした。"
+    End If
 End Sub
 
 ' 数式を配列で分割取得し、セル内の関数ごとの重複と関数間の重複を分けて集計する。
@@ -758,10 +811,14 @@ Private Function VolatileIndex(ByVal token As String) As Long
     End Select
 End Function
 
-' 入力規則のセル数。SpecialCellsの「該当なし」だけを正常な0件として扱う。
+' 保護中は入力規則を取得しない。非保護時は「該当なし」だけを正常な0件とする。
 Private Function CountValidation(ByVal ws As Excel.Worksheet) As Variant
     Dim cells As Excel.Range, querying As Boolean, number As Long, description As String
     On Error GoTo Failed
+    If IsProtectedWorksheet(ws) Then
+        CountValidation = PROTECTED_NOT_RETRIEVED
+        Exit Function
+    End If
     querying = True
     Set cells = ws.Cells.SpecialCells(xlCellTypeAllValidation)
     querying = False
